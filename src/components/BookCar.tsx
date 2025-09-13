@@ -44,22 +44,26 @@ export default function BookCar() {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
     
+    // Validate họ tên
     if (!formData.name.trim()) {
       newErrors.name = "Vui lòng nhập họ và tên";
     } else if (formData.name.trim().length < 2) {
       newErrors.name = "Họ và tên phải có ít nhất 2 ký tự";
     }
     
+    // Validate số điện thoại
     if (!formData.phone.trim()) {
       newErrors.phone = "Vui lòng nhập số điện thoại";
-    } else if (!/^[0-9]{10}$/.test(formData.phone)) {
-      newErrors.phone = "Số điện thoại không hợp lệ";
+    } else if (!/^(0[3|5|7|8|9])+([0-9]{8})$/.test(formData.phone)) {
+      newErrors.phone = "Số điện thoại không đúng định dạng";
     }
     
+    // Validate email nếu có
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Email không hợp lệ";
+      newErrors.email = "Email không đúng định dạng";
     }
     
+    // Validate các trường bắt buộc khác
     if (!formData.model) {
       newErrors.model = "Vui lòng chọn xe";
     }
@@ -72,6 +76,7 @@ export default function BookCar() {
       newErrors.dealer = "Vui lòng chọn đại lý";
     }
     
+    // Validate ngày hẹn
     if (!formData.date) {
       newErrors.date = "Vui lòng chọn ngày hẹn";
     } else {
@@ -98,6 +103,7 @@ export default function BookCar() {
 
     setIsSubmitting(true);
     try {
+      // Giả lập API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       alert("Đặt lịch thành công!");
       // Reset form
@@ -114,7 +120,6 @@ export default function BookCar() {
       });
       setErrors({});
     } catch {
-      // Handle any errors that might occur
       alert("Có lỗi xảy ra. Vui lòng thử lại!");
     } finally {
       setIsSubmitting(false);
@@ -167,9 +172,7 @@ export default function BookCar() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="Ví dụ: 0912345678"
-                    className={errors.phone ? 'error' : ''}
                   />
-                  <div className="error-message">{errors.phone || ''}</div>
                 </div>
 
                 <div className="form-group">
@@ -177,7 +180,6 @@ export default function BookCar() {
                   <input
                     type="email"
                     name="email"
-                    className={errors.email ? 'error' : ''}
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="example@gmail.com"
