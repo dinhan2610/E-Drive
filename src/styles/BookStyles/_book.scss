@@ -42,6 +42,12 @@
         font-size: 13px;
         color: #666;
         font-weight: 500;
+
+        &.required::after {
+          content: "*";
+          color: #ff4444;
+          margin-left: 4px;
+        }
       }
 
       &.error {
