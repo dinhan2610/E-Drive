@@ -16,7 +16,7 @@ const ChooseUs: React.FC = () => {
       description: "Xe điện E-Drive mang đến hành trình xanh, thông minh với công nghệ AI tiên tiến."
     },
     {
-      icon: "fa-solid fa-shield-check",
+      icon: "fa-solid fa-award",
       title: "Giá trị toàn diện",
       description: "Hỗ trợ chuyên nghiệp từ tư vấn, lái thử đến bảo hành và dịch vụ hậu mãi."
     },
