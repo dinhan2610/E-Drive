@@ -53,7 +53,8 @@ const CONTACT_INFO: ContactInfo[] = [
 const SOCIAL_LINKS: MenuItem[] = [
   { text: "Facebook", link: "https://facebook.com/edrive", icon: "fa-brands fa-facebook" },
   { text: "Instagram", link: "https://instagram.com/edrive", icon: "fa-brands fa-instagram" },
-  { text: "TikTok", link: "https://tiktok.com/@edrive", icon: "fa-brands fa-tiktok" }
+  { text: "TikTok", link: "https://tiktok.com/@edrive", icon: "fa-brands fa-tiktok" },
+  { text: "Mail", link: "mailto:contact@e-drive.vn", icon: "fa-solid fa-envelope" },
 ];
 
 const Footer: React.FC = () => {
@@ -125,17 +126,14 @@ const Footer: React.FC = () => {
             <h4 className="column-title">Giờ làm việc</h4>
             <div className="working-hours">
               <div className="hours-item">
-                <span className="day">Thứ 2 - Thứ 6</span>
-                <span className="time">8:00 - 18:00</span>
-              </div>
-              <div className="hours-item">
-                <span className="day">Thứ 7</span>
+                <span className="day">Thứ 2 - Thứ 7</span>
                 <span className="time">8:00 - 17:00</span>
               </div>
               <div className="hours-item">
                 <span className="day">Chủ nhật</span>
-                <span className="time">9:00 - 16:00</span>
+                <span className="time">Đóng cửa</span>
               </div>
+            
             </div>
           </div>
         </div>
