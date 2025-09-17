@@ -1,7 +1,7 @@
 import { FC } from 'react';
 import Footer from "../components/Footer";
 import HeroPages from "../components/HeroPages";
-import Testimonials from "../components/Testimonials";
+import Testimonials from "../components/feedback";
 
 interface TestimonialsPageProps {}
 
