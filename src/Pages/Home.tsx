@@ -1,11 +1,10 @@
-import { FC } from 'react';
+import type { FC } from 'react';
 import Hero from "../components/Hero";
-import BookCar from "../components/BookCar";
 import PlanTrip from "../components/PlanTrip";
 import PickCar from "../components/PickCar";
 import Banner from "../components/Banner";
 import ChooseUs from "../components/ChooseUs";
-import Testimonials from "../components/Testimonials";
+import Testimonials from "../components/feedback";
 import Faq from "../components/Faq";
 import Download from "../components/Download";
 import Footer from "../components/Footer";
@@ -16,14 +15,15 @@ const Home: FC<HomeProps> = () => {
   return (
     <>
       <Hero />
-      <BookCar />
       <PlanTrip />
       <PickCar />
-      <Banner />
+       <Download />
+      
       <ChooseUs />
+     
       <Testimonials />
+      <Banner />
       <Faq />
-      <Download />
       <Footer />
     </>
   );
