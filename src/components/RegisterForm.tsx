@@ -58,13 +58,67 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       [name]: type === 'checkbox' ? checked : value
     }));
 
-    // Clear error when user starts typing
-    if (errors[name as keyof FormErrors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
+    // Real-time validation
+    const fieldErrors: FormErrors = {};
+    
+    if (name === 'fullName') {
+      if (value.trim() && value.trim().length < 2) {
+        fieldErrors.fullName = 'Họ tên phải có ít nhất 2 ký tự';
+      } else if (value.trim() && !/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/.test(value)) {
+        fieldErrors.fullName = 'Họ tên chỉ được chứa chữ cái và khoảng trắng';
+      } else {
+        fieldErrors.fullName = undefined;
+      }
     }
+    
+    if (name === 'email') {
+      if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        fieldErrors.email = 'Email không hợp lệ';
+      } else {
+        fieldErrors.email = undefined;
+      }
+    }
+    
+    if (name === 'phone') {
+      const cleanPhone = value.replace(/[\s\-]/g, '');
+      if (value.trim() && !/^(\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/.test(cleanPhone)) {
+        fieldErrors.phone = 'Số điện thoại không hợp lệ ';
+      } else {
+        fieldErrors.phone = undefined;
+      }
+    }
+    
+    if (name === 'company') {
+      if (value.trim() && value.trim().length < 2) {
+        fieldErrors.company = 'Tên công ty phải có ít nhất 2 ký tự';
+      } else {
+        fieldErrors.company = undefined;
+      }
+    }
+    
+    if (name === 'password') {
+      if (value && value.length < 6) {
+        fieldErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+      } else if (value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(value)) {
+        fieldErrors.password = 'Mật khẩu phải chứa chữ hoa, chữ thường và số';
+      } else {
+        fieldErrors.password = undefined;
+      }
+    }
+    
+    if (name === 'confirmPassword') {
+      if (value && value !== formData.password) {
+        fieldErrors.confirmPassword = 'Xác nhận mật khẩu không khớp';
+      } else {
+        fieldErrors.confirmPassword = undefined;
+      }
+    }
+
+    // Update errors
+    setErrors(prev => ({
+      ...prev,
+      [name]: fieldErrors[name as keyof FormErrors]
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -75,6 +129,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.fullName = 'Họ tên là bắt buộc';
     } else if (formData.fullName.trim().length < 2) {
       newErrors.fullName = 'Họ tên phải có ít nhất 2 ký tự';
+    } else if (!/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/.test(formData.fullName)) {
+      newErrors.fullName = 'Họ tên chỉ được chứa chữ cái và khoảng trắng';
     }
 
     // Email validation
@@ -84,25 +140,27 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.email = 'Email không hợp lệ';
     }
 
-    // Phone validation
+    // Phone validation - Vietnamese format
     if (!formData.phone) {
       newErrors.phone = 'Số điện thoại là bắt buộc';
-    } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Số điện thoại không hợp lệ (10-11 số)';
+    } else if (!/^(\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/.test(formData.phone.replace(/[\s\-]/g, ''))) {
+      newErrors.phone = 'Số điện thoại Việt Nam không hợp lệ (VD: 0901234567)';
     }
 
     // Company validation
     if (!formData.company.trim()) {
       newErrors.company = 'Tên công ty là bắt buộc';
+    } else if (formData.company.trim().length < 2) {
+      newErrors.company = 'Tên công ty phải có ít nhất 2 ký tự';
     }
 
     // Password validation
     if (!formData.password) {
       newErrors.password = 'Mật khẩu là bắt buộc';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 số';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(formData.password)) {
+      newErrors.password = 'Mật khẩu phải chứa chữ hoa, chữ thường và số';
     }
 
     // Confirm password validation
@@ -197,7 +255,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           <p>Tham gia cùng chúng tôi để trở thành đối tác kinh doanh</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {errors.general && (
             <div className="auth-error-message">
               {errors.general}
@@ -211,13 +269,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <input
                   type="text"
                   name="fullName"
-                  placeholder="Họ và tên"
+                  placeholder="Họ và tên *"
                   value={formData.fullName}
                   onChange={handleInputChange}
                   className={errors.fullName ? 'error' : ''}
                 />
               </div>
-              {errors.fullName && <span className="field-error">{errors.fullName}</span>}
+              {errors.fullName && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.fullName}
+                </span>
+              )}
             </div>
 
             <div className="form-group">
@@ -226,13 +289,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <input
                   type="email"
                   name="email"
-                  placeholder="Email"
+                  placeholder="Email *"
                   value={formData.email}
                   onChange={handleInputChange}
                   className={errors.email ? 'error' : ''}
                 />
               </div>
-              {errors.email && <span className="field-error">{errors.email}</span>}
+              {errors.email && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.email}
+                </span>
+              )}
             </div>
           </div>
 
@@ -243,13 +311,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <input
                   type="tel"
                   name="phone"
-                  placeholder="Số điện thoại"
+                  placeholder="Số điện thoại *"
                   value={formData.phone}
                   onChange={handleInputChange}
                   className={errors.phone ? 'error' : ''}
                 />
               </div>
-              {errors.phone && <span className="field-error">{errors.phone}</span>}
+              {errors.phone && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.phone}
+                </span>
+              )}
             </div>
 
             <div className="form-group">
@@ -258,13 +331,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <input
                   type="text"
                   name="company"
-                  placeholder="Tên công ty"
+                  placeholder="Tên công ty *"
                   value={formData.company}
                   onChange={handleInputChange}
                   className={errors.company ? 'error' : ''}
                 />
               </div>
-              {errors.company && <span className="field-error">{errors.company}</span>}
+              {errors.company && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.company}
+                </span>
+              )}
             </div>
           </div>
 
@@ -287,7 +365,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
               </button>
             </div>
-            {errors.password && <span className="field-error">{errors.password}</span>}
+            {errors.password && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.password}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
@@ -309,7 +392,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
               </button>
             </div>
-            {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
+            {errors.confirmPassword && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.confirmPassword}
+              </span>
+            )}
           </div>
 
           <div className="form-group terms-group">
@@ -326,7 +414,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <a href="#" target="_blank">Chính sách bảo mật</a>
               </span>
             </label>
-            {errors.agreeToTerms && <span className="field-error">{errors.agreeToTerms}</span>}
+            {errors.agreeToTerms && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.agreeToTerms}
+              </span>
+            )}
           </div>
 
           <button 
