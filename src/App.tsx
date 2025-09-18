@@ -1,6 +1,7 @@
 import Home from "./Pages/Home";
 import Contact from "./Pages/Contact";
 import Navbar from "../src/components/Navbar";
+import ChatBox from "../src/components/ChatBox";
 import { Route, Routes } from "react-router-dom";
 
 
@@ -13,6 +14,7 @@ function App() {
         <Route index path="/" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
       </Routes>
+      <ChatBox />
     </>
   );
 }
