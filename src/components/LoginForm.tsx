@@ -42,13 +42,30 @@ const LoginForm: React.FC<LoginFormProps> = ({
       [name]: value
     }));
 
-    // Clear error when user starts typing
-    if (errors[name as keyof FormErrors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
+    // Real-time validation
+    const fieldErrors: FormErrors = {};
+    
+    if (name === 'email') {
+      if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        fieldErrors.email = 'Email không hợp lệ';
+      } else {
+        fieldErrors.email = undefined;
+      }
     }
+    
+    if (name === 'password') {
+      if (value && value.length < 6) {
+        fieldErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+      } else {
+        fieldErrors.password = undefined;
+      }
+    }
+
+    // Update errors
+    setErrors(prev => ({
+      ...prev,
+      [name]: fieldErrors[name as keyof FormErrors]
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -136,7 +153,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
           <p>Chào mừng trở lại! Vui lòng đăng nhập để tiếp tục</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {errors.general && (
             <div className="auth-error-message">
               {errors.general}
@@ -155,7 +172,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 className={errors.email ? 'error' : ''}
               />
             </div>
-            {errors.email && <span className="field-error">{errors.email}</span>}
+            {errors.email && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.email}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
@@ -177,7 +199,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
               </button>
             </div>
-            {errors.password && <span className="field-error">{errors.password}</span>}
+            {errors.password && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.password}
+              </span>
+            )}
           </div>
 
           <div className="form-options">

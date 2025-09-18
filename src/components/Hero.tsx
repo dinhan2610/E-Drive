@@ -1,16 +1,11 @@
 import BgShape from "../images/hero/hero-bg.png";
 import HeroCar from "../images/hero/main-car.png";
-import { useEffect, useState, type FC } from "react";
+import { useState, type FC } from "react";
 import '../styles/HeroStyles/_index.scss';
 import { BookCarModal } from "./BookCar";
 
 const Hero: FC = () => {
-  const [goUp, setGoUp] = useState<boolean>(false);
   const [isTestDriveModalOpen, setIsTestDriveModalOpen] = useState<boolean>(false);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
   const handleTestDriveClick = () => {
     setIsTestDriveModalOpen(true);
@@ -19,21 +14,6 @@ const Hero: FC = () => {
   const handleCloseTestDriveModal = () => {
     setIsTestDriveModalOpen(false);
   };
-
-  useEffect(() => {
-    const onPageScroll = () => {
-      if (window.pageYOffset > 600) {
-        setGoUp(true);
-      } else {
-        setGoUp(false);
-      }
-    };
-    window.addEventListener("scroll", onPageScroll);
-
-    return () => {
-      window.removeEventListener("scroll", onPageScroll);
-    };
-  }, []);
   return (
     <section id="home" className="hero-section">
       <div className="container">
@@ -80,14 +60,6 @@ const Hero: FC = () => {
           isOpen={isTestDriveModalOpen} 
           onClose={handleCloseTestDriveModal} 
         />
-
-        {/* page up */}
-        <div
-          onClick={scrollToTop}
-          className={`scroll-up ${goUp ? "show-scroll" : ""}`}
-        >
-          <i className="fa-solid fa-arrow-up"></i>
-        </div>
       </section>
   );
 }

@@ -191,7 +191,7 @@ const CarBox: React.FC<CarBoxProps> = ({ data, carID }) => {
                   <span>Thân thiện môi trường</span>
                 </div>
                 <div className="feature-badge comfort">
-                  <i className="fa-solid fa-shield-check"></i>
+                  <i className="fas fa-shield-alt"></i>
                   <span>An toàn tuyệt đối</span>
                 </div>
                 <div className="feature-badge tech">

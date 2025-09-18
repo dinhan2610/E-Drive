@@ -4,18 +4,21 @@ import '../styles/HeroStyles/_index.scss';
 
 interface HeroPagesProps {
   name: string;
+  showBreadcrumb?: boolean;
 }
 
-const HeroPages: FC<HeroPagesProps> = ({ name }) => {
+const HeroPages: FC<HeroPagesProps> = ({ name, showBreadcrumb = true }) => {
   return (
     <section className="hero-pages">
       <div className="hero-pages__overlay"></div>
       <div className="container">
         <div className="hero-pages__text">
           <h3>{name}</h3>
-          <p>
-            <Link to="/">Home</Link> / {name}
-          </p>
+          {showBreadcrumb && (
+            <p>
+              <Link to="/">Home</Link> / {name}
+            </p>
+          )}
         </div>
       </div>
     </section>

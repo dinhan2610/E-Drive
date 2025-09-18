@@ -108,12 +108,17 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     name: (value: string): string => {
       if (!value) return "Họ tên là bắt buộc";
       if (value.length < 2) return "Họ tên phải có ít nhất 2 ký tự";
+      if (!/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/.test(value)) {
+        return "Họ tên chỉ được chứa chữ cái và khoảng trắng";
+      }
       return "";
     },
     phone: (value: string): string => {
       if (!value) return "Số điện thoại là bắt buộc";
-      const phoneRegex = /^[0-9]{10,11}$/;
-      if (!phoneRegex.test(value)) return "Số điện thoại không hợp lệ";
+      const cleanPhone = value.replace(/[\s\-]/g, '');
+      if (!/^(\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/.test(cleanPhone)) {
+        return "Số điện thoại Việt Nam không hợp lệ (VD: 0901234567)";
+      }
       return "";
     },
     email: (value: string): string => {
@@ -314,7 +319,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                   <p>Vui lòng điền đầy đủ thông tin để chúng tôi hỗ trợ bạn tốt nhất</p>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} noValidate>
                   <div className="book-form">
                     <div className="form-section">
                       <h3>Thông tin cá nhân</h3>
@@ -329,7 +334,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             onChange={handleInputChange}
                             placeholder="Nhập họ và tên của bạn"
                           />
-                          {errors.name && <span className="error-message">{errors.name}</span>}
+                          {errors.name && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.name}
+                            </span>
+                          )}
                         </div>
 
                         <div className="form-group">
@@ -341,7 +351,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             onChange={handleInputChange}
                             placeholder="Ví dụ: 0912345678"
                           />
-                          {errors.phone && <span className="error-message">{errors.phone}</span>}
+                          {errors.phone && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.phone}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -354,7 +369,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                           onChange={handleInputChange}
                           placeholder="example@gmail.com"
                         />
-                        {errors.email && <span className="error-message">{errors.email}</span>}
+                        {errors.email && (
+                          <span className="field-error">
+                            <i className="fa-solid fa-exclamation-circle"></i>
+                            {errors.email}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -376,7 +396,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                               </option>
                             ))}
                           </select>
-                          {errors.model && <span className="error-message">{errors.model}</span>}
+                          {errors.model && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.model}
+                            </span>
+                          )}
                         </div>
 
                         <div className="form-group">
@@ -393,7 +418,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                               </option>
                             ))}
                           </select>
-                          {errors.variant && <span className="error-message">{errors.variant}</span>}
+                          {errors.variant && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.variant}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -411,7 +441,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             </option>
                           ))}
                         </select>
-                        {errors.dealer && <span className="error-message">{errors.dealer}</span>}
+                        {errors.dealer && (
+                          <span className="field-error">
+                            <i className="fa-solid fa-exclamation-circle"></i>
+                            {errors.dealer}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -428,7 +463,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             onChange={handleInputChange}
                             min={new Date().toISOString().split('T')[0]}
                           />
-                          {errors.date && <span className="error-message">{errors.date}</span>}
+                          {errors.date && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.date}
+                            </span>
+                          )}
                         </div>
 
                         <div className="form-group">
@@ -511,7 +551,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                               </div>
                             </div>
                           </div>
-                          {errors.time && <span className="error-message">{errors.time}</span>}
+                          {errors.time && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.time}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -546,7 +591,12 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                         
                         {/* Validation message on separate line */}
                         <div className="validation-message-container">
-                          {errors.confirmInfo && <span className="error-message">{errors.confirmInfo}</span>}
+                          {errors.confirmInfo && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.confirmInfo}
+                            </span>
+                          )}
                         </div>
                       </div>
 

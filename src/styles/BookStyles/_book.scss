@@ -420,6 +420,15 @@
         }
       }
 
+      .field-error {
+        display: block;
+        color: #dc2626;
+        font-size: 12px;
+        margin-top: 6px;
+        margin-left: 4px;
+        font-weight: 500;
+      }
+
       .error-message {
         display: block;
         color: #ef4444;
@@ -462,6 +471,12 @@
           margin: 0;
         }
 
+        .field-error {
+          margin-left: 26px;
+          margin-top: 4px;
+          color: #dc2626;
+        }
+
         .error-message {
           margin-left: 26px; /* Điều chỉnh từ 30px xuống 26px */
           margin-top: 4px;
@@ -470,6 +485,13 @@
 
       .validation-message-container {
         margin-top: 8px;
+        
+        .field-error {
+          margin-left: 0;
+          margin-top: 0;
+          display: block;
+          color: #dc2626;
+        }
         
         .error-message {
           margin-left: 0;

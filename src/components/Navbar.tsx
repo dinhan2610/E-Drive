@@ -51,7 +51,7 @@ const Navbar: React.FC = () => {
     { to: "#dealer", label: "Trở thành đại lý", className: "dealer-link" },
      { to: "#compare", label: "So sánh mẫu xe", className: "compare-link" },
     { to: "#services", label: "Dịch vụ", className: "services-link" },
-    { to: "#contact", label: "Liên hệ", className: "contact-link" }
+    { to: "/contact", label: "Liên hệ", className: "contact-link" }
    
   ];
 
