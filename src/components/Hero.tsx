@@ -22,7 +22,7 @@ const Hero: FC = () => {
           <div className="hero-content__text">
             <h4> Đơn giản để bắt đầu hành trình xanh</h4>
             <h1>
-              Đặt xe <span>nhanh chóng,</span>chăm sóc <span>tận tâm</span>
+              Đặt xe <span>nhanh chóng, </span>chăm sóc <span>tận tâm</span>
             </h1>
             <p>
               Hãy để E-Drive đồng hành cùng bạn lăn bánh về tương lai xanh, nơi công nghệ và sự bền vững gặp nhau.
