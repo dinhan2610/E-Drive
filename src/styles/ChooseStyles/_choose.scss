@@ -59,10 +59,11 @@
 
   &__title {
     font-size: clamp(32px, 5vw, 48px);
-    font-weight: 800;
+    font-weight: 700;
     color: #1e293b;
     line-height: 1.2;
     margin-bottom: 16px;
+    font-family: 'Anton', sans-serif;
 
     .highlight {
       color: #ff4d30;
