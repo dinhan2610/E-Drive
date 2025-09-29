@@ -10,12 +10,12 @@ interface LoginFormProps {
 }
 
 interface FormData {
-  email: string;
+  username: string;
   password: string;
 }
 
 interface FormErrors {
-  email?: string;
+  username?: string;
   password?: string;
   general?: string;
 }
@@ -27,7 +27,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   onLoginSuccess 
 }) => {
   const [formData, setFormData] = useState<FormData>({
-    email: '',
+    username: '',
     password: ''
   });
 
@@ -45,11 +45,13 @@ const LoginForm: React.FC<LoginFormProps> = ({
     // Real-time validation
     const fieldErrors: FormErrors = {};
     
-    if (name === 'email') {
-      if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-        fieldErrors.email = 'Email không hợp lệ';
+    if (name === 'username') {
+      if (value.trim() && value.length < 3) {
+        fieldErrors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự';
+      } else if (value.trim() && /\s/.test(value)) {
+        fieldErrors.username = 'Tên đăng nhập không được chứa khoảng trắng';
       } else {
-        fieldErrors.email = undefined;
+        fieldErrors.username = undefined;
       }
     }
     
@@ -71,11 +73,13 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email là bắt buộc';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+    // Username validation
+    if (!formData.username) {
+      newErrors.username = 'Tên đăng nhập là bắt buộc';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự';
+    } else if (/\s/.test(formData.username)) {
+      newErrors.username = 'Tên đăng nhập không được chứa khoảng trắng';
     }
 
     // Password validation
@@ -106,7 +110,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       // Mock successful login
       const userData = {
         id: 1,
-        email: formData.email,
+        username: formData.username,
         name: 'Đại lý mới',
         role: 'agent'
       };
@@ -116,7 +120,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       }
 
       // Reset form
-      setFormData({ email: '', password: '' });
+      setFormData({ username: '', password: '' });
       onClose();
       
     } catch (error) {
@@ -162,20 +166,20 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
           <div className="form-group">
             <div className="input-wrapper">
-              <i className="fas fa-envelope input-icon"></i>
+              <i className="fas fa-user input-icon"></i>
               <input
-                type="email"
-                name="email"
-                placeholder="Email của bạn"
-                value={formData.email}
+                type="text"
+                name="username"
+                placeholder="Tên đăng nhập"
+                value={formData.username}
                 onChange={handleInputChange}
-                className={errors.email ? 'error' : ''}
+                className={errors.username ? 'error' : ''}
               />
             </div>
-            {errors.email && (
+            {errors.username && (
               <span className="field-error">
                 <i className="fa-solid fa-exclamation-circle"></i>
-                {errors.email}
+                {errors.username}
               </span>
             )}
           </div>
@@ -233,6 +237,11 @@ const LoginForm: React.FC<LoginFormProps> = ({
           <div className="auth-divider">
             <span>Hoặc</span>
           </div>
+
+          <button type="button" className="google-auth-btn">
+            <i className="fab fa-google"></i>
+            Đăng nhập với Google
+          </button>
 
           <div className="auth-switch">
             <p>

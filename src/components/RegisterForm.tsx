@@ -11,6 +11,7 @@ interface RegisterFormProps {
 
 interface FormData {
   fullName: string;
+  username: string;
   email: string;
   phone: string;
   company: string;
@@ -21,6 +22,7 @@ interface FormData {
 
 interface FormErrors {
   fullName?: string;
+  username?: string;
   email?: string;
   phone?: string;
   company?: string;
@@ -38,6 +40,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
+    username: '',
     email: '',
     phone: '',
     company: '',
@@ -68,6 +71,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         fieldErrors.fullName = 'Họ tên chỉ được chứa chữ cái và khoảng trắng';
       } else {
         fieldErrors.fullName = undefined;
+      }
+    }
+    
+    if (name === 'username') {
+      if (value.trim() && value.length < 3) {
+        fieldErrors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự';
+      } else if (value.trim() && /\s/.test(value)) {
+        fieldErrors.username = 'Tên đăng nhập không được chứa khoảng trắng';
+      } else if (value.trim() && !/^[a-zA-Z0-9_]+$/.test(value)) {
+        fieldErrors.username = 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu _';
+      } else {
+        fieldErrors.username = undefined;
       }
     }
     
@@ -133,6 +148,17 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.fullName = 'Họ tên chỉ được chứa chữ cái và khoảng trắng';
     }
 
+    // Username validation
+    if (!formData.username.trim()) {
+      newErrors.username = 'Tên đăng nhập là bắt buộc';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự';
+    } else if (/\s/.test(formData.username)) {
+      newErrors.username = 'Tên đăng nhập không được chứa khoảng trắng';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu _';
+    }
+
     // Email validation
     if (!formData.email) {
       newErrors.email = 'Email là bắt buộc';
@@ -147,10 +173,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.phone = 'Số điện thoại Việt Nam không hợp lệ (VD: 0901234567)';
     }
 
-    // Company validation
-    if (!formData.company.trim()) {
-      newErrors.company = 'Tên công ty là bắt buộc';
-    } else if (formData.company.trim().length < 2) {
+    // Company validation (optional)
+    if (formData.company.trim() && formData.company.trim().length < 2) {
       newErrors.company = 'Tên công ty phải có ít nhất 2 ký tự';
     }
 
@@ -197,6 +221,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       const userData = {
         id: Date.now(),
         fullName: formData.fullName,
+        username: formData.username,
         email: formData.email,
         phone: formData.phone,
         company: formData.company,
@@ -211,6 +236,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       // Reset form
       setFormData({
         fullName: '',
+        username: '',
         email: '',
         phone: '',
         company: '',
@@ -307,6 +333,48 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           <div className="form-row">
             <div className="form-group">
               <div className="input-wrapper">
+                <i className="fas fa-at input-icon"></i>
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Tên đăng nhập *"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  className={errors.username ? 'error' : ''}
+                />
+              </div>
+              {errors.username && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.username}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <div className="input-wrapper">
+                <i className="fas fa-building input-icon"></i>
+                <input
+                  type="text"
+                  name="company"
+                  placeholder="Công ty"
+                  value={formData.company}
+                  onChange={handleInputChange}
+                  className={errors.company ? 'error' : ''}
+                />
+              </div>
+              {errors.company && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.company}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <div className="input-wrapper">
                 <i className="fas fa-phone input-icon"></i>
                 <input
                   type="tel"
@@ -327,20 +395,27 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
 
             <div className="form-group">
               <div className="input-wrapper">
-                <i className="fas fa-building input-icon"></i>
+                <i className="fas fa-lock input-icon"></i>
                 <input
-                  type="text"
-                  name="company"
-                  placeholder="Tên công ty *"
-                  value={formData.company}
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Mật khẩu *"
+                  value={formData.password}
                   onChange={handleInputChange}
-                  className={errors.company ? 'error' : ''}
+                  className={errors.password ? 'error' : ''}
                 />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                </button>
               </div>
-              {errors.company && (
+              {errors.password && (
                 <span className="field-error">
                   <i className="fa-solid fa-exclamation-circle"></i>
-                  {errors.company}
+                  {errors.password}
                 </span>
               )}
             </div>
@@ -350,36 +425,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             <div className="input-wrapper">
               <i className="fas fa-lock input-icon"></i>
               <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="Mật khẩu"
-                value={formData.password}
-                onChange={handleInputChange}
-                className={errors.password ? 'error' : ''}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-              </button>
-            </div>
-            {errors.password && (
-              <span className="field-error">
-                <i className="fa-solid fa-exclamation-circle"></i>
-                {errors.password}
-              </span>
-            )}
-          </div>
-
-          <div className="form-group">
-            <div className="input-wrapper">
-              <i className="fas fa-lock input-icon"></i>
-              <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 name="confirmPassword"
-                placeholder="Xác nhận mật khẩu"
+                placeholder="Nhập lại mật khẩu *"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
                 className={errors.confirmPassword ? 'error' : ''}
@@ -436,10 +484,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
               'Đăng ký đại lý'
             )}
           </button>
-
-          <div className="auth-divider">
-            <span>Hoặc</span>
-          </div>
 
           <div className="auth-switch">
             <p>
