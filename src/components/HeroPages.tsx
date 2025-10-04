@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { FC } from "react";
-import '../styles/HeroStyles/_index.scss';
+import '../styles/HeroStyles/_hero.scss';
 
 interface HeroPagesProps {
   name: string;

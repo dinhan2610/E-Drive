@@ -1,4 +1,6 @@
-@use "../global" as *;
+@use "../global/colors" as *;
+@use "../global/boilerplate" as *;
+@use "../global/typhography" as *;
 
 .plan-section {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);

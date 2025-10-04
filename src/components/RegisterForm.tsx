@@ -26,6 +26,7 @@ interface FormErrors {
   email?: string;
   phone?: string;
   company?: string;
+  
   password?: string;
   confirmPassword?: string;
   agreeToTerms?: string;
@@ -44,6 +45,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     email: '',
     phone: '',
     company: '',
+    
     password: '',
     confirmPassword: '',
     agreeToTerms: false

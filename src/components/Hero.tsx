@@ -1,7 +1,7 @@
 import BgShape from "../images/hero/hero-bg.png";
 import HeroCar from "../images/hero/main-car.png";
 import { useState, type FC } from "react";
-import '../styles/HeroStyles/_index.scss';
+import '../styles/HeroStyles/_hero.scss';
 import { BookCarModal } from "./BookCar";
 
 const Hero: FC = () => {

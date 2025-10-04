@@ -1,5 +1,6 @@
 import Home from "./Pages/Home";
 import Contact from "./Pages/Contact";
+// import CompareSlots from "./Pages/CompareSlots";
 import Navbar from "../src/components/Navbar";
 import ChatBox from "../src/components/ChatBox";
 import { Route, Routes } from "react-router-dom";
@@ -13,6 +14,7 @@ function App() {
       <Routes>
         <Route index path="/" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
+        {/* <Route path="/compare-slots" element={<CompareSlots />} /> */}
       </Routes>
       <ChatBox />
     </>
