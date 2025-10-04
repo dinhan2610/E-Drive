@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import type { FC } from 'react';
-import '../styles/SuccesModal/_index.scss';
+import '../styles/SuccesModal/_successmodal.scss';
 
 interface ModalProps {
   isOpen: boolean;

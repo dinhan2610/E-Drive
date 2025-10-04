@@ -1,18 +1,21 @@
-@forward "../styles/global";
-@forward "../styles/NavbarStyles";
-@forward "../styles/HeroStyles";
-@forward "../styles/BookStyles";
-@forward "../styles/PlanTripStyles";
-@forward "../styles/PickStyles";
-@forward "../styles/BannerStyles";
-@forward "../styles/ChooseStyles";
-@forward "../styles/TestimonialsStyles";
-@forward "../styles/FaqStyles";
-@forward "../styles/DownloadStyles";
-@forward "../styles/FooterStyles";
-@forward "../styles/AuthStyles";
-@forward "../styles/ContactStyles";
-@forward "../styles/ChatBoxStyles";
+@forward "./global/boilerplate"; // Direct file import
+@forward "./global/colors"; // Direct file import  
+@forward "./global/typhography"; // Direct file import
+@forward "./NavbarStyles/navbar"; // Direct file import
+@forward "./HeroStyles/hero"; // Direct file import
+@forward "./BookStyles/book"; // Direct file import
+@forward "./PlanTripStyles/plan"; // Direct file import
+@forward "./PickStyles/pick"; // Direct file import
+@forward "./BannerStyles/banner"; // Direct file import
+@forward "./ChooseStyles/choose"; // Direct file import
+@forward "./TestimonialsStyles/testimonials"; // Direct file import
+@forward "./FaqStyles/faq"; // Direct file import
+@forward "./DownloadStyles/download"; // Direct file import
+@forward "./FooterStyles/footer"; // Direct file import
+@forward "./AuthStyles/authforms"; // Direct file import
+@forward "./ContactStyles/contact"; // Direct file import
+@forward "./ChatBoxStyles/chatbox"; // Direct file import
+@forward "./SuccesModal/successmodal"; // Direct file import
 
 
 

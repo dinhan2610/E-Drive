@@ -1,4 +1,6 @@
-@use "../global" as *;
+@use "../global/colors" as *;
+@use "../global/boilerplate" as *;
+@use "../global/typhography" as *;
 
 .download-section {
   background-image: url("../../images/banners/bg02.png");

@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import type { FC } from 'react';
 import Footer from "../components/Footer";
 import HeroPages from "../components/HeroPages";
 import Testimonials from "../components/feedback";

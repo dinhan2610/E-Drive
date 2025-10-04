@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import SelectCar from "../images/plan/icon1.png";
 import Contact from "../images/plan/icon2.png";
 import Drive from "../images/plan/icon3.png";
-import '../styles/PlanTripStyles/_index.scss';
+import '../styles/PlanTripStyles/_plan.scss';
 
 interface FeatureItem {
   id: string;

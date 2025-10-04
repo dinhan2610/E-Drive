@@ -2,7 +2,7 @@ import { useState } from "react";
 import { type FC } from "react";
 import CarBox from "./CarBox";
 import { CAR_DATA } from "../constants/CarDatas";
-import '../styles/PickStyles/_index.scss';
+import '../styles/PickStyles/_pick.scss';
 
 type CarSelector = 'FirstCar' | 'SecondCar' | 'ThirdCar' | 'FourthCar' | 'FifthCar' | 'SixthCar';
 type ButtonType = 'btn1' | 'btn2' | 'btn3' | 'btn4' | 'btn5' | 'btn6' | '';
