@@ -1,0 +1,113 @@
+// Pagination component styles
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pageButton {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  
+  &:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+  }
+  
+  &:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &:hover {
+      background: white;
+      border-color: #ddd;
+      color: #333;
+    }
+  }
+  
+  &.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+    
+    &:hover {
+      background: #0056b3;
+      border-color: #0056b3;
+      color: white;
+    }
+  }
+  
+  &.navButton {
+    min-width: 80px;
+    font-weight: 600;
+    
+    .icon {
+      margin: 0 4px;
+    }
+  }
+}
+
+.ellipsis {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.pageInfo {
+  margin: 0 16px;
+  font-size: 0.875rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+// Mobile responsive
+@media (max-width: 480px) {
+  .pagination {
+    gap: 4px;
+  }
+  
+  .pageButton {
+    min-width: 36px;
+    height: 36px;
+    font-size: 0.8125rem;
+    
+    &.navButton {
+      min-width: 70px;
+    }
+  }
+  
+  .ellipsis {
+    min-width: 36px;
+    height: 36px;
+  }
+  
+  .pageInfo {
+    margin: 0 8px;
+    font-size: 0.8125rem;
+  }
+}

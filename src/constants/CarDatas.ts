@@ -30,7 +30,7 @@ export const CAR_DATA: CarType[][] = [
       doors: "4/5",
       air: "Yes",
       transmission: "Manual",
-      fuel: "Diesel",
+      fuel: "Xe Điện",
     },
   ],
   [
@@ -44,7 +44,7 @@ export const CAR_DATA: CarType[][] = [
       doors: "4/5",
       air: "Yes",
       transmission: "Manual",
-      fuel: "Gasoline",
+      fuel: "Xe Điện",
     },
   ],
   [
@@ -58,7 +58,7 @@ export const CAR_DATA: CarType[][] = [
       doors: "4/5",
       air: "Yes",
       transmission: "Automatic",
-      fuel: "Hybrid",
+      fuel: "Xe Điện",
     },
   ],
   [
@@ -72,7 +72,7 @@ export const CAR_DATA: CarType[][] = [
       doors: "4/5",
       air: "Yes",
       transmission: "Manual",
-      fuel: "Diesel",
+      fuel: "Xe Điện",
     },
   ],
   [
@@ -86,7 +86,7 @@ export const CAR_DATA: CarType[][] = [
       doors: "4/5",
       air: "Yes",
       transmission: "Manual",
-      fuel: "Diesel",
+      fuel: "Xe Điện",
     },
   ],
   [
@@ -100,7 +100,7 @@ export const CAR_DATA: CarType[][] = [
       doors: "4/5",
       air: "Yes",
       transmission: "Automatic",
-      fuel: "Gasoline",
+      fuel: "Xe Điện",
     },
   ],
 ];
