@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { authApi } from '../services/authApi';
+import { SuccessModal } from './SuccessModal';
 import "../styles/AuthStyles/_authforms.scss";
 
 interface LoginFormProps {
@@ -34,6 +36,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loggedInUserName, setLoggedInUserName] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -104,24 +108,30 @@ const LoginForm: React.FC<LoginFormProps> = ({
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock successful login
-      const userData = {
-        id: 1,
+      // Call login API
+      const result = await authApi.login({
         username: formData.username,
-        name: 'Đại lý mới',
-        role: 'agent'
-      };
-
-      if (onLoginSuccess) {
-        onLoginSuccess(userData);
+        password: formData.password
+      });
+      
+      if (result.success) {
+        // Set user name for success modal
+        setLoggedInUserName(result.data?.user?.fullName || result.data?.user?.username || formData.username);
+        
+        // Reset form
+        setFormData({ username: '', password: '' });
+        
+        // Close login form first
+        onClose();
+        
+        // Then show success modal after a small delay
+        setTimeout(() => {
+          setShowSuccessModal(true);
+        }, 100);
+      } else {
+        setErrors({ general: result.message || 'Đăng nhập thất bại' });
+        return;
       }
-
-      // Reset form
-      setFormData({ username: '', password: '' });
-      onClose();
       
     } catch (error) {
       setErrors({
@@ -256,7 +266,23 @@ const LoginForm: React.FC<LoginFormProps> = ({
     </div>
   );
 
-  return createPortal(modalContent, document.body);
+  return (
+    <>
+      {createPortal(modalContent, document.body)}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        type="login"
+        userName={loggedInUserName}
+        onContinue={() => {
+          setShowSuccessModal(false);
+          if (onLoginSuccess) {
+            onLoginSuccess({ fullName: loggedInUserName });
+          }
+        }}
+      />
+    </>
+  );
 };
 
 export default LoginForm;

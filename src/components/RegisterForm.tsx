@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { authApi } from '../services/authApi';
+import { SuccessModal } from './SuccessModal';
 import "../styles/AuthStyles/_authforms.scss";
 
 interface RegisterFormProps {
@@ -14,7 +16,8 @@ interface FormData {
   username: string;
   email: string;
   phone: string;
-  company: string;
+  dealerName: string;
+  address: string;
   password: string;
   confirmPassword: string;
   agreeToTerms: boolean;
@@ -25,8 +28,8 @@ interface FormErrors {
   username?: string;
   email?: string;
   phone?: string;
-  company?: string;
-  
+  dealerName?: string;
+  address?: string;
   password?: string;
   confirmPassword?: string;
   agreeToTerms?: string;
@@ -44,8 +47,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     username: '',
     email: '',
     phone: '',
-    company: '',
-    
+    dealerName: '',
+    address: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false
@@ -55,6 +58,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [registeredUserName, setRegisteredUserName] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -105,11 +110,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       }
     }
     
-    if (name === 'company') {
+    if (name === 'dealerName') {
       if (value.trim() && value.trim().length < 2) {
-        fieldErrors.company = 'Tên công ty phải có ít nhất 2 ký tự';
+        fieldErrors.dealerName = 'Tên đại lý phải có ít nhất 2 ký tự';
       } else {
-        fieldErrors.company = undefined;
+        fieldErrors.dealerName = undefined;
+      }
+    }
+    
+    if (name === 'address') {
+      if (value.trim() && value.trim().length < 5) {
+        fieldErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+      } else {
+        fieldErrors.address = undefined;
       }
     }
     
@@ -175,9 +188,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.phone = 'Số điện thoại Việt Nam không hợp lệ (VD: 0901234567)';
     }
 
-    // Company validation (optional)
-    if (formData.company.trim() && formData.company.trim().length < 2) {
-      newErrors.company = 'Tên công ty phải có ít nhất 2 ký tự';
+    // Dealer name validation
+    if (!formData.dealerName.trim()) {
+      newErrors.dealerName = 'Tên đại lý là bắt buộc';
+    } else if (formData.dealerName.trim().length < 2) {
+      newErrors.dealerName = 'Tên đại lý phải có ít nhất 2 ký tự';
+    }
+    
+    // Address validation
+    if (!formData.address.trim()) {
+      newErrors.address = 'Địa chỉ là bắt buộc';
+    } else if (formData.address.trim().length < 5) {
+      newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
     }
 
     // Password validation
@@ -216,38 +238,45 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful registration
-      const userData = {
-        id: Date.now(),
+      // Call API
+      const result = await authApi.register({
         fullName: formData.fullName,
-        username: formData.username,
         email: formData.email,
         phone: formData.phone,
-        company: formData.company,
-        role: 'agent',
-        status: 'pending_approval'
-      };
-
-      if (onRegisterSuccess) {
-        onRegisterSuccess(userData);
-      }
-
-      // Reset form
-      setFormData({
-        fullName: '',
-        username: '',
-        email: '',
-        phone: '',
-        company: '',
-        password: '',
-        confirmPassword: '',
-        agreeToTerms: false
+        dealerName: formData.dealerName,
+        address: formData.address,
+        username: formData.username,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
       });
       
-      onClose();
+      if (result.success) {
+        // Set user name for success modal
+        setRegisteredUserName(formData.fullName);
+        
+        // Reset form
+        setFormData({
+          fullName: '',
+          username: '',
+          email: '',
+          phone: '',
+          dealerName: '',
+          address: '',
+          password: '',
+          confirmPassword: '',
+          agreeToTerms: false
+        });
+        
+        // Close register form first
+        onClose();
+        
+        // Then show success modal after a small delay
+        setTimeout(() => {
+          setShowSuccessModal(true);
+        }, 100);
+      } else {
+        setErrors({ general: result.message || 'Đăng ký thất bại' });
+      }
       
     } catch (error) {
       setErrors({
@@ -358,17 +387,17 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <i className="fas fa-building input-icon"></i>
                 <input
                   type="text"
-                  name="company"
-                  placeholder="Công ty"
-                  value={formData.company}
+                  name="dealerName"
+                  placeholder="Tên đại lý"
+                  value={formData.dealerName}
                   onChange={handleInputChange}
-                  className={errors.company ? 'error' : ''}
+                  className={errors.dealerName ? 'error' : ''}
                 />
               </div>
-              {errors.company && (
+              {errors.dealerName && (
                 <span className="field-error">
                   <i className="fa-solid fa-exclamation-circle"></i>
-                  {errors.company}
+                  {errors.dealerName}
                 </span>
               )}
             </div>
@@ -421,6 +450,26 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="form-group">
+            <div className="input-wrapper">
+              <i className="fas fa-map-marker-alt input-icon"></i>
+              <input
+                type="text"
+                name="address"
+                placeholder="Địa chỉ *"
+                value={formData.address}
+                onChange={handleInputChange}
+                className={errors.address ? 'error' : ''}
+              />
+            </div>
+            {errors.address && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.address}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
@@ -500,7 +549,23 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     </div>
   );
 
-  return createPortal(modalContent, document.body);
+  return (
+    <>
+      {createPortal(modalContent, document.body)}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        type="register"
+        userName={registeredUserName}
+        onContinue={() => {
+          setShowSuccessModal(false);
+          if (onRegisterSuccess) {
+            onRegisterSuccess({ fullName: registeredUserName });
+          }
+        }}
+      />
+    </>
+  );
 };
 
 export default RegisterForm;
