@@ -23,19 +23,19 @@
 .layout {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 180px 32px 80px;
+  padding: 140px 32px 80px; // Normal padding for scrollable SortBar
   position: relative;
   
   @media (max-width: 1200px) {
-    padding: 160px 28px 60px;
+    padding: 120px 28px 60px;
   }
   
   @media (max-width: 768px) {
-    padding: 140px 20px 40px;
+    padding: 100px 20px 40px; // Normal mobile padding for scrollable SortBar
   }
   
   @media (max-width: 480px) {
-    padding: 130px 16px 32px;
+    padding: 90px 16px 32px; // Normal small mobile padding for scrollable SortBar
   }
 }
 

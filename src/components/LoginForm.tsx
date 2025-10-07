@@ -118,16 +118,28 @@ const LoginForm: React.FC<LoginFormProps> = ({
         // Set user name for success modal
         setLoggedInUserName(result.data?.user?.fullName || result.data?.user?.username || formData.username);
         
+        // Store user data for persistence
+        const userData = {
+          ...result.data?.user,
+          fullName: result.data?.user?.fullName || result.data?.user?.username || formData.username,
+          name: result.data?.user?.fullName || result.data?.user?.username || formData.username
+        };
+        localStorage.setItem('e-drive-user', JSON.stringify(userData));
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Dispatch login success event
+        window.dispatchEvent(new Event('loginSuccess'));
+        
         // Reset form
         setFormData({ username: '', password: '' });
         
-        // Close login form first
-        onClose();
+        // Show success modal immediately (don't close login form yet)
+        setShowSuccessModal(true);
         
-        // Then show success modal after a small delay
-        setTimeout(() => {
-          setShowSuccessModal(true);
-        }, 100);
+        // Call onLoginSuccess callback if provided
+        if (onLoginSuccess) {
+          onLoginSuccess(userData);
+        }
       } else {
         setErrors({ general: result.message || 'Đăng nhập thất bại' });
         return;
@@ -271,14 +283,19 @@ const LoginForm: React.FC<LoginFormProps> = ({
       {createPortal(modalContent, document.body)}
       <SuccessModal
         isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => {
+          setShowSuccessModal(false);
+          onClose(); // Close login form when modal is dismissed
+        }}
         type="login"
         userName={loggedInUserName}
         onContinue={() => {
           setShowSuccessModal(false);
-          if (onLoginSuccess) {
-            onLoginSuccess({ fullName: loggedInUserName });
-          }
+          onClose(); // Close login form
+          // Dispatch success event for other components
+          window.dispatchEvent(new CustomEvent('loginSuccess', {
+            detail: { userName: loggedInUserName }
+          }));
         }}
       />
     </>

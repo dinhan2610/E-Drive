@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import Logo from "../images/logo/logo.png";
 import AuthManager from "./AuthManager";
@@ -13,6 +13,54 @@ interface NavLink {
 const Navbar: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Check login status on component mount
+  useEffect(() => {
+    checkLoginStatus();
+    
+    // Listen for login/logout events
+    const handleLoginSuccess = () => checkLoginStatus();
+    const handleLogout = () => {
+      setIsLoggedIn(false);
+      setUserProfile(null);
+    };
+    const handleProfileUpdate = () => checkLoginStatus();
+    
+    window.addEventListener('loginSuccess', handleLoginSuccess);
+    window.addEventListener('registerSuccess', handleLoginSuccess);
+    window.addEventListener('userLogout', handleLogout);
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('loginSuccess', handleLoginSuccess);
+      window.removeEventListener('registerSuccess', handleLoginSuccess);
+      window.removeEventListener('userLogout', handleLogout);
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+    };
+  }, []);
+
+  const checkLoginStatus = () => {
+    const userData = localStorage.getItem('e-drive-user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setIsLoggedIn(true);
+        setUserProfile(user);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('e-drive-user');
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('e-drive-user');
+    setIsLoggedIn(false);
+    setUserProfile(null);
+    window.dispatchEvent(new Event('userLogout'));
+  };
 
   const handleSectionScroll = (sectionId: string) => {
     const section = document.getElementById(sectionId);
@@ -39,11 +87,7 @@ const Navbar: React.FC = () => {
     }, 300);
   };
 
-  const handleAuthSuccess = (userData: any) => {
-    console.log('Auth success:', userData);
-    // Handle successful auth - save user data, update state, etc.
-    alert(`Chào mừng ${userData.name || userData.fullName}!`);
-  };
+  
 
   const navLinks: NavLink[] = [
     { to: "/", label: "Trang chủ", className: "home-link" },
@@ -87,21 +131,62 @@ const Navbar: React.FC = () => {
         </ul>
 
         <div className="navbar__actions">
-          <button 
-            className="navbar__actions__signin"
-            onClick={handleLoginClick}
-          >
-            <i className="fas fa-user"></i>
-            <span>Đăng nhập</span>
-          </button>
-          <button 
-            className="navbar__actions__register"
-            onClick={handleRegisterClick}
-          >
-            <i className="fas fa-handshake"></i>
-            <span>Làm đại lý</span>
-            <div className="btn-shimmer"></div>
-          </button>
+          {isLoggedIn && userProfile ? (
+            <div className="user-profile">
+              <div className="profile-avatar-container">
+                <img 
+                  src={userProfile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.fullName || userProfile.name || 'User')}&background=ff4d30&color=fff&size=100`}
+                  alt={userProfile.fullName || userProfile.name}
+                  className="profile-avatar"
+                />
+              </div>
+              
+              <div className="profile-dropdown">
+                <div className="dropdown-header">
+                  <h4>{userProfile.fullName || userProfile.name}</h4>
+                  <p>{userProfile.email}</p>
+                </div>
+                
+                <div className="dropdown-menu">
+                  <Link to="/profile" className="dropdown-item">
+                    <i className="fas fa-user"></i>
+                    Hồ sơ cá nhân
+                  </Link>
+                  <Link to="/products" className="dropdown-item">
+                    <i className="fas fa-car"></i>
+                    Mẫu xe
+                  </Link>
+                  <Link to="/compare-slots" className="dropdown-item">
+                    <i className="fas fa-balance-scale"></i>
+                    So sánh xe
+                  </Link>
+                  <div className="dropdown-divider"></div>
+                  <button className="dropdown-item logout" onClick={handleLogout}>
+                    <i className="fas fa-sign-out-alt"></i>
+                    Đăng xuất
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button 
+                className="navbar__actions__signin"
+                onClick={handleLoginClick}
+              >
+                <i className="fas fa-user"></i>
+                <span>Đăng nhập</span>
+              </button>
+              <button 
+                className="navbar__actions__register"
+                onClick={handleRegisterClick}
+              >
+                <i className="fas fa-handshake"></i>
+                <span>Làm đại lý</span>
+                <div className="btn-shimmer"></div>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -109,7 +194,7 @@ const Navbar: React.FC = () => {
         isOpen={authModalOpen}
         onClose={handleCloseAuth}
         initialMode={authMode}
-        onAuthSuccess={handleAuthSuccess}
+        onAuthSuccess={() => checkLoginStatus()}
       />
     </nav>
   );

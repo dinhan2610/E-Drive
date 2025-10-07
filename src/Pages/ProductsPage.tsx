@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Product, ProductFilters } from '../types/product';
-import { getProductsFromApi } from '../services/vehicleApi';
+import { CAR_DATA, type CarType } from '../constants/CarDatas';
 import ProductCard from '../components/Products/ProductCard';
 import SortBar from '../components/Products/SortBar';
 import Pagination from '../components/Products/Pagination';
 import EmptyState from '../components/Products/EmptyState';
+import Footer from '../components/Footer';
 
 import styles from '../styles/ProductsStyles/ProductsPage.module.scss';
 
@@ -38,6 +39,41 @@ const ProductsPage: React.FC = () => {
     currentFilters 
   });
 
+  // Convert CarData to Product format
+  const convertCarToProduct = (car: CarType, index: number): Product => ({
+    id: `car-${index}`,
+    name: car.name,
+    variant: `${car.model} ${car.year}`,
+    slug: car.name.toLowerCase().replace(/\s+/g, '-'),
+    price: car.price * 1000000, // Convert to VND (assuming price is in million)
+    image: car.img,
+    images: [car.img],
+    rangeKm: car.fuel === 'Hybrid' ? 800 : car.fuel === 'Gasoline' ? 600 : 700,
+    battery: car.fuel === 'Hybrid' ? '2.0L + Electric' : car.fuel === 'Diesel' ? 'Diesel Engine' : 'Gasoline Engine',
+    motor: `${car.transmission} - ${car.fuel}`,
+    fastCharge: car.fuel === 'Hybrid' ? '30 minutes' : 'N/A',
+    warranty: '3 years / 100,000 km',
+    driveType: 'FWD' as const,
+    inStock: true,
+    isPopular: index < 2,
+    hasDiscount: car.price < 35,
+    tags: [car.mark, car.fuel, car.transmission],
+    description: `${car.mark} ${car.model} ${car.year} - ${car.transmission} transmission with ${car.fuel} engine. Features ${car.doors} doors and ${car.air === 'Yes' ? 'air conditioning' : 'no air conditioning'}.`,
+    features: [
+      `${car.doors} doors`,
+      car.air === 'Yes' ? 'Air Conditioning' : 'No AC',
+      `${car.transmission} transmission`,
+      `${car.fuel} engine`,
+      'Safety features',
+      'Modern interior'
+    ],
+    createdAt: new Date().toISOString()
+  });
+
+  // Get all cars from CAR_DATA (flatten the nested arrays)
+  const allCars: CarType[] = CAR_DATA.flat();
+  const allProducts: Product[] = allCars.map(convertCarToProduct);
+
   // Update URL with new parameters
   const updateURL = useCallback((updates: Record<string, string | number | undefined>) => {
     const newParams = new URLSearchParams(searchParams);
@@ -55,36 +91,69 @@ const ProductsPage: React.FC = () => {
 
   // Load products when dependencies change
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadProducts = () => {
       setIsLoading(true);
       console.log('🔄 Loading products with:', { currentFilters, currentSort, currentPage, currentPageSize });
-      try {
-        // Convert filters to API params
-        const minPrice = currentFilters.priceMin;
-        const maxPrice = currentFilters.priceMax;
-        const search = currentFilters.q;
-        
-        const response = await getProductsFromApi(
-          currentPage,
-          currentPageSize,
-          search,
-          minPrice,
-          maxPrice,
-          status
+      
+      // Start with all products
+      let filteredProducts = [...allProducts];
+      
+      // Apply search filter
+      if (currentFilters.q) {
+        const searchTerm = currentFilters.q.toLowerCase();
+        filteredProducts = filteredProducts.filter(product =>
+          product.name.toLowerCase().includes(searchTerm) ||
+          product.description.toLowerCase().includes(searchTerm) ||
+          product.tags.some(tag => tag.toLowerCase().includes(searchTerm))
         );
-        
-        console.log('✅ Products loaded:', response);
-        setProducts(response.products);
-        setTotalProducts(response.total);
-        setTotalPages(response.totalPages);
-      } catch (error) {
-        console.error('❌ Failed to load products:', error);
-        setProducts([]);
-        setTotalProducts(0);
-        setTotalPages(0);
-      } finally {
-        setIsLoading(false);
       }
+      
+      // Apply price filters
+      if (currentFilters.priceMin) {
+        filteredProducts = filteredProducts.filter(product => product.price >= currentFilters.priceMin!);
+      }
+      if (currentFilters.priceMax) {
+        filteredProducts = filteredProducts.filter(product => product.price <= currentFilters.priceMax!);
+      }
+      
+      // Apply sorting
+      const [sortField, sortOrder] = currentSort.split('-');
+      filteredProducts.sort((a, b) => {
+        let aValue: any, bValue: any;
+        
+        switch (sortField) {
+          case 'price':
+            aValue = a.price;
+            bValue = b.price;
+            break;
+          case 'name':
+            aValue = a.name;
+            bValue = b.name;
+            break;
+          default:
+            aValue = a.createdAt;
+            bValue = b.createdAt;
+        }
+        
+        if (sortOrder === 'desc') {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        } else {
+          return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+        }
+      });
+      
+      // Calculate pagination
+      const total = filteredProducts.length;
+      const calculatedTotalPages = Math.ceil(total / currentPageSize);
+      const startIndex = (currentPage - 1) * currentPageSize;
+      const endIndex = startIndex + currentPageSize;
+      const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+      
+      console.log('✅ Products loaded:', { total, paginatedProducts: paginatedProducts.length });
+      setProducts(paginatedProducts);
+      setTotalProducts(total);
+      setTotalPages(calculatedTotalPages);
+      setIsLoading(false);
     };
 
     loadProducts();
@@ -128,9 +197,10 @@ const ProductsPage: React.FC = () => {
   };
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.layout}>
-        <main className={styles.content}>
+    <>
+      <div className={styles.wrap}>
+        <div className={styles.layout}>
+          <main className={styles.content}>
           <div className={styles.sortBarContainer}>
             <SortBar
               searchValue={currentSearchValue}
@@ -181,6 +251,8 @@ const ProductsPage: React.FC = () => {
         </main>
       </div>
     </div>
+    <Footer />
+    </>
   );
 };
 

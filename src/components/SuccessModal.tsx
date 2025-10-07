@@ -39,25 +39,25 @@ export const SuccessModal: FC<ModalProps> = ({
     switch (type) {
       case 'register':
         return {
-          icon: '🎉',
-          iconBg: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-          iconShadow: 'rgba(139, 92, 246, 0.3)',
-          mainTitle: title || 'Đăng ký thành công!',
-          subtitle: userName ? `Chào mừng ${userName}!` : 'Chào mừng bạn!',
-          description: message || 'Tài khoản của bạn đã được tạo thành công. Chúng tôi rất vui khi bạn tham gia cùng chúng tôi!',
-          buttonText: 'Bắt đầu khám phá',
-          bgColor: '#8B5CF6'
+          icon: '🚗',
+          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #e63946 100%)',
+          iconShadow: 'rgba(255, 77, 48, 0.4)',
+          mainTitle: title || 'Chào mừng đến với E-Drive!',
+          subtitle: userName ? `Xin chào ${userName}!` : 'Tài khoản đã được tạo thành công!',
+          description: message || 'Bạn đã trở thành đại lý của chúng tôi. Hãy đăng nhập để bắt đầu hành trình kinh doanh xe hơi cùng E-Drive!',
+          buttonText: 'Đăng nhập ngay',
+          bgColor: '#ff4d30'
         };
       case 'login':
         return {
-          icon: '👋',
-          iconBg: 'linear-gradient(135deg, #06B6D4 0%, #0891B2 100%)',
-          iconShadow: 'rgba(6, 182, 212, 0.3)',
-          mainTitle: title || 'Đăng nhập thành công!',
-          subtitle: userName ? `Xin chào ${userName}!` : 'Chào mừng trở lại!',
-          description: message || 'Chúng tôi rất vui được gặp lại bạn. Hãy tiếp tục hành trình khám phá xe của bạn!',
-          buttonText: 'Tiếp tục',
-          bgColor: '#06B6D4'
+          icon: '🎯',
+          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #e63946 100%)',
+          iconShadow: 'rgba(255, 77, 48, 0.4)',
+          mainTitle: title || 'Chào mừng trở lại E-Drive!',
+          subtitle: userName ? `Xin chào ${userName}!` : 'Đăng nhập thành công!',
+          description: message || 'Sẵn sàng khám phá những chiếc xe tuyệt vời và phục vụ khách hàng của bạn!',
+          buttonText: 'Bắt đầu làm việc',
+          bgColor: '#ff4d30'
         };
       default:
         return {
@@ -82,22 +82,62 @@ export const SuccessModal: FC<ModalProps> = ({
       style.id = 'success-modal-animations';
       style.textContent = `
         @keyframes modalFadeIn {
-          from {
+          0% {
             opacity: 0;
-            transform: scale(0.9) translateY(-20px);
+            transform: scale(0.85) translateY(-30px);
+            filter: blur(2px);
           }
-          to {
+          50% {
+            opacity: 0.8;
+            transform: scale(1.02) translateY(-5px);
+            filter: blur(0.5px);
+          }
+          100% {
             opacity: 1;
             transform: scale(1) translateY(0);
+            filter: blur(0);
           }
         }
         
         @keyframes successScale {
-          from {
+          0% {
+            opacity: 0;
+            transform: scale(0.2) rotate(-10deg);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.1) rotate(5deg);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+          }
+        }
+        
+        @keyframes fadeInUp {
+          0% {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes bounceIn {
+          0% {
             opacity: 0;
             transform: scale(0.3);
           }
-          to {
+          50% {
+            opacity: 1;
+            transform: scale(1.05);
+          }
+          70% {
+            transform: scale(0.9);
+          }
+          100% {
             opacity: 1;
             transform: scale(1);
           }
@@ -147,6 +187,15 @@ export const SuccessModal: FC<ModalProps> = ({
           0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
           50% { transform: translateY(-25px) rotate(-90deg); opacity: 0.2; }
         }
+        
+        @keyframes fadeIn {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
       `;
       document.head.appendChild(style);
     }
@@ -159,26 +208,29 @@ export const SuccessModal: FC<ModalProps> = ({
       left: '0',
       width: '100vw',
       height: '100vh',
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: '999999',
       pointerEvents: 'all',
-      backdropFilter: 'blur(8px)'
+      backdropFilter: 'blur(12px)',
+      animation: 'fadeIn 0.2s ease-out'
     }} onClick={onClose}>
       <div style={{
-        backgroundColor: 'white',
-        padding: '3rem 2.5rem',
-        borderRadius: '24px',
-        maxWidth: '480px',
-        width: '90%',
+        backgroundColor: '#fefefe',
+        padding: '3.5rem 3rem',
+        borderRadius: '32px',
+        maxWidth: '520px',
+        width: '92%',
         textAlign: 'center' as const,
-        boxShadow: '0 32px 64px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 50px 100px rgba(255, 77, 48, 0.15), 0 20px 40px rgba(0, 0, 0, 0.1)',
         pointerEvents: 'all',
-        animation: 'modalFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        animation: 'modalFadeIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        border: '2px solid rgba(255, 77, 48, 0.1)',
+        fontFamily: '"Roboto", sans-serif'
       }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
         
         {/* Background decoration */}
@@ -194,8 +246,8 @@ export const SuccessModal: FC<ModalProps> = ({
 
         {/* Success Icon */}
         <div style={{
-          width: '120px',
-          height: '120px',
+          width: '140px',
+          height: '140px',
           background: content.iconBg,
           borderRadius: '50%',
           display: 'flex',
@@ -234,13 +286,16 @@ export const SuccessModal: FC<ModalProps> = ({
           <h2 style={{
             color: '#1e293b',
             marginBottom: '0.5rem',
-            fontSize: '2rem',
+            fontSize: '2.2rem',
             fontWeight: '800',
             margin: '0 0 0.5rem 0',
-            background: `linear-gradient(135deg, ${content.bgColor}, #1e293b)`,
+            background: `linear-gradient(135deg, ${content.bgColor}, #2d3748)`,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            backgroundClip: 'text',
+            animation: 'fadeInUp 0.5s ease-out 0.3s both',
+            fontFamily: '"Roboto", sans-serif',
+            letterSpacing: '-0.02em'
           }}>
             {content.mainTitle}
           </h2>
@@ -249,9 +304,12 @@ export const SuccessModal: FC<ModalProps> = ({
             <h3 style={{
               color: content.bgColor,
               marginBottom: '1rem',
-              fontSize: '1.25rem',
+              fontSize: '1.35rem',
               fontWeight: '600',
-              margin: '0 0 1rem 0'
+              margin: '0 0 1.2rem 0',
+              animation: 'fadeInUp 0.5s ease-out 0.4s both',
+              fontFamily: '"Roboto", sans-serif',
+              letterSpacing: '-0.01em'
             }}>
               {content.subtitle}
             </h3>
@@ -261,8 +319,11 @@ export const SuccessModal: FC<ModalProps> = ({
             color: '#64748b',
             marginBottom: '2.5rem',
             lineHeight: '1.7',
-            fontSize: '16px',
-            margin: '0 0 2.5rem 0'
+            fontSize: '1rem',
+            margin: '0 0 2.5rem 0',
+            animation: 'fadeInUp 0.5s ease-out 0.5s both',
+            fontFamily: '"Roboto", sans-serif',
+            fontWeight: '400'
           }}>
             {content.description}
           </p>
@@ -273,15 +334,18 @@ export const SuccessModal: FC<ModalProps> = ({
           background: `linear-gradient(135deg, ${content.bgColor}, ${content.bgColor}dd)`,
           color: 'white',
           border: 'none',
-          padding: '16px 32px',
-          borderRadius: '12px',
-          fontSize: '16px',
+          padding: '18px 40px',
+          borderRadius: '16px',
+          fontSize: '1.05rem',
           fontWeight: '600',
           cursor: 'pointer',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          fontFamily: '"Roboto", sans-serif',
+          letterSpacing: '0.01em',
           boxShadow: `0 8px 24px ${content.iconShadow}`,
           position: 'relative',
-          zIndex: 1
+          zIndex: 1,
+          animation: 'bounceIn 0.6s ease-out 0.6s both'
         }}
         onMouseEnter={(e) => {
           (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';

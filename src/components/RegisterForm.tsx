@@ -254,6 +254,22 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         // Set user name for success modal
         setRegisteredUserName(formData.fullName);
         
+        // Store user data for persistence
+        const userData = {
+          fullName: formData.fullName,
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          dealerName: formData.dealerName,
+          address: formData.address,
+          name: formData.fullName
+        };
+        localStorage.setItem('e-drive-user', JSON.stringify(userData));
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Dispatch register success event
+        window.dispatchEvent(new Event('registerSuccess'));
+        
         // Reset form
         setFormData({
           fullName: '',
@@ -267,13 +283,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           agreeToTerms: false
         });
         
-        // Close register form first
-        onClose();
+        // Show success modal immediately (don't close register form yet)
+        setShowSuccessModal(true);
         
-        // Then show success modal after a small delay
-        setTimeout(() => {
-          setShowSuccessModal(true);
-        }, 100);
+        // Call onRegisterSuccess callback if provided
+        if (onRegisterSuccess) {
+          onRegisterSuccess(userData);
+        }
       } else {
         setErrors({ general: result.message || 'Đăng ký thất bại' });
       }
@@ -554,14 +570,16 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       {createPortal(modalContent, document.body)}
       <SuccessModal
         isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => {
+          setShowSuccessModal(false);
+          onClose(); // Close register form when modal is dismissed
+        }}
         type="register"
         userName={registeredUserName}
         onContinue={() => {
           setShowSuccessModal(false);
-          if (onRegisterSuccess) {
-            onRegisterSuccess({ fullName: registeredUserName });
-          }
+          // Switch to login form instead of closing
+          onSwitchToLogin();
         }}
       />
     </>
