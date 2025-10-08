@@ -3,6 +3,7 @@ import Contact from "./Pages/Contact";
 import Compare from "./Pages/Compare";
 import ProductsPage from "./Pages/ProductsPage";
 import ProfilePage from "./Pages/ProfilePage";
+import AdminPage from "./Pages/AdminPage";
 import Navbar from "../src/components/Navbar";
 import ChatBox from "../src/components/ChatBox";
 import { Route, Routes } from "react-router-dom";
@@ -19,6 +20,7 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/compare-slots" element={<Compare />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Routes>
       <ChatBox />
     </>

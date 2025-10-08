@@ -143,7 +143,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onClick={handleContactDealer}
             disabled={!item.inStock}
           >
-            {item.inStock ? 'Liên hệ đại lý' : 'Hết hàng'}
+            {item.inStock ? 'Liên hệ hãng' : 'Hết hàng'}
           </button>
         </div>
       </div>
