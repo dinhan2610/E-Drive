@@ -15,13 +15,22 @@ export interface VehicleApiResponse {
   widthMm: number;
   heightMm: number;
   priceRetail: number;
-  status: string;
+  status: 'AVAILABLE' | 'DISCONTINUED';
+  manufactureYear?: number; // Optional field
 }
 
 export interface ApiListResponse {
   statusCode: number;
   message: string;
   data: VehicleApiResponse[];
+}
+
+// API Response cho create vehicle
+export interface ApiCreateResponse {
+  statusCode: number;
+  message: string;
+  data?: VehicleApiResponse | VehicleApiResponse[];
+  vehicleId?: number;
 }
 
 // UI Product - đơn giản cho hiển thị

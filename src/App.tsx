@@ -4,6 +4,7 @@ import Compare from "./Pages/Compare";
 import ProductsPage from "./Pages/ProductsPage";
 import ProfilePage from "./Pages/ProfilePage";
 import AdminPage from "./Pages/AdminPage";
+import CustomersPage from "./Pages/CustomersPage";
 import Navbar from "../src/components/Navbar";
 import ChatBox from "../src/components/ChatBox";
 import { Route, Routes } from "react-router-dom";
@@ -21,6 +22,7 @@ function App() {
         <Route path="/compare-slots" element={<Compare />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/customers" element={<CustomersPage />} />
       </Routes>
       <ChatBox />
     </>

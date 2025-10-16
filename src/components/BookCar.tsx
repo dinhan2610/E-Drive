@@ -1,12 +1,16 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import "../styles/BookStyles/_book.scss";
-import { CAR_MODELS, VARIANTS, DEALERS } from "../constants/carData";
+import { DEALERS } from "../constants/carData";
 import { SuccessModal } from "./SuccessModal";
+import { fetchVehiclesFromApi } from "../services/vehicleApi";
+import { bookTestDrive, TestDriveApiError } from "../services/testDriveApi";
+import type { VehicleApiResponse } from "../types/product";
 
 interface BookingFormData {
   name: string;
   phone: string;
   email: string;
+  citizenId: string;
   model: string;
   variant: string;
   dealer: string;
@@ -20,6 +24,7 @@ interface ValidationErrors {
   name?: string;
   phone?: string;
   email?: string;
+  citizenId?: string;
   model?: string;
   variant?: string;
   dealer?: string;
@@ -36,16 +41,42 @@ interface BookCarProps {
 function BookCar({ isOpen = false, onClose }: BookCarProps) {
   const [isModalOpen, setIsModalOpen] = useState(isOpen);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isInContinueFlow, setIsInContinueFlow] = useState(false); // Track continue flow
+  const [isInContinueFlow, setIsInContinueFlow] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   
-  // Sync internal state with prop, but don't override when in continue flow
+  // Vehicle data from API
+  const [vehicles, setVehicles] = useState<VehicleApiResponse[]>([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
+  
+  // Sync internal state with prop
   useEffect(() => {
     if (!isInContinueFlow) {
       setIsModalOpen(isOpen);
     }
   }, [isOpen, isInContinueFlow]);
   
-  // Separate hour and minute states for sliders
+  // Fetch vehicles when modal opens
+  useEffect(() => {
+    if (isModalOpen && vehicles.length === 0 && !loadingVehicles) {
+      const loadVehicles = async () => {
+        setLoadingVehicles(true);
+        setVehicleError(null);
+        try {
+          const result = await fetchVehiclesFromApi({ status: 'AVAILABLE' });
+          setVehicles(result.vehicles);
+        } catch (error) {
+          console.error('Error loading vehicles:', error);
+          setVehicleError('Không thể tải danh sách xe. Vui lòng thử lại.');
+        } finally {
+          setLoadingVehicles(false);
+        }
+      };
+      loadVehicles();
+    }
+  }, [isModalOpen, vehicles.length, loadingVehicles]);
+  
   const [selectedHour, setSelectedHour] = useState<number>(9);
   const [selectedMinute, setSelectedMinute] = useState<number>(0);
 
@@ -53,6 +84,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     name: "",
     phone: "",
     email: "",
+    citizenId: "",
     model: "",
     variant: "",
     dealer: "",
@@ -83,15 +115,16 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
-    setIsInContinueFlow(false); // Reset continue flow when closing
+    setIsInContinueFlow(false);
     if (onClose) {
       onClose();
     }
-    // Reset form when closing
+    // Reset form
     setFormData({
       name: "",
       phone: "",
       email: "",
+      citizenId: "",
       model: "",
       variant: "",
       dealer: "",
@@ -101,9 +134,9 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
       confirmInfo: false
     });
     setErrors({});
+    setSubmitError(null);
   }, [onClose]);
 
-  // Consolidated validation functions
   const validators = useMemo(() => ({
     name: (value: string): string => {
       if (!value) return "Họ tên là bắt buộc";
@@ -122,13 +155,21 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
       return "";
     },
     email: (value: string): string => {
-      if (!value) return "Email là bắt buộc";
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) return "Email không hợp lệ";
+      if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        return "Email không hợp lệ";
+      }
+      return "";
+    },
+    citizenId: (value: string): string => {
+      if (!value) return "Căn Cước Công Dân là bắt buộc";
+      const cleanId = value.replace(/[\s\-\.]/g, '');
+      if (!/^[0-9]{9}$|^[0-9]{12}$/.test(cleanId)) {
+        return "Căn Cước Công Dân phải có 9 hoặc 12 số";
+      }
       return "";
     },
     model: (value: string): string => !value ? "Vui lòng chọn mẫu xe" : "",
-    variant: (value: string): string => !value ? "Vui lòng chọn phiên bản" : "",
+    variant: (value: string): string => !value ? "Vui lòng chọn màu sắc" : "",
     dealer: (value: string): string => !value ? "Vui lòng chọn đại lý" : "",
     date: (value: string): string => {
       if (!value) return "Ngày hẹn là bắt buộc";
@@ -137,7 +178,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
       today.setHours(0, 0, 0, 0);
       if (selectedDate < today) return "Ngày hẹn không thể là ngày trong quá khứ";
       
-      // Kiểm tra thứ trong tuần (0 = Chủ nhật, 1 = Thứ 2, ..., 6 = Thứ 7)
       const dayOfWeek = selectedDate.getDay();
       if (dayOfWeek === 0) return "Chúng tôi chỉ làm việc từ Thứ 2 đến Thứ 7";
       
@@ -146,7 +186,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     time: (value: string, dateValue?: string): string => {
       if (!value) return "Giờ hẹn là bắt buộc";
       
-      // Kiểm tra ngày có hợp lệ không trước
       if (!dateValue) return "Vui lòng chọn ngày trước";
       
       const selectedDate = new Date(dateValue);
@@ -168,7 +207,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     if (name === "confirmInfo") {
       error = validators.confirmInfo(value as boolean);
     } else if (name === "time") {
-      // Special handling for time validator that needs date parameter
       error = validators.time(value as string, formData.date);
     } else {
       const validator = validators[name as keyof typeof validators];
@@ -181,7 +219,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     }));
   }, [validators, formData.date]);
 
-  // Re-validate time when date changes (to check weekday)
   useEffect(() => {
     if (formData.date && formData.time) {
       validateField('time', formData.time);
@@ -197,7 +234,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
         if (key === "confirmInfo") {
           error = validators.confirmInfo(formData[key] as boolean);
         } else if (key === "time") {
-          // Special handling for time validator that needs date parameter
           error = validators.time(formData[key] as string, formData.date);
         } else if (validators[key as keyof typeof validators]) {
           error = (validators[key as keyof typeof validators] as (value: string) => string)(formData[key] as string);
@@ -215,14 +251,102 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Reset previous errors
+    setSubmitError(null);
+    
+    // Validate all fields
     const newErrors = validateAllFields();
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      // Xử lý submit form thành công
-      setIsSuccessModalOpen(true);
+      setIsSubmitting(true);
+      
+      try {
+        // Get selected vehicle to extract IDs
+        const selectedVehicle = vehicles.find(v => 
+          `${v.modelName} ${v.version}` === formData.model && 
+          v.color === formData.variant
+        );
+
+        // Get dealer ID - tìm index trong DEALERS array
+        const dealerIndex = DEALERS.indexOf(formData.dealer);
+        const dealerId = dealerIndex >= 0 ? dealerIndex + 1 : 1; // Default to 1 if not found
+
+        if (!selectedVehicle) {
+          throw new Error('Không tìm thấy thông tin xe được chọn');
+        }
+
+        // Parse and validate time
+        const [hour, minute] = formData.time.split(':').map(Number);
+        if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+          throw new Error('Thời gian không hợp lệ');
+        }
+
+        // Validate date (should be today or future)
+        const bookingDate = new Date(formData.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (bookingDate < today) {
+          throw new Error('Ngày đặt lịch phải từ hôm nay trở đi');
+        }
+
+        // Prepare API request data
+        const apiRequestData = {
+          fullName: formData.name.trim(),
+          phone: formData.phone.trim().replace(/\D/g, ''), // Remove non-digits
+          email: formData.email.trim().toLowerCase(),
+          idCardNo: formData.citizenId.trim().replace(/\D/g, ''), // Remove non-digits
+          dealerId: dealerId,
+          vehicleId: selectedVehicle.vehicleId,
+          date: formData.date, // Format: "YYYY-MM-DD"
+          hour: hour,
+          minute: minute,
+          note: formData.note.trim() || '',
+          agreePolicy: formData.confirmInfo,
+        };
+
+
+
+        // Make API call
+        await bookTestDrive(apiRequestData);
+
+
+        
+        // Show success modal
+        setIsSuccessModalOpen(true);
+        
+      } catch (error) {
+        console.error('Booking error:', error);
+        
+        if (error instanceof TestDriveApiError) {
+          // Handle specific API errors
+          switch (error.code) {
+            case 'NETWORK_ERROR':
+              setSubmitError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.');
+              break;
+            case 'HTTP_400':
+              setSubmitError('Thông tin đặt lịch không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.');
+              break;
+            case 'HTTP_409':
+              setSubmitError('Lịch hẹn này đã được đặt. Vui lòng chọn thời gian khác.');
+              break;
+            case 'HTTP_500':
+              setSubmitError('Lỗi server. Vui lòng thử lại sau ít phút.');
+              break;
+            default:
+              setSubmitError(error.message || 'Đặt lịch lái thử thất bại. Vui lòng thử lại.');
+          }
+        } else if (error instanceof Error) {
+          setSubmitError(error.message);
+        } else {
+          setSubmitError('Đã xảy ra lỗi không mong muốn khi đặt lịch. Vui lòng thử lại sau.');
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     }
-  }, [formData, validateAllFields]);
+  }, [formData, validateAllFields, vehicles]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -230,30 +354,42 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     
     const newValue = type === 'checkbox' ? checked : value;
     
-    setFormData(prev => ({
-      ...prev,
-      [name]: newValue
-    }));
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        [name]: newValue
+      };
+      
+      if (name === 'model') {
+        newFormData.variant = '';
+      }
+      
+      return newFormData;
+    });
 
-    // Validate ngay lập tức khi user nhập
     validateField(name, newValue);
+    
+    if (name === 'model') {
+      setErrors(prev => ({
+        ...prev,
+        variant: undefined
+      }));
+    }
   }, [validateField]);
 
   const handleSuccessModalClose = useCallback(() => {
     setIsSuccessModalOpen(false);
-    // Đóng main modal và reset form khi đóng success modal
     handleCloseModal();
   }, [handleCloseModal]);
 
   const handleContinueRegistration = useCallback(() => {
-    // Mark that we're in continue flow to prevent prop override
     setIsInContinueFlow(true);
     
-    // Reset form data
     setFormData({
       name: "",
       phone: "",
       email: "",
+      citizenId: "",
       model: "",
       variant: "",
       dealer: "",
@@ -263,13 +399,13 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
       confirmInfo: false
     });
     setErrors({});
+    setSubmitError(null);
     
-    // Close success modal and open main modal
     setIsSuccessModalOpen(false);
     setIsModalOpen(true);
   }, []);
 
-  // Handle ESC key to close modal
+  // Handle ESC key
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isModalOpen) {
@@ -281,7 +417,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     return () => document.removeEventListener('keydown', handleEscKey);
   }, [isModalOpen, handleCloseModal]);
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -294,7 +430,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
     };
   }, [isModalOpen]);
 
-  // If neither modal should be open, don't render anything
   const shouldRender = isModalOpen || isSuccessModalOpen;
   if (!shouldRender) {
     return null;
@@ -319,6 +454,23 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                   <p>Vui lòng điền đầy đủ thông tin để chúng tôi hỗ trợ bạn tốt nhất</p>
                 </div>
 
+                {submitError && (
+                  <div className="alert alert-error" style={{
+                    padding: '12px 16px',
+                    marginBottom: '20px',
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '8px',
+                    color: '#991b1b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <i className="fa-solid fa-exclamation-triangle"></i>
+                    <span>{submitError}</span>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} noValidate>
                   <div className="book-form">
                     <div className="form-section">
@@ -333,6 +485,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             value={formData.name}
                             onChange={handleInputChange}
                             placeholder="Nhập họ và tên của bạn"
+                            disabled={isSubmitting}
                           />
                           {errors.name && (
                             <span className="field-error">
@@ -350,6 +503,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             value={formData.phone}
                             onChange={handleInputChange}
                             placeholder="Ví dụ: 0912345678"
+                            disabled={isSubmitting}
                           />
                           {errors.phone && (
                             <span className="field-error">
@@ -360,21 +514,43 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                         </div>
                       </div>
 
-                      <div className="form-group full-width">
-                        <label>Email</label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          placeholder="example@gmail.com"
-                        />
-                        {errors.email && (
-                          <span className="field-error">
-                            <i className="fa-solid fa-exclamation-circle"></i>
-                            {errors.email}
-                          </span>
-                        )}
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Email</label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            placeholder="example@gmail.com"
+                            disabled={isSubmitting}
+                          />
+                          {errors.email && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.email}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="form-group">
+                          <label className="required">Căn Cước Công Dân</label>
+                          <input
+                            type="text"
+                            name="citizenId"
+                            value={formData.citizenId}
+                            onChange={handleInputChange}
+                            placeholder="Ví dụ: 123456789 hoặc 123456789012"
+                            maxLength={12}
+                            disabled={isSubmitting}
+                          />
+                          {errors.citizenId && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-circle"></i>
+                              {errors.citizenId}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -388,14 +564,27 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             name="model"
                             value={formData.model}
                             onChange={handleInputChange}
+                            disabled={loadingVehicles || isSubmitting}
                           >
-                            <option value="">Chọn mẫu xe</option>
-                            {CAR_MODELS.map((model) => (
-                              <option key={model} value={model}>
-                                {model}
-                              </option>
-                            ))}
+                            <option value="">
+                              {loadingVehicles ? 'Đang tải danh sách xe...' : 'Chọn mẫu xe'}
+                            </option>
+                            {vehicleError ? (
+                              <option value="" disabled>Lỗi tải dữ liệu</option>
+                            ) : (
+                              vehicles.map((vehicle) => (
+                                <option key={vehicle.vehicleId} value={`${vehicle.modelName} ${vehicle.version}`}>
+                                  {vehicle.modelName} {vehicle.version}
+                                </option>
+                              ))
+                            )}
                           </select>
+                          {vehicleError && (
+                            <span className="field-error">
+                              <i className="fa-solid fa-exclamation-triangle"></i>
+                              {vehicleError}
+                            </span>
+                          )}
                           {errors.model && (
                             <span className="field-error">
                               <i className="fa-solid fa-exclamation-circle"></i>
@@ -405,18 +594,22 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                         </div>
 
                         <div className="form-group">
-                          <label className="required">Phiên bản</label>
+                          <label className="required">Màu sắc</label>
                           <select
                             name="variant"
                             value={formData.variant}
                             onChange={handleInputChange}
+                            disabled={loadingVehicles || !formData.model || isSubmitting}
                           >
-                            <option value="">Chọn phiên bản</option>
-                            {VARIANTS.map((variant) => (
-                              <option key={variant} value={variant}>
-                                {variant}
-                              </option>
-                            ))}
+                            <option value="">Chọn màu sắc</option>
+                            {formData.model && vehicles
+                              .filter(v => `${v.modelName} ${v.version}` === formData.model)
+                              .map((vehicle) => (
+                                <option key={`${vehicle.vehicleId}-${vehicle.color}`} value={vehicle.color}>
+                                  {vehicle.color}
+                                </option>
+                              ))
+                            }
                           </select>
                           {errors.variant && (
                             <span className="field-error">
@@ -433,6 +626,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                           name="dealer"
                           value={formData.dealer}
                           onChange={handleInputChange}
+                          disabled={isSubmitting}
                         >
                           <option value="">Chọn đại lý</option>
                           {DEALERS.map((dealer) => (
@@ -462,6 +656,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             value={formData.date}
                             onChange={handleInputChange}
                             min={new Date().toISOString().split('T')[0]}
+                            disabled={isSubmitting}
                           />
                           {errors.date && (
                             <span className="field-error">
@@ -481,6 +676,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                                   value={selectedHour}
                                   onChange={handleHourChange}
                                   className="time-select hour-select"
+                                  disabled={isSubmitting}
                                 >
                                   {Array.from({ length: 10 }, (_, i) => i + 8).map(hour => (
                                     <option key={hour} value={hour}>
@@ -500,6 +696,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                                   value={selectedMinute}
                                   onChange={handleMinuteChange}
                                   className="time-select minute-select"
+                                  disabled={isSubmitting}
                                 >
                                   <option value={0}>00</option>
                                   <option value={15}>15</option>
@@ -516,6 +713,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                                   type="button" 
                                   className={`quick-time-btn ${selectedHour === 8 && selectedMinute === 0 ? 'active' : ''}`}
                                   onClick={() => {setSelectedHour(8); setSelectedMinute(0);}}
+                                  disabled={isSubmitting}
                                 >
                                   08:00
                                 </button>
@@ -523,6 +721,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                                   type="button" 
                                   className={`quick-time-btn ${selectedHour === 9 && selectedMinute === 30 ? 'active' : ''}`}
                                   onClick={() => {setSelectedHour(9); setSelectedMinute(30);}}
+                                  disabled={isSubmitting}
                                 >
                                   09:30
                                 </button>
@@ -530,6 +729,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                                   type="button"
                                   className={`quick-time-btn ${selectedHour === 13 && selectedMinute === 0 ? 'active' : ''}`}
                                   onClick={() => {setSelectedHour(13); setSelectedMinute(0);}}
+                                  disabled={isSubmitting}
                                 >
                                   13:00
                                 </button>
@@ -537,6 +737,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                                   type="button"
                                   className={`quick-time-btn ${selectedHour === 14 && selectedMinute === 30 ? 'active' : ''}`}
                                   onClick={() => {setSelectedHour(14); setSelectedMinute(30);}}
+                                  disabled={isSubmitting}
                                 >
                                   14:30
                                 </button>
@@ -544,10 +745,10 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                                   type="button"
                                   className={`quick-time-btn ${selectedHour === 16 && selectedMinute === 0 ? 'active' : ''}`}
                                   onClick={() => {setSelectedHour(16); setSelectedMinute(0);}}
+                                  disabled={isSubmitting}
                                 >
                                   16:00
                                 </button>
-                                
                               </div>
                             </div>
                           </div>
@@ -570,6 +771,7 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                           onChange={handleInputChange}
                           placeholder="Nhập ghi chú nếu cần"
                           rows={3}
+                          disabled={isSubmitting}
                         />
                       </div>
                     </div>
@@ -583,13 +785,13 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                             name="confirmInfo"
                             checked={formData.confirmInfo}
                             onChange={handleInputChange}
+                            disabled={isSubmitting}
                           />
                           <label htmlFor="confirmInfo">
                             Tôi đã đọc và đồng ý với các quy định và chính sách của E-Drive Việt Nam. <span style={{ color: '#ef4444', fontWeight: '600' }}>*</span>
                           </label>
                         </div>
                         
-                        {/* Validation message on separate line */}
                         <div className="validation-message-container">
                           {errors.confirmInfo && (
                             <span className="field-error">
@@ -600,9 +802,23 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                         </div>
                       </div>
 
+                      {submitError && (
+                        <div className="api-error-message">
+                          <i className="fa-solid fa-exclamation-triangle"></i>
+                          <span>{submitError}</span>
+                        </div>
+                      )}
+
                       <div className="submit-btn-center">
-                        <button type="submit">
-                          Đặt lịch ngay
+                        <button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <>
+                              <i className="fa-solid fa-spinner fa-spin"></i>
+                              Đang xử lý...
+                            </>
+                          ) : (
+                            'Đặt lịch ngay'
+                          )}
                         </button>
                       </div>
                     </div>
@@ -615,7 +831,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
       </div>
     </div>
     
-    {/* Success Modal */}
     {isSuccessModalOpen && (
       <SuccessModal 
         isOpen={isSuccessModalOpen}
@@ -629,7 +844,6 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
   );
 }
 
-// Named exports for different use cases  
 export const BookCarModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
   <BookCar isOpen={isOpen} onClose={onClose} />
 );

@@ -438,6 +438,26 @@
         background: transparent;
         animation: slideIn 0.3s ease;
       }
+
+      .api-error-message {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #dc2626;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 16px;
+        animation: slideIn 0.3s ease;
+
+        i {
+          color: #ef4444;
+          font-size: 14px;
+        }
+      }
     }
 
     .form-footer {
