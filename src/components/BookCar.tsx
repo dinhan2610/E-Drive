@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import "../styles/BookStyles/_book.scss";
-import { CAR_MODELS, VARIANTS, DEALERS } from "../constants/carData";
+import { DEALERS } from "../constants/carData";
 import { SuccessModal } from "./SuccessModal";
 import { fetchVehiclesFromApi } from "../services/vehicleApi";
-import { bookTestDrive, convertFormDataToApiRequest, TestDriveApiError } from "../services/testDriveApi";
+import { bookTestDrive, TestDriveApiError } from "../services/testDriveApi";
 import type { VehicleApiResponse } from "../types/product";
 
 interface BookingFormData {
@@ -262,31 +262,56 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
       setIsSubmitting(true);
       
       try {
-        // Convert form data to API format
-        const apiRequest = convertFormDataToApiRequest(formData);
-        
         // Get selected vehicle to extract IDs
         const selectedVehicle = vehicles.find(v => 
           `${v.modelName} ${v.version}` === formData.model && 
           v.color === formData.variant
         );
 
-        // Get dealer ID (you need to implement this mapping)
-        // For now, using a placeholder
-        const dealerId = DEALERS.indexOf(formData.dealer) + 1;
+        // Get dealer ID - tìm index trong DEALERS array
+        const dealerIndex = DEALERS.indexOf(formData.dealer);
+        const dealerId = dealerIndex >= 0 ? dealerIndex + 1 : 1; // Default to 1 if not found
 
         if (!selectedVehicle) {
           throw new Error('Không tìm thấy thông tin xe được chọn');
         }
 
-        // Make API call
-        const response = await bookTestDrive({
-          ...apiRequest,
-          dealerId,
-          vehicleId: selectedVehicle.vehicleId,
-        } as any);
+        // Parse and validate time
+        const [hour, minute] = formData.time.split(':').map(Number);
+        if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+          throw new Error('Thời gian không hợp lệ');
+        }
 
-        console.log('Booking successful:', response);
+        // Validate date (should be today or future)
+        const bookingDate = new Date(formData.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (bookingDate < today) {
+          throw new Error('Ngày đặt lịch phải từ hôm nay trở đi');
+        }
+
+        // Prepare API request data
+        const apiRequestData = {
+          fullName: formData.name.trim(),
+          phone: formData.phone.trim().replace(/\D/g, ''), // Remove non-digits
+          email: formData.email.trim().toLowerCase(),
+          idCardNo: formData.citizenId.trim().replace(/\D/g, ''), // Remove non-digits
+          dealerId: dealerId,
+          vehicleId: selectedVehicle.vehicleId,
+          date: formData.date, // Format: "YYYY-MM-DD"
+          hour: hour,
+          minute: minute,
+          note: formData.note.trim() || '',
+          agreePolicy: formData.confirmInfo,
+        };
+
+
+
+        // Make API call
+        await bookTestDrive(apiRequestData);
+
+
         
         // Show success modal
         setIsSuccessModalOpen(true);
@@ -295,9 +320,27 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
         console.error('Booking error:', error);
         
         if (error instanceof TestDriveApiError) {
+          // Handle specific API errors
+          switch (error.code) {
+            case 'NETWORK_ERROR':
+              setSubmitError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.');
+              break;
+            case 'HTTP_400':
+              setSubmitError('Thông tin đặt lịch không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.');
+              break;
+            case 'HTTP_409':
+              setSubmitError('Lịch hẹn này đã được đặt. Vui lòng chọn thời gian khác.');
+              break;
+            case 'HTTP_500':
+              setSubmitError('Lỗi server. Vui lòng thử lại sau ít phút.');
+              break;
+            default:
+              setSubmitError(error.message || 'Đặt lịch lái thử thất bại. Vui lòng thử lại.');
+          }
+        } else if (error instanceof Error) {
           setSubmitError(error.message);
         } else {
-          setSubmitError('Đã xảy ra lỗi khi đặt lịch. Vui lòng thử lại sau.');
+          setSubmitError('Đã xảy ra lỗi không mong muốn khi đặt lịch. Vui lòng thử lại sau.');
         }
       } finally {
         setIsSubmitting(false);
@@ -758,6 +801,13 @@ function BookCar({ isOpen = false, onClose }: BookCarProps) {
                           )}
                         </div>
                       </div>
+
+                      {submitError && (
+                        <div className="api-error-message">
+                          <i className="fa-solid fa-exclamation-triangle"></i>
+                          <span>{submitError}</span>
+                        </div>
+                      )}
 
                       <div className="submit-btn-center">
                         <button type="submit" disabled={isSubmitting}>

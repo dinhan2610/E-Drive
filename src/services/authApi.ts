@@ -24,10 +24,6 @@ interface AuthResponse {
   };
 }
 
-interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
 interface RefreshTokenResponse {
   success: boolean;
   message?: string;

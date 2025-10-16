@@ -39,35 +39,35 @@ export const SuccessModal: FC<ModalProps> = ({
     switch (type) {
       case 'register':
         return {
-          icon: '🚗',
-          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #e63946 100%)',
+          icon: 'fas fa-car',
+          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%)',
           iconShadow: 'rgba(255, 77, 48, 0.4)',
           mainTitle: title || 'Chào mừng đến với E-Drive!',
           subtitle: userName ? `Xin chào ${userName}!` : 'Tài khoản đã được tạo thành công!',
-          description: message || 'Bạn đã trở thành đại lý của chúng tôi. Hãy đăng nhập để bắt đầu hành trình kinh doanh xe hơi cùng E-Drive!',
-          buttonText: 'Đăng nhập ngay',
+          description: message || 'Bạn đã trở thành thành viên của E-Drive. Hãy khám phá những chiếc xe tuyệt vời và trải nghiệm dịch vụ đẳng cấp!',
+          buttonText: 'Bắt đầu khám phá',
           bgColor: '#ff4d30'
         };
       case 'login':
         return {
-          icon: '🎯',
-          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #e63946 100%)',
+          icon: 'fas fa-circle-check',
+          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%)',
           iconShadow: 'rgba(255, 77, 48, 0.4)',
           mainTitle: title || 'Chào mừng trở lại E-Drive!',
           subtitle: userName ? `Xin chào ${userName}!` : 'Đăng nhập thành công!',
-          description: message || 'Sẵn sàng khám phá những chiếc xe tuyệt vời và phục vụ khách hàng của bạn!',
-          buttonText: 'Bắt đầu làm việc',
+          description: message || 'Sẵn sàng khám phá những chiếc xe tuyệt vời và trải nghiệm dịch vụ chất lượng cao nhất!',
+          buttonText: 'Bắt đầu khám phá',
           bgColor: '#ff4d30'
         };
       default:
         return {
-          icon: '✓',
+          icon: 'fas fa-check-circle',
           iconBg: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
           iconShadow: 'rgba(16, 185, 129, 0.3)',
-          mainTitle: title || 'Thành công!',
+          mainTitle: title || 'Đặt lịch thành công!',
           subtitle: '',
-          description: message || 'Thao tác đã được thực hiện thành công.',
-          buttonText: 'Tiếp tục',
+          description: message || 'Chúng tôi sẽ liên hệ với bạn để xác nhận lịch hẹn trong thời gian sớm nhất. Cảm ơn bạn đã tin tưởng E-Drive!',
+          buttonText: 'Hoàn tất',
           bgColor: '#10B981'
         };
     }
@@ -262,7 +262,7 @@ export const SuccessModal: FC<ModalProps> = ({
             fontSize: '56px',
             animation: 'iconBounce 0.8s ease-out 0.2s both'
           }}>
-            {content.icon}
+            <i className={content.icon}></i>
           </div>
           
           {/* Floating particles */}

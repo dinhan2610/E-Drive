@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { formatNumber, debounce } from '../../utils/productUtils';
+import { debounce } from '../../utils/productUtils';
 import styles from '../../styles/ProductsStyles/SortBar.module.scss';
 
 // Simple sort options - chỉ cơ bản
@@ -34,9 +34,6 @@ const SortBar: React.FC<SortBarProps> = ({
   isLoading = false
 }) => {
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
-  
-  const startResult = totalResults === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endResult = Math.min(currentPage * pageSize, totalResults);
 
   // Debounced search handler
   const debouncedSearch = useCallback(

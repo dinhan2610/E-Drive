@@ -62,9 +62,32 @@ interface CarWithStatus extends CarType {
   lastMaintenance: string;
 }
 
+interface TestDriveBooking {
+  id: number;
+  customerId: number;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  idCardNo: string;
+  dealerId: number;
+  dealerName: string;
+  vehicleId: number;
+  vehicleName: string;
+  scheduleDatetime: string;
+  date: string;
+  time: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no-show';
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+
 const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'users' | 'bookings' | 'analytics' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'users' | 'bookings' | 'testdrives' | 'analytics' | 'settings'>('dashboard');
   const [cars, setCars] = useState<CarWithStatus[]>([]);
+  const [testDrives, setTestDrives] = useState<TestDriveBooking[]>([]);
   const [showAddCarModal, setShowAddCarModal] = useState<boolean>(false);
   const [showViewCarModal, setShowViewCarModal] = useState<boolean>(false);
   const [showEditCarModal, setShowEditCarModal] = useState<boolean>(false);
@@ -238,6 +261,87 @@ const AdminPage: React.FC = () => {
     ];
     setBookings(mockBookings);
 
+    // Mock test drives data
+    const mockTestDrives: TestDriveBooking[] = [
+      {
+        id: 1,
+        customerId: 1,
+        customerName: 'Nguyễn Văn A',
+        customerEmail: 'nguyenvana@email.com',
+        customerPhone: '0901234567',
+        idCardNo: '123456789012',
+        vehicleId: 1,
+        vehicleName: 'VW Golf 6',
+        dealerId: 1,
+        dealerName: 'E-Drive Hà Nội',
+        scheduleDatetime: '2024-10-15T14:30:00',
+        date: '2024-10-15',
+        time: '14:30',
+        note: 'Muốn lái thử để cảm nhận cảm giác lái',
+        status: 'pending',
+        createdAt: '2024-10-13T10:20:00',
+        updatedAt: '2024-10-13T10:20:00'
+      },
+      {
+        id: 2,
+        customerId: 2,
+        customerName: 'Trần Thị B',
+        customerEmail: 'tranthib@email.com',
+        customerPhone: '0902345678',
+        idCardNo: '987654321098',
+        vehicleId: 2,
+        vehicleName: 'Audi A1 S-Line',
+        dealerId: 2,
+        dealerName: 'E-Drive TP.HCM',
+        scheduleDatetime: '2024-10-16T10:00:00',
+        date: '2024-10-16',
+        time: '10:00',
+        note: 'Quan tâm đến tính năng an toàn',
+        status: 'confirmed',
+        createdAt: '2024-10-12T15:45:00',
+        updatedAt: '2024-10-13T09:15:00'
+      },
+      {
+        id: 3,
+        customerId: 3,
+        customerName: 'Lê Minh C',
+        customerEmail: 'leminhc@email.com',
+        customerPhone: '0903456789',
+        idCardNo: '456789123456',
+        vehicleId: 3,
+        vehicleName: 'Toyota Camry',
+        dealerId: 1,
+        dealerName: 'E-Drive Hà Nội',
+        scheduleDatetime: '2024-10-14T16:00:00',
+        date: '2024-10-14',
+        time: '16:00',
+        note: 'Cần tư vấn về động cơ hybrid',
+        status: 'completed',
+        createdAt: '2024-10-10T11:30:00',
+        updatedAt: '2024-10-14T16:30:00'
+      },
+      {
+        id: 4,
+        customerId: 4,
+        customerName: 'Phạm Thị D',
+        customerEmail: 'phamthid@email.com',
+        customerPhone: '0904567890',
+        idCardNo: '789123456789',
+        vehicleId: 4,
+        vehicleName: 'BMW 320',
+        dealerId: 3,
+        dealerName: 'E-Drive Đà Nẵng',
+        scheduleDatetime: '2024-10-18T11:30:00',
+        date: '2024-10-18',
+        time: '11:30',
+        note: 'So sánh với các dòng xe cùng phân khúc',
+        status: 'confirmed',
+        createdAt: '2024-10-13T14:20:00',
+        updatedAt: '2024-10-13T14:20:00'
+      }
+    ];
+    setTestDrives(mockTestDrives);
+
     // Calculate enhanced stats
     setStats({
       totalCars: cars.length || 0,
@@ -295,6 +399,8 @@ const AdminPage: React.FC = () => {
       alert('❌ Không thể tải thông tin xe. Vui lòng thử lại.');
     }
   };
+
+
 
   const handleEditCar = async (carId: number) => {
     try {
@@ -384,6 +490,13 @@ const AdminPage: React.FC = () => {
           >
             <i className="fas fa-calendar-alt"></i>
             Đặt xe ({bookings.length})
+          </button>
+          <button
+            className={`${styles.navTab} ${activeTab === 'testdrives' ? styles.active : ''}`}
+            onClick={() => setActiveTab('testdrives')}
+          >
+            <i className="fas fa-car"></i>
+            Lái thử ({testDrives.length})
           </button>
           <button
             className={`${styles.navTab} ${activeTab === 'analytics' ? styles.active : ''}`}
@@ -718,6 +831,138 @@ const AdminPage: React.FC = () => {
                           </button>
                           <button className={styles.approveButton} title="Duyệt">
                             <i className="fas fa-check"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'testdrives' && (
+          <div className={styles.testDrivesManagement}>
+            <div className={styles.sectionHeader}>
+              <h3>Quản lý đăng ký lái thử</h3>
+              <div className={styles.filterButtons}>
+                <button className={`${styles.filterButton} ${styles.active}`}>
+                  Tất cả ({testDrives.length})
+                </button>
+                <button className={styles.filterButton}>
+                  Chờ xác nhận ({testDrives.filter(td => td.status === 'pending').length})
+                </button>
+                <button className={styles.filterButton}>
+                  Đã xác nhận ({testDrives.filter(td => td.status === 'confirmed').length})
+                </button>
+                <button className={styles.filterButton}>
+                  Hoàn thành ({testDrives.filter(td => td.status === 'completed').length})
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.testDrivesTable}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Khách hàng</th>
+                    <th>Liên hệ</th>
+                    <th>Xe lái thử</th>
+                    <th>Đại lý</th>
+                    <th>Thời gian</th>
+                    <th>Trạng thái</th>
+                    <th>Ghi chú</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {testDrives.map(testDrive => (
+                    <tr key={testDrive.id}>
+                      <td>#{testDrive.id}</td>
+                      <td>
+                        <div>
+                          <div style={{fontWeight: 'bold'}}>{testDrive.customerName}</div>
+                          <div style={{fontSize: '12px', color: '#666'}}>
+                            CCCD: {testDrive.idCardNo}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div>
+                          <div style={{fontSize: '12px'}}>{testDrive.customerPhone}</div>
+                          <div style={{fontSize: '12px', color: '#666'}}>{testDrive.customerEmail}</div>
+                        </div>
+                      </td>
+                      <td>{testDrive.vehicleName}</td>
+                      <td>{testDrive.dealerName}</td>
+                      <td>
+                        <div>
+                          <div>{testDrive.date}</div>
+                          <div style={{fontSize: '12px', color: '#666'}}>{testDrive.time}</div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${styles[testDrive.status]}`}>
+                          {testDrive.status === 'pending' && 'Chờ xác nhận'}
+                          {testDrive.status === 'confirmed' && 'Đã xác nhận'}
+                          {testDrive.status === 'completed' && 'Hoàn thành'}
+                          {testDrive.status === 'cancelled' && 'Đã hủy'}
+                          {testDrive.status === 'no-show' && 'Không đến'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                          {testDrive.note || 'Không có ghi chú'}
+                        </div>
+                      </td>
+                      <td>
+                        <div className={styles.tableActions}>
+                          {testDrive.status === 'pending' && (
+                            <button 
+                              className={styles.approveButton} 
+                              title="Xác nhận"
+                              onClick={() => {
+                                // Handle confirm
+                                const updatedTestDrives = testDrives.map(td =>
+                                  td.id === testDrive.id ? { ...td, status: 'confirmed' as const } : td
+                                );
+                                setTestDrives(updatedTestDrives);
+                              }}
+                            >
+                              <i className="fas fa-check"></i>
+                            </button>
+                          )}
+                          {testDrive.status === 'confirmed' && (
+                            <button 
+                              className={styles.completeButton} 
+                              title="Hoàn thành"
+                              onClick={() => {
+                                // Handle complete
+                                const updatedTestDrives = testDrives.map(td =>
+                                  td.id === testDrive.id ? { ...td, status: 'completed' as const } : td
+                                );
+                                setTestDrives(updatedTestDrives);
+                              }}
+                            >
+                              <i className="fas fa-flag-checkered"></i>
+                            </button>
+                          )}
+                          <button 
+                            className={styles.cancelButton} 
+                            title="Hủy"
+                            onClick={() => {
+                              // Handle cancel
+                              if (window.confirm('Bạn có chắc muốn hủy đăng ký lái thử này?')) {
+                                const updatedTestDrives = testDrives.map(td =>
+                                  td.id === testDrive.id ? { ...td, status: 'cancelled' as const } : td
+                                );
+                                setTestDrives(updatedTestDrives);
+                              }
+                            }}
+                          >
+                            <i className="fas fa-times"></i>
                           </button>
                         </div>
                       </td>
