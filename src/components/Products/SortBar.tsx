@@ -27,8 +27,6 @@ const SortBar: React.FC<SortBarProps> = ({
   onSortChange,
   pageSize,
   onPageSizeChange,
-  totalResults,
-  currentPage,
   searchValue = '',
   onSearchChange,
   isLoading = false

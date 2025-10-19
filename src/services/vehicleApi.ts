@@ -1,4 +1,4 @@
-import type { VehicleApiResponse, ApiListResponse, ApiCreateResponse, Product, ApiParams } from '../types/product';
+import type { VehicleApiResponse, ApiCreateResponse, Product, ApiParams } from '../types/product';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -56,16 +56,28 @@ export async function fetchVehiclesFromApi(params: ApiParams = {}): Promise<{ ve
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 
-    const data: ApiListResponse = await response.json();
+    const data = await response.json();
     console.log('✅ API Response:', data);
 
-    if (data.statusCode !== 200) {
-      throw new Error(`API error: ${data.message}`);
+    // Check if response has wrapper structure or is direct array
+    let vehicles: VehicleApiResponse[];
+    
+    if (Array.isArray(data)) {
+      // Direct array response
+      vehicles = data;
+    } else if (data.statusCode && data.data) {
+      // Wrapped response
+      if (data.statusCode !== 200) {
+        throw new Error(`API error: ${data.message}`);
+      }
+      vehicles = data.data;
+    } else {
+      throw new Error('Unexpected API response format');
     }
 
     return {
-      vehicles: data.data,
-      total: data.data.length, // API might return total separately in future
+      vehicles: vehicles,
+      total: vehicles.length, // Use array length as total
     };
   } catch (error) {
     console.error('❌ API Error:', error);

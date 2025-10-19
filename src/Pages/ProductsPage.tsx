@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { Product, ProductFilters } from '../types/product';
-import { CAR_DATA, type CarType } from '../constants/CarDatas';
+import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
 import ProductCard from '../components/Products/ProductCard';
 import SortBar from '../components/Products/SortBar';
 import Pagination from '../components/Products/Pagination';
@@ -14,6 +14,7 @@ const ProductsPage: React.FC = () => {
   console.log('🌟 ProductsPage: Component initializing');
   
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -39,41 +40,6 @@ const ProductsPage: React.FC = () => {
     currentFilters 
   });
 
-  // Convert CarData to Product format
-  const convertCarToProduct = (car: CarType, index: number): Product => ({
-    id: `car-${index}`,
-    name: car.name,
-    variant: `${car.model} ${car.year}`,
-    slug: car.name.toLowerCase().replace(/\s+/g, '-'),
-    price: car.price * 1000000, // Convert to VND (assuming price is in million)
-    image: car.img,
-    images: [car.img],
-    rangeKm: car.fuel === 'Hybrid' ? 800 : car.fuel === 'Gasoline' ? 600 : 700,
-    battery: car.fuel === 'Hybrid' ? '2.0L + Electric' : car.fuel === 'Diesel' ? 'Diesel Engine' : 'Gasoline Engine',
-    motor: `${car.transmission} - ${car.fuel}`,
-    fastCharge: car.fuel === 'Hybrid' ? '30 minutes' : 'N/A',
-    warranty: '3 years / 100,000 km',
-    driveType: 'FWD' as const,
-    inStock: true,
-    isPopular: index < 2,
-    hasDiscount: car.price < 35,
-    tags: [car.mark, car.fuel, car.transmission],
-    description: `${car.mark} ${car.model} ${car.year} - ${car.transmission} transmission with ${car.fuel} engine. Features ${car.doors} doors and ${car.air === 'Yes' ? 'air conditioning' : 'no air conditioning'}.`,
-    features: [
-      `${car.doors} doors`,
-      car.air === 'Yes' ? 'Air Conditioning' : 'No AC',
-      `${car.transmission} transmission`,
-      `${car.fuel} engine`,
-      'Safety features',
-      'Modern interior'
-    ],
-    createdAt: new Date().toISOString()
-  });
-
-  // Get all cars from CAR_DATA (flatten the nested arrays)
-  const allCars: CarType[] = CAR_DATA.flat();
-  const allProducts: Product[] = allCars.map(convertCarToProduct);
-
   // Update URL with new parameters
   const updateURL = useCallback((updates: Record<string, string | number | undefined>) => {
     const newParams = new URLSearchParams(searchParams);
@@ -89,71 +55,72 @@ const ProductsPage: React.FC = () => {
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
-  // Load products when dependencies change
+  // Load products from API when dependencies change
   useEffect(() => {
-    const loadProducts = () => {
+    const loadProducts = async () => {
       setIsLoading(true);
-      console.log('🔄 Loading products with:', { currentFilters, currentSort, currentPage, currentPageSize });
+      console.log('🔄 Loading products from API with:', { currentFilters, currentSort, currentPage, currentPageSize });
       
-      // Start with all products
-      let filteredProducts = [...allProducts];
-      
-      // Apply search filter
-      if (currentFilters.q) {
-        const searchTerm = currentFilters.q.toLowerCase();
-        filteredProducts = filteredProducts.filter(product =>
-          product.name.toLowerCase().includes(searchTerm) ||
-          product.description.toLowerCase().includes(searchTerm) ||
-          product.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-        );
-      }
-      
-      // Apply price filters
-      if (currentFilters.priceMin) {
-        filteredProducts = filteredProducts.filter(product => product.price >= currentFilters.priceMin!);
-      }
-      if (currentFilters.priceMax) {
-        filteredProducts = filteredProducts.filter(product => product.price <= currentFilters.priceMax!);
-      }
-      
-      // Apply sorting
-      const [sortField, sortOrder] = currentSort.split('-');
-      filteredProducts.sort((a, b) => {
-        let aValue: any, bValue: any;
+      try {
+        // Fetch from API
+        const { vehicles, total } = await fetchVehiclesFromApi({
+          page: currentPage - 1, // API uses 0-based index
+          size: currentPageSize,
+          search: currentFilters.q,
+          minPrice: currentFilters.priceMin,
+          maxPrice: currentFilters.priceMax,
+        });
         
-        switch (sortField) {
-          case 'price':
-            aValue = a.price;
-            bValue = b.price;
-            break;
-          case 'name':
-            aValue = a.name;
-            bValue = b.name;
-            break;
-          default:
-            aValue = a.createdAt;
-            bValue = b.createdAt;
-        }
+        // Convert API response to UI Product format
+        let productList = vehicles.map(convertVehicleToProduct);
         
-        if (sortOrder === 'desc') {
-          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-        } else {
-          return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
-        }
-      });
-      
-      // Calculate pagination
-      const total = filteredProducts.length;
-      const calculatedTotalPages = Math.ceil(total / currentPageSize);
-      const startIndex = (currentPage - 1) * currentPageSize;
-      const endIndex = startIndex + currentPageSize;
-      const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-      
-      console.log('✅ Products loaded:', { total, paginatedProducts: paginatedProducts.length });
-      setProducts(paginatedProducts);
-      setTotalProducts(total);
-      setTotalPages(calculatedTotalPages);
-      setIsLoading(false);
+        // Apply sorting (since API might not support all sort options)
+        const [sortField, sortOrder] = currentSort.split('-');
+        productList.sort((a, b) => {
+          let aValue: any, bValue: any;
+          
+          switch (sortField) {
+            case 'price':
+              aValue = a.price;
+              bValue = b.price;
+              break;
+            case 'name':
+              aValue = a.name;
+              bValue = b.name;
+              break;
+            default:
+              aValue = a.createdAt;
+              bValue = b.createdAt;
+          }
+          
+          if (sortOrder === 'desc') {
+            return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+          } else {
+            return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+          }
+        });
+        
+        const calculatedTotalPages = Math.ceil(total / currentPageSize);
+        
+        console.log('✅ Products loaded from API:', { 
+          total, 
+          productsLoaded: productList.length,
+          currentPage,
+          totalPages: calculatedTotalPages 
+        });
+        
+        setProducts(productList);
+        setTotalProducts(total);
+        setTotalPages(calculatedTotalPages);
+        setIsLoading(false);
+        
+      } catch (error) {
+        console.error('❌ Error loading products:', error);
+        setProducts([]);
+        setTotalProducts(0);
+        setTotalPages(0);
+        setIsLoading(false);
+      }
     };
 
     loadProducts();
@@ -187,13 +154,15 @@ const ProductsPage: React.FC = () => {
   };
 
   const handleViewDetails = (product: Product) => {
-    // TODO: Navigate to product detail page or open modal
+    // Navigate to product detail page
     console.log('View details for:', product);
+    navigate(`/products/${product.id}`);
   };
 
   const handleContactDealer = (product: Product) => {
-    // TODO: Open contact form or navigate to dealer contact
+    // Navigate to contact page with product info
     console.log('Contact dealer for:', product);
+    navigate('/contact', { state: { product } });
   };
 
   return (

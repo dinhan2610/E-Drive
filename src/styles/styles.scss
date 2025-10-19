@@ -1,6 +1,9 @@
-@forward "./global/boilerplate"; // Direct file import
 @forward "./global/colors"; // Direct file import  
 @forward "./global/typhography"; // Direct file import
+@forward "./global/breakpoints"; // Responsive breakpoints
+@forward "./global/boilerplate"; // Direct file import
+@forward "./global/grid"; // Grid system
+@forward "./global/utilities"; // Utility classes
 @forward "./NavbarStyles/navbar"; // Direct file import
 @forward "./HeroStyles/hero"; // Direct file import
 @forward "./BookStyles/book"; // Direct file import

@@ -24,12 +24,12 @@
 
 .profile-container {
   max-width: 1400px;
-  margin: 2rem auto;
+  margin: 0 auto 2rem; // Remove top margin since body has padding
   padding: 0 2rem;
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 3rem;
-  min-height: 80vh;
+  min-height: calc(80vh - 10rem); // Account for navbar
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
@@ -47,7 +47,7 @@
   border: 1px solid rgba(255, 77, 48, 0.1);
   height: fit-content;
   position: sticky;
-  top: 2rem;
+  top: 12rem; // Adjust for navbar height (10rem) + spacing (2rem)
 
   @media (max-width: 1024px) {
     position: static;

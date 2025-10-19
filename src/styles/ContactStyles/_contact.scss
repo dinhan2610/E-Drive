@@ -1,13 +1,22 @@
 // Contact Page Styles - Modern & Professional Design
 @use "../global/colors" as *;
+@use "../global/breakpoints" as *;
 
 .contact-page {
-  min-height: 100vh;
+  min-height: calc(100vh - 10rem); // Account for fixed navbar
   
   .contact-hero {
     background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%);
-    padding: 8rem 0 6rem;
+    padding: 4rem 0 6rem; // Reduced top padding
     position: relative;
+    
+    @include respond-to('md') {
+      padding: 6rem 0 6rem;
+    }
+    
+    @include respond-to('lg') {
+      padding: 8rem 0 6rem;
+    }
     
     &::before {
       content: '';

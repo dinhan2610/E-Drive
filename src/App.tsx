@@ -2,6 +2,7 @@ import Home from "./Pages/Home";
 import Contact from "./Pages/Contact";
 import Compare from "./Pages/Compare";
 import ProductsPage from "./Pages/ProductsPage";
+import ProductDetailPage from "./Pages/ProductDetailPage";
 import ProfilePage from "./Pages/ProfilePage";
 import AdminPage from "./Pages/AdminPage";
 import CustomersPage from "./Pages/CustomersPage";
@@ -18,6 +19,7 @@ function App() {
       <Routes>
         <Route index path="/" element={<Home />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/:id" element={<ProductDetailPage />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/compare-slots" element={<Compare />} />
         <Route path="/profile" element={<ProfilePage />} />

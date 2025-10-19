@@ -1,5 +1,6 @@
 @use "./colors" as *;
 @use "./typhography" as *;
+@use "./breakpoints" as *;
 
 * {
   box-sizing: border-box;
@@ -10,18 +11,190 @@
 html {
   font-size: 62.5%;
   scroll-behavior: smooth;
+  
+  // Adjust base font size for better mobile readability
+  @include respond-to-max('sm') {
+    font-size: 56.25%; // 9px base
+  }
+  
+  @include respond-to('xxl') {
+    font-size: 68.75%; // 11px base for large screens
+  }
 }
 
 body {
   background-color: $bg-white;
   font-family: $titles-font;
   position: relative;
+  overflow-x: hidden; // Prevent horizontal scroll
+  
+  // Add padding for fixed navbar
+  padding-top: 8rem; // Adjust based on navbar height
+  
+  @include respond-to('md') {
+    padding-top: 9rem;
+  }
+  
+  @include respond-to('lg') {
+    padding-top: 10rem;
+  }
 }
 
+// Responsive Container System
 .container {
-  max-width: 133rem !important;
-  margin: 0 auto !important;
-  padding: 0 2.5rem !important;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  
+  // Extra small devices (portrait phones, less than 576px)
+  @include respond-to('xs') {
+    max-width: 100%;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  // Small devices (landscape phones, 576px and up)
+  @include respond-to('sm') {
+    max-width: 540px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  // Medium devices (tablets, 768px and up)
+  @include respond-to('md') {
+    max-width: 720px;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  
+  // Large devices (desktops, 992px and up)
+  @include respond-to('lg') {
+    max-width: 960px;
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+  
+  // Extra large devices (large desktops, 1200px and up)
+  @include respond-to('xl') {
+    max-width: 1140px;
+  }
+  
+  // Extra extra large devices (1400px and up)
+  @include respond-to('xxl') {
+    max-width: 1320px;
+  }
+  
+  // Ultra wide screens (1600px and up)
+  @include respond-to('xxxl') {
+    max-width: 1520px;
+  }
+}
+
+// Fluid container - always 100% width with padding
+.container-fluid {
+  width: 100%;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  margin-left: auto;
+  margin-right: auto;
+  
+  @include respond-to('sm') {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  @include respond-to('md') {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  
+  @include respond-to('lg') {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+// Container with no horizontal padding (for full-bleed sections)
+.container-no-padding {
+  @extend .container;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+// Utility classes for responsive spacing
+.px-responsive {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  
+  @include respond-to('sm') {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  @include respond-to('md') {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  
+  @include respond-to('lg') {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+// Main content wrapper (for fixed navbar)
+.main-content {
+  min-height: calc(100vh - 10rem);
+  position: relative;
+}
+
+// Page wrapper (alternative approach)
+.page-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+// Section with proper spacing
+.section {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  
+  @include respond-to('md') {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+  
+  @include respond-to('lg') {
+    padding-top: 8rem;
+    padding-bottom: 8rem;
+  }
+}
+
+.section-sm {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+  
+  @include respond-to('md') {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+}
+
+.section-lg {
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+  
+  @include respond-to('md') {
+    padding-top: 8rem;
+    padding-bottom: 8rem;
+  }
+  
+  @include respond-to('lg') {
+    padding-top: 10rem;
+    padding-bottom: 10rem;
+  }
 }
 
 // scroll bar ------
