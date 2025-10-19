@@ -1,0 +1,161 @@
+@use "./breakpoints" as *;
+
+// Responsive Grid System
+
+// Grid container
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  
+  @include respond-to('md') {
+    margin-left: -2rem;
+    margin-right: -2rem;
+  }
+}
+
+// Grid columns
+.col {
+  flex: 1 0 0%;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  
+  @include respond-to('md') {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+// Auto-width columns
+.col-auto {
+  flex: 0 0 auto;
+  width: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  
+  @include respond-to('md') {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+// Generate column classes (1-12 columns)
+@for $i from 1 through 12 {
+  .col-#{$i} {
+    flex: 0 0 auto;
+    width: percentage($i / 12);
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    
+    @include respond-to('md') {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+}
+
+// Responsive column classes
+@each $breakpoint in ('sm', 'md', 'lg', 'xl', 'xxl') {
+  @include respond-to($breakpoint) {
+    .col-#{$breakpoint} {
+      flex: 1 0 0%;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+      
+      @include respond-to('md') {
+        padding-left: 2rem;
+        padding-right: 2rem;
+      }
+    }
+    
+    .col-#{$breakpoint}-auto {
+      flex: 0 0 auto;
+      width: auto;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+      
+      @include respond-to('md') {
+        padding-left: 2rem;
+        padding-right: 2rem;
+      }
+    }
+    
+    @for $i from 1 through 12 {
+      .col-#{$breakpoint}-#{$i} {
+        flex: 0 0 auto;
+        width: percentage($i / 12);
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+        
+        @include respond-to('md') {
+          padding-left: 2rem;
+          padding-right: 2rem;
+        }
+      }
+    }
+  }
+}
+
+// No gutters
+.row.no-gutters {
+  margin-left: 0;
+  margin-right: 0;
+  
+  > [class*="col"] {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+// Alignment classes for rows
+.row {
+  &.align-items-start { align-items: flex-start; }
+  &.align-items-center { align-items: center; }
+  &.align-items-end { align-items: flex-end; }
+  &.align-items-stretch { align-items: stretch; }
+  &.align-items-baseline { align-items: baseline; }
+  
+  &.justify-content-start { justify-content: flex-start; }
+  &.justify-content-center { justify-content: center; }
+  &.justify-content-end { justify-content: flex-end; }
+  &.justify-content-between { justify-content: space-between; }
+  &.justify-content-around { justify-content: space-around; }
+  &.justify-content-evenly { justify-content: space-evenly; }
+}
+
+// Order utilities
+@for $i from 0 through 12 {
+  .order-#{$i} {
+    order: $i;
+  }
+}
+
+// Responsive order utilities
+@each $breakpoint in ('sm', 'md', 'lg', 'xl', 'xxl') {
+  @include respond-to($breakpoint) {
+    @for $i from 0 through 12 {
+      .order-#{$breakpoint}-#{$i} {
+        order: $i;
+      }
+    }
+  }
+}
+
+// Offset utilities
+@for $i from 0 through 11 {
+  .offset-#{$i} {
+    margin-left: percentage($i / 12);
+  }
+}
+
+// Responsive offset utilities
+@each $breakpoint in ('sm', 'md', 'lg', 'xl', 'xxl') {
+  @include respond-to($breakpoint) {
+    @for $i from 0 through 11 {
+      .offset-#{$breakpoint}-#{$i} {
+        margin-left: percentage($i / 12);
+      }
+    }
+  }
+}

@@ -1,9 +1,10 @@
 .customersPage {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: calc(100vh - 10rem); // Account for fixed navbar
   background: #f8fafc;
   padding: 0 0 24px 0;
+  margin-top: 0; // Ensure no extra margin
 }
 
 .header {

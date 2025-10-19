@@ -1,12 +1,23 @@
 @use "../global/colors" as *;
 @use "../global/boilerplate" as *;
 @use "../global/typhography" as *;
+@use "../global/breakpoints" as *;
 
 .hero-section {
   width: 100%;
-  height: 97vh;
   background-color: $bg-gray;
   position: relative;
+  
+  // Adjust height to account for fixed navbar
+  min-height: calc(100vh - 8rem);
+  
+  @include respond-to('md') {
+    min-height: calc(100vh - 9rem);
+  }
+  
+  @include respond-to('lg') {
+    min-height: calc(100vh - 10rem);
+  }
 }
 
 .bg-shape {
@@ -14,15 +25,22 @@
   top: 0;
   right: 0;
   z-index: 1;
-
 }
 
 .hero-content {
   width: 100%;
-  height: 100vh;
+  min-height: calc(100vh - 8rem);
   display: flex;
   align-items: center;
   position: relative;
+  
+  @include respond-to('md') {
+    min-height: calc(100vh - 9rem);
+  }
+  
+  @include respond-to('lg') {
+    min-height: calc(100vh - 10rem);
+  }
 
 
   &__text {

@@ -1,6 +1,7 @@
 @use "../global/colors" as *;
 @use "../global/boilerplate" as *;
 @use "../global/typhography" as *;
+@use "../global/breakpoints" as *;
 
 .nav-wrapper {
   position: fixed;
@@ -11,6 +12,18 @@
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(250, 66, 38, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  
+  // Ensure consistent height
+  min-height: 7rem;
+  
+  @include respond-to('md') {
+    min-height: 8rem;
+  }
+  
+  @include respond-to('lg') {
+    min-height: 9rem;
+  }
 }
 
 .navbar {
@@ -20,9 +33,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2rem 3rem;
   margin: 0 auto;
   position: relative;
+  
+  // Responsive padding
+  padding: 1.5rem 2rem;
+  
+  @include respond-to('md') {
+    padding: 2rem 2.5rem;
+  }
+  
+  @include respond-to('lg') {
+    padding: 2rem 3rem;
+  }
 
   &__brand {
     display: flex;
