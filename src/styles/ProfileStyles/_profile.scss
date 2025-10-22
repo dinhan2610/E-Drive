@@ -24,17 +24,17 @@
 
 .profile-container {
   max-width: 1400px;
-  margin: 0 auto 2rem; // Remove top margin since body has padding
-  padding: 0 2rem;
+  margin: 0 auto 2rem;
+  padding: 3rem 2rem 0; // Add top padding to replace HeroPages
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 3rem;
-  min-height: calc(80vh - 10rem); // Account for navbar
+  min-height: calc(80vh - 10rem);
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
     gap: 2rem;
-    padding: 0 1rem;
+    padding: 10rem 1rem 0; // Smaller padding on mobile
   }
 }
 

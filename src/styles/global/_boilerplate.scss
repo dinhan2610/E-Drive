@@ -38,6 +38,11 @@ body {
   @include respond-to('lg') {
     padding-top: 10rem;
   }
+  
+  // Admin page không có navbar - bỏ padding
+  &.admin-page {
+    padding-top: 0 !important;
+  }
 }
 
 // Responsive Container System

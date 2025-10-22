@@ -57,14 +57,14 @@ const ProductDetailPage: React.FC = () => {
     target.src = 'src/images/cars-big/audia1.jpg'; // Fallback image
   };
 
-  const handleContactDealer = () => {
-    // Navigate to contact page with product info
-    navigate('/contact', { state: { product } });
+  const handleOrder = () => {
+    // Navigate to dealer order page with product info
+    navigate('/dealer-order', { state: { product } });
   };
 
   const handleTestDrive = () => {
-    // Navigate to contact/booking page
-    navigate('/contact', { state: { product, requestType: 'test-drive' } });
+    // Navigate to test drive page with product info pre-filled
+    navigate('/test-drive', { state: { product } });
   };
 
   if (isLoading) {
@@ -231,11 +231,11 @@ const ProductDetailPage: React.FC = () => {
               <div className={styles.actions}>
                 <button 
                   className={styles.primaryButton}
-                  onClick={handleContactDealer}
+                  onClick={handleOrder}
                   disabled={!product.inStock}
                 >
-                  <i className="fas fa-phone"></i>
-                  {product.inStock ? 'Liên hệ hãng' : 'Hết hàng'}
+                  <i className="fas fa-shopping-cart"></i>
+                  {product.inStock ? 'Đặt hàng ngay' : 'Hết hàng'}
                 </button>
                 <button 
                   className={styles.secondaryButton}

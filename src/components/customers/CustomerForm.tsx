@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Customer, CustomerFormData, CustomerStatus } from '../../types/customer';
+import type { Customer, CustomerFormData } from '../../types/customer';
 import { validateCustomerData } from '../../services/customersApi';
 import styles from '../../styles/CustomersStyles/CustomerForm.module.scss';
 
@@ -11,8 +11,6 @@ interface CustomerFormProps {
   isLoading?: boolean;
 }
 
-
-
 const CustomerForm: React.FC<CustomerFormProps> = ({
   isOpen,
   onClose,
@@ -20,14 +18,21 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
   customer,
   isLoading = false
 }) => {
+  // Add gender options
+  const genderOptions = [
+    { value: 'Nam', label: 'Nam' },
+    { value: 'Nữ', label: 'Nữ' },
+    { value: 'Khác', label: 'Khác' }
+  ];
+
   const [formData, setFormData] = useState<CustomerFormData>({
     fullName: '',
+    dob: '',
+    gender: '',
     email: '',
-    phoneNumber: '',
+    phone: '',
     address: '',
-    interestedModel: '',
-    notes: '',
-    status: 'POTENTIAL'
+    idCardNo: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -38,23 +43,23 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     if (customer) {
       setFormData({
         fullName: customer.fullName,
-        email: customer.email || '',
-        phoneNumber: customer.phone,
-        address: '',
-        interestedModel: customer.interestedModel || '',
-        notes: customer.notes || '',
-        status: customer.status
+        dob: customer.dob,
+        gender: customer.gender,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+        idCardNo: customer.idCardNo
       });
     } else {
       // Reset form for new customer
       setFormData({
         fullName: '',
+        dob: '',
+        gender: '',
         email: '',
-        phoneNumber: '',
+        phone: '',
         address: '',
-        interestedModel: '',
-        notes: '',
-        status: 'POTENTIAL'
+        idCardNo: ''
       });
     }
     setErrors({});
@@ -62,13 +67,13 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
   }, [customer, isOpen]);
 
   const handleInputChange = (field: keyof CustomerFormData, value: string) => {
-    setFormData((prev: CustomerFormData) => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
-    if (errors[field as string]) {
+    if (errors[field]) {
       setErrors(prev => {
         const newErrors = { ...prev };
-        delete newErrors[field as string];
+        delete newErrors[field];
         return newErrors;
       });
     }
@@ -76,18 +81,18 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
 
   const handleBlur = (field: keyof CustomerFormData) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    validateField(field, formData[field] || '');
+    validateField(field, formData[field]);
   };
 
   const validateField = (field: keyof CustomerFormData, value: string) => {
     const validation = validateCustomerData({ ...formData, [field]: value });
     
-    if (!validation.isValid && validation.errors[field as string]) {
-      setErrors(prev => ({ ...prev, [field as string]: validation.errors[field as string] }));
+    if (!validation.isValid && validation.errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: validation.errors[field] }));
     } else {
       setErrors(prev => {
         const newErrors = { ...prev };
-        delete newErrors[field as string];
+        delete newErrors[field];
         return newErrors;
       });
     }
@@ -157,7 +162,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
               <label htmlFor="fullName" className={styles.label}>
                 Họ và tên đầy đủ <span className={styles.required}>*</span>
               </label>
-                <input
+              <input
                 id="fullName"
                 type="text"
                 value={formData.fullName}
@@ -175,21 +180,72 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
               )}
             </div>
 
-            {/* Two column row - Email & Phone */}
+            {/* Two column row - DOB & Gender */}
             <div className={styles.twoColumnRow}>
-              {/* Email */}
+              {/* Date of Birth */}
+              <div className={styles.formGroup}>
+                <label htmlFor="dob" className={styles.label}>
+                  Ngày sinh <span className={styles.required}>*</span>
+                </label>
+                <input
+                  id="dob"
+                  type="date"
+                  value={formData.dob}
+                  onChange={(e) => handleInputChange('dob', e.target.value)}
+                  onBlur={() => handleBlur('dob')}
+                  className={`${styles.input} ${errors.dob ? styles.error : ''}`}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+                {errors.dob && touched.dob && (
+                  <span className={styles.errorText}>
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.dob}
+                  </span>
+                )}
+              </div>
+
+              {/* Gender */}
+              <div className={styles.formGroup}>
+                <label htmlFor="gender" className={styles.label}>
+                  Giới tính <span className={styles.required}>*</span>
+                </label>
+                <select
+                  id="gender"
+                  value={formData.gender}
+                  onChange={(e) => handleInputChange('gender', e.target.value)}
+                  onBlur={() => handleBlur('gender')}
+                  className={`${styles.input} ${errors.gender ? styles.error : ''}`}
+                >
+                  <option value="">Chọn giới tính</option>
+                  {genderOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.gender && touched.gender && (
+                  <span className={styles.errorText}>
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.gender}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Email & Phone */}
+            <div className={styles.twoColumnRow}>
               <div className={styles.formGroup}>
                 <label htmlFor="email" className={styles.label}>
-                  Địa chỉ Email <span className={styles.required}>*</span>
+                  Email
                 </label>
                 <input
                   id="email"
-                  type="text"
+                  type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   onBlur={() => handleBlur('email')}
                   className={`${styles.input} ${errors.email ? styles.error : ''}`}
-                  placeholder="example@email.com"
+                  placeholder="Nhập địa chỉ email"
                 />
                 {errors.email && touched.email && (
                   <span className={styles.errorText}>
@@ -199,118 +255,89 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                 )}
               </div>
 
-              {/* Phone Number */}
               <div className={styles.formGroup}>
-                <label htmlFor="phoneNumber" className={styles.label}>
+                <label htmlFor="phone" className={styles.label}>
                   Số điện thoại <span className={styles.required}>*</span>
                 </label>
                 <input
-                  id="phoneNumber"
+                  id="phone"
                   type="tel"
-                  value={formData.phoneNumber}
-                  onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                  onBlur={() => handleBlur('phoneNumber')}
-                  className={`${styles.input} ${errors.phoneNumber ? styles.error : ''}`}
-                  placeholder="0987 654 321"
-                  pattern="[0-9]{10,11}"
-                  autoComplete="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onBlur={() => handleBlur('phone')}
+                  className={`${styles.input} ${errors.phone ? styles.error : ''}`}
+                  placeholder="Nhập số điện thoại"
                 />
-                {errors.phoneNumber && touched.phoneNumber && (
+                {errors.phone && touched.phone && (
                   <span className={styles.errorText}>
                     <i className="fa-solid fa-exclamation-circle"></i>
-                    {errors.phoneNumber}
+                    {errors.phone}
                   </span>
                 )}
-              </div>
-            </div>
-
-            {/* Two column row - Status & Interested Model */}
-            <div className={styles.twoColumnRow}>
-              {/* Status */}
-              <div className={styles.formGroup}>
-                <label htmlFor="status" className={styles.label}>
-                  Trạng thái khách hàng
-                </label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value as CustomerStatus)}
-                  className={styles.select}
-                >
-                  <option value="POTENTIAL">Tiềm năng</option>
-                  <option value="TEST_DRIVE">Lái thử</option>
-                  <option value="NEED_CONSULTING">Cần tư vấn</option>
-                  <option value="PURCHASED">Đã mua</option>
-                </select>
-              </div>
-
-              {/* Interested Model */}
-              <div className={styles.formGroup}>
-                <label htmlFor="interestedModel" className={styles.label}>
-                  Mẫu xe quan tâm
-                </label>
-                <input
-                  id="interestedModel"
-                  type="text"
-                  value={formData.interestedModel}
-                  onChange={(e) => handleInputChange('interestedModel', e.target.value)}
-                  className={styles.input}
-                  placeholder="VinFast VF 8, Tesla Model Y, BMW iX..."
-                />
               </div>
             </div>
 
             {/* Address */}
             <div className={styles.formGroup}>
               <label htmlFor="address" className={styles.label}>
-                Địa chỉ liên hệ
+                Địa chỉ <span className={styles.required}>*</span>
               </label>
               <input
                 id="address"
                 type="text"
                 value={formData.address}
                 onChange={(e) => handleInputChange('address', e.target.value)}
-                className={styles.input}
-                placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                onBlur={() => handleBlur('address')}
+                className={`${styles.input} ${errors.address ? styles.error : ''}`}
+                placeholder="Nhập địa chỉ đầy đủ"
               />
+              {errors.address && touched.address && (
+                <span className={styles.errorText}>
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.address}
+                </span>
+              )}
             </div>
 
-            {/* Notes */}
+            {/* ID Card */}
             <div className={styles.formGroup}>
-              <label htmlFor="notes" className={styles.label}>
-                Ghi chú và thông tin bổ sung
+              <label htmlFor="idCardNo" className={styles.label}>
+                CCCD/CMND <span className={styles.required}>*</span>
               </label>
-              <textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                className={styles.textarea}
-                placeholder="Thông tin bổ sung về khách hàng, sở thích, yêu cầu đặc biệt..."
-                rows={4}
+              <input
+                id="idCardNo"
+                type="text"
+                value={formData.idCardNo}
+                onChange={(e) => handleInputChange('idCardNo', e.target.value)}
+                onBlur={() => handleBlur('idCardNo')}
+                className={`${styles.input} ${errors.idCardNo ? styles.error : ''}`}
+                placeholder="Nhập số CCCD hoặc CMND"
               />
+              {errors.idCardNo && touched.idCardNo && (
+                <span className={styles.errorText}>
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.idCardNo}
+                </span>
+              )}
             </div>
           </div>
 
-          <div className={styles.footer}>
+          <div className={styles.formActions}>
             <button
               type="button"
               onClick={handleCancel}
-              className={styles.cancelButton}
+              className={`${styles.button} ${styles.cancelButton}`}
               disabled={isLoading}
             >
-              <i className="fas fa-times" />
               Hủy
             </button>
             <button
               type="submit"
-              className={styles.submitButton}
+              className={`${styles.button} ${styles.submitButton}`}
               disabled={isLoading}
             >
               {isLoading ? (
-                <>
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                  Đang xử lý...
-                </>
+                <span><i className="fas fa-spinner fa-spin"></i> Đang xử lý...</span>
               ) : (
                 customer ? 'Cập nhật khách hàng' : 'Thêm khách hàng mới'
               )}

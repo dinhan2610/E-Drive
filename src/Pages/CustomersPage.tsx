@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Customer, CustomerFormData, CustomerStatus, ListCustomersParams } from '../types/customer';
-import { CUSTOMER_STATUS_CONFIG } from '../types/customer';
+import type { Customer, CustomerFormData, ListCustomersParams } from '../types/customer';
 import { 
   listCustomers, 
   createCustomer, 
@@ -26,7 +25,6 @@ const CustomersPage: React.FC = () => {
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<CustomerStatus[]>([]);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name_asc' | 'name_desc'>('newest');
   
   // Modal and UI state
@@ -47,11 +45,11 @@ const CustomersPage: React.FC = () => {
         q: searchQuery || undefined,
         page,
         pageSize,
-        status: statusFilter.length > 0 ? statusFilter : undefined,
         sort: sortBy
       };
 
       const response = await listCustomers(params);
+      
       setCustomers(response.items);
       setTotal(response.total);
       setTotalPages(response.totalPages);
@@ -60,7 +58,7 @@ const CustomersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, page, pageSize, statusFilter, sortBy]);
+  }, [searchQuery, page, pageSize, sortBy]);
 
   // Load data on mount and when dependencies change
   useEffect(() => {
@@ -72,7 +70,7 @@ const CustomersPage: React.FC = () => {
     if (page !== 1) {
       setPage(1);
     }
-  }, [searchQuery, statusFilter, sortBy]);
+  }, [searchQuery, sortBy]);
 
   // Handlers for CRUD operations
   const handleCreateCustomer = () => {
@@ -100,28 +98,10 @@ const CustomersPage: React.FC = () => {
     try {
       if (editingCustomer) {
         // Update existing customer
-        const payload = {
-          fullName: data.fullName,
-          phone: data.phoneNumber,
-          email: data.email || undefined,
-          status: data.status,
-          interestedModel: data.interestedModel || undefined,
-          notes: data.notes || undefined
-        };
-        if (editingCustomer.id) {
-          await updateCustomer(editingCustomer.id, payload);
-        }
+        await updateCustomer(editingCustomer.customerId, data);
       } else {
         // Create new customer
-        const payload = {
-          fullName: data.fullName,
-          phone: data.phoneNumber,
-          email: data.email || undefined,
-          status: data.status,
-          interestedModel: data.interestedModel || undefined,
-          notes: data.notes || undefined
-        };
-        await createCustomer(payload);
+        await createCustomer(data);
       }
       await loadCustomers();
       setIsFormOpen(false);
@@ -138,15 +118,13 @@ const CustomersPage: React.FC = () => {
     
     setDeleteLoading(true);
     try {
-      if (customerToDelete.id) {
-        await deleteCustomer(customerToDelete.id);
-      }
+      await deleteCustomer(customerToDelete.customerId);
       await loadCustomers();
       setIsDeleteDialogOpen(false);
       setCustomerToDelete(null);
       
       // Close detail view if the deleted customer was being viewed
-      if (selectedCustomer && selectedCustomer.id === customerToDelete.id) {
+      if (selectedCustomer && selectedCustomer.customerId === customerToDelete.customerId) {
         setIsDetailOpen(false);
         setSelectedCustomer(null);
       }
@@ -160,11 +138,6 @@ const CustomersPage: React.FC = () => {
   // Handler for search
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-  };
-
-  // Handler for filters
-  const handleStatusFilterChange = (statuses: CustomerStatus[]) => {
-    setStatusFilter(statuses);
   };
 
   // Handler for sorting
@@ -185,45 +158,49 @@ const CustomersPage: React.FC = () => {
   // Clear all filters
   const handleClearFilters = () => {
     setSearchQuery('');
-    setStatusFilter([]);
     setSortBy('newest');
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchQuery || statusFilter.length > 0;
+  const hasActiveFilters = searchQuery !== '';
 
   return (
     <div className={styles.customersPage}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerContent}>
-          <div className={styles.headerLeft}>
-            <h1 className={styles.pageTitle}>
-              <i className="fas fa-users" />
-              Quản lý khách hàng
-            </h1>
-            <div className={styles.breadcrumb}>
-              <span className={styles.breadcrumbItem}>Trang chủ</span>
-              <i className="fas fa-chevron-right" />
-              <span className={styles.breadcrumbItem}>Khách hàng</span>
+      {/* Hero Header */}
+      <div className={styles.heroHeader}>
+        <div className={styles.heroContent}>
+          <div className={styles.heroTop}>
+            <div className={styles.heroLeft}>
+             
+              <div className={styles.statsDisplay}>
+                <div className={styles.statItem}>
+                  <i className="fas fa-database" />
+                  <div className={styles.statContent}>
+                    <span className={styles.statNumber}>{total.toLocaleString()}</span>
+                    <span className={styles.statLabel}>Khách hàng</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <div className={styles.headerRight}>
-            <button 
-              className={styles.createButton}
-              onClick={handleCreateCustomer}
-            >
-              <i className="fas fa-plus" />
-              Thêm khách hàng
-            </button>
+            
+            <div className={styles.heroRight}>
+              <button 
+                className={styles.createButton}
+                onClick={handleCreateCustomer}
+              >
+                <i className="fas fa-plus" />
+                Thêm khách hàng
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className={styles.filtersSection}>
-        <div className={styles.filtersContainer}>
+      {/* Main Content */}
+      <div className={styles.mainContent}>
+        {/* Search and Filters */}
+        <div className={styles.filtersSection}>
+          <div className={styles.filtersContainer}>
           {/* Search */}
           <div className={styles.searchBox}>
             <i className="fas fa-search" />
@@ -247,48 +224,6 @@ const CustomersPage: React.FC = () => {
 
           {/* Filters */}
           <div className={styles.filters}>
-            {/* Status Filter */}
-            <div className={styles.statusFilterGroup}>
-              <div className={styles.statusButtons}>
-                <button
-                  type="button"
-                  className={`${styles.statusButton} ${statusFilter.length === 0 ? styles.active : ''}`}
-                  onClick={() => handleStatusFilterChange([])}
-                >
-                  <i className="fas fa-list" />
-                  Tất cả
-                </button>
-                {Object.entries(CUSTOMER_STATUS_CONFIG).map(([status, config]) => (
-                  <button
-                    key={status}
-                    type="button"
-                    className={`${styles.statusButton} ${statusFilter.includes(status as CustomerStatus) ? styles.active : ''}`}
-                    style={{
-                      '--status-color': config.color,
-                      '--status-bg': config.bgColor,
-                      '--status-border': config.borderColor
-                    } as React.CSSProperties}
-                    onClick={() => {
-                      const currentStatus = status as CustomerStatus;
-                      if (statusFilter.includes(currentStatus)) {
-                        handleStatusFilterChange(statusFilter.filter(s => s !== currentStatus));
-                      } else {
-                        handleStatusFilterChange([...statusFilter, currentStatus]);
-                      }
-                    }}
-                  >
-                    <span className={styles.statusDot}></span>
-                    {config.label}
-                    {statusFilter.includes(status as CustomerStatus) && (
-                      <i className="fas fa-check" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-
-
             {/* Sort */}
             <div className={styles.filterGroup}>
               <select
@@ -303,16 +238,6 @@ const CustomersPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Add Customer Button */}
-            <button 
-              className={styles.addCustomerButton}
-              onClick={handleCreateCustomer}
-            >
-              <i className="fas fa-plus" />
-              Thêm khách hàng
-              <div className={styles.btnShimmer}></div>
-            </button>
-
             {/* Clear Filters */}
             {hasActiveFilters && (
               <button
@@ -326,48 +251,10 @@ const CustomersPage: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className={styles.stats}>
-        <div className={styles.statsContainer}>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>{total.toLocaleString()}</div>
-            <div className={styles.statLabel}>Tổng khách hàng</div>
-          </div>
-          
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>
-              {customers.filter(c => c.status === 'POTENTIAL').length}
-            </div>
-            <div className={styles.statLabel}>Tiềm năng</div>
-          </div>
-          
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>
-              {customers.filter(c => c.status === 'TEST_DRIVE').length}
-            </div>
-            <div className={styles.statLabel}>Lái thử</div>
-          </div>
-          
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>
-              {customers.filter(c => c.status === 'NEED_CONSULTING').length}
-            </div>
-            <div className={styles.statLabel}>Cần tư vấn</div>
-          </div>
-          
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>
-              {customers.filter(c => c.status === 'PURCHASED').length}
-            </div>
-            <div className={styles.statLabel}>Đã mua</div>
-          </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className={styles.tableSection}>
+        {/* Table */}
+        <div className={styles.tableSection}>
         <CustomerTable
           customers={customers}
           loading={loading}
@@ -477,6 +364,7 @@ const CustomersPage: React.FC = () => {
         type="danger"
         loading={deleteLoading}
       />
+      </div>
     </div>
   );
 };

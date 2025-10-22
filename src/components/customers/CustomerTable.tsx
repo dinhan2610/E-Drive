@@ -1,7 +1,5 @@
 import React from 'react';
 import type { Customer } from '../../types/customer';
-import { CUSTOMER_STATUS_CONFIG } from '../../types/customer';
-import { formatPhoneNumber } from '../../services/customersApi';
 import styles from '../../styles/CustomersStyles/CustomerTable.module.scss';
 
 interface CustomerTableProps {
@@ -19,49 +17,21 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
   onEdit,
   onDelete
 }) => {
-  const getStatusBadge = (status: Customer['status']) => {
-    const config = CUSTOMER_STATUS_CONFIG[status];
-    return (
-      <span 
-        className={styles.statusBadge}
-        style={{
-          color: config.color,
-          backgroundColor: config.bgColor,
-          borderColor: config.borderColor
-        }}
-      >
-        {config.label}
-      </span>
-    );
-  };
-
-  const getInitials = (fullName: string): string => {
-    return fullName
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const formatRelativeTime = (dateString: string): string => {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-
-    if (diffMinutes < 60) {
-      return `${diffMinutes} phút trước`;
-    } else if (diffHours < 24) {
-      return `${diffHours} giờ trước`;
-    } else if (diffDays < 7) {
-      return `${diffDays} ngày trước`;
-    } else {
-      return date.toLocaleDateString('vi-VN');
+  // Format phone number utility
+  const formatPhoneNumber = (phone: string): string => {
+    if (!phone) return '-';
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
     }
+    return phone;
   };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+  };
+
 
   const handleRowClick = (customer: Customer, e: React.MouseEvent) => {
     // Don't trigger row click if clicking on action buttons
@@ -114,19 +84,21 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
         <table className={styles.table}>
           <thead>
             <tr className={styles.headerRow}>
-              <th className={styles.headerCell}>Khách hàng</th>
-              <th className={styles.headerCell}>Điện thoại</th>
+              <th className={styles.headerCell}>ID</th>
+              <th className={styles.headerCell}>Họ tên</th>
+              <th className={styles.headerCell}>Ngày sinh</th>
+              <th className={styles.headerCell}>Giới tính</th> 
               <th className={styles.headerCell}>Email</th>
-              <th className={styles.headerCell}>Trạng thái</th>
-              <th className={styles.headerCell}>Quan tâm</th>
-              <th className={styles.headerCell}>Cập nhật</th>
+              <th className={styles.headerCell}>Số điện thoại</th>
+              <th className={styles.headerCell}>Địa chỉ</th>
+              <th className={styles.headerCell}>CCCD/CMND</th>
               <th className={styles.headerCell}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {customers.map((customer, index) => (
+            {customers.map(customer => (
               <tr
-                key={customer.id || customer.phone || index}
+                key={customer.customerId}
                 className={styles.dataRow}
                 onClick={(e) => handleRowClick(customer, e)}
                 role="button"
@@ -137,41 +109,14 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                   }
                 }}
               >
-                <td className={styles.dataCell}>
-                  <div className={styles.customerInfo}>
-                    <div className={styles.avatar}>
-                      {getInitials(customer.fullName)}
-                    </div>
-                    <div className={styles.customerDetails}>
-                      <div className={styles.customerName}>
-                        {customer.fullName}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className={styles.dataCell}>
-                  <span className={styles.phoneNumber}>
-                    {formatPhoneNumber(customer.phone)}
-                  </span>
-                </td>
-                <td className={styles.dataCell}>
-                  <span className={styles.email}>
-                    {customer.email || '-'}
-                  </span>
-                </td>
-                <td className={styles.dataCell}>
-                  {getStatusBadge(customer.status)}
-                </td>
-                <td className={styles.dataCell}>
-                  <span className={styles.interestedModel}>
-                    {customer.interestedModel || '-'}
-                  </span>
-                </td>
-                <td className={styles.dataCell}>
-                  <span className={styles.relativeTime}>
-                    {formatRelativeTime(customer.updatedAt)}
-                  </span>
-                </td>
+                <td className={styles.dataCell}>{customer.customerId}</td>
+                <td className={styles.dataCell}>{customer.fullName}</td>
+                <td className={styles.dataCell}>{formatDate(customer.dob)}</td>
+                <td className={styles.dataCell}>{customer.gender}</td>
+                <td className={styles.dataCell}>{customer.email}</td>
+                <td className={styles.dataCell}>{formatPhoneNumber(customer.phone)}</td>
+                <td className={styles.dataCell}>{customer.address}</td>
+                <td className={styles.dataCell}>{customer.idCardNo}</td>
                 <td className={styles.dataCell}>
                   <div className={styles.actions}>
                     {onEdit && (

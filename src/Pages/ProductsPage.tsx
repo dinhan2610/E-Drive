@@ -160,9 +160,9 @@ const ProductsPage: React.FC = () => {
   };
 
   const handleContactDealer = (product: Product) => {
-    // Navigate to contact page with product info
-    console.log('Contact dealer for:', product);
-    navigate('/contact', { state: { product } });
+    // Navigate to dealer order page with product info
+    console.log('Dealer order product:', product);
+    navigate('/dealer-order', { state: { product } });
   };
 
   return (
