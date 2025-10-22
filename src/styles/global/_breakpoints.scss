@@ -29,6 +29,42 @@ $container-paddings: (
   'xxl': 3rem        // 30px
 );
 
+// Media query mixins
+@mixin respond-to-min($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $value: map-get($breakpoints, $breakpoint);
+    @media (min-width: $value) {
+      @content;
+    }
+  } @else {
+    @error "Unknown breakpoint: #{$breakpoint}. Available breakpoints are: #{map-keys($breakpoints)}";
+  }
+}
+
+@mixin respond-to-max($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $value: map-get($breakpoints, $breakpoint);
+    $max: calc($value - 0.02px);
+    @media (max-width: $max) {
+      @content;
+    }
+  } @else {
+    @error "Unknown breakpoint: #{$breakpoint}. Available breakpoints are: #{map-keys($breakpoints)}";
+  }
+}
+
+@mixin respond-between($lower, $upper) {
+  @if map-has-key($breakpoints, $lower) and map-has-key($breakpoints, $upper) {
+    $min: map-get($breakpoints, $lower);
+    $max: calc(#{map-get($breakpoints, $upper)} - 0.02px);
+    @media (min-width: $min) and (max-width: $max) {
+      @content;
+    }
+  } @else {
+    @error "Unknown breakpoint: #{$lower} or #{$upper}. Available breakpoints are: #{map-keys($breakpoints)}";
+  }
+}
+
 // Mixin for media queries
 @mixin respond-to($breakpoint) {
   @if map-has-key($breakpoints, $breakpoint) {

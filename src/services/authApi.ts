@@ -213,28 +213,48 @@ export const authApi = {
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
+      // Debug: Log the actual response to see token structure
+      console.log('✅ Login successful! Server response:', data);
+      
+      // Backend wraps data in a nested structure: { statusCode, message, data: { token, user } }
+      const responseData = data.data || data;
+      
+      // Handle different token field names from backend
+      // Common patterns: accessToken, access_token, token, jwt
+      const accessToken = responseData.accessToken || responseData.access_token || responseData.token || responseData.jwt;
+      const refreshToken = responseData.refreshToken || responseData.refresh_token;
+      const user = responseData.user || responseData;
+      
       // Store tokens if provided
-      if (data.accessToken && data.refreshToken) {
-        tokenManager.setTokens(data.accessToken, data.refreshToken);
+      if (accessToken) {
+        console.log('🔑 Storing access token:', accessToken.substring(0, 20) + '...');
+        tokenManager.setAccessToken(accessToken);
+        if (refreshToken) {
+          console.log('🔄 Storing refresh token');
+          tokenManager.setRefreshToken(refreshToken);
+        }
+      } else {
+        console.warn('⚠️ No access token found in response!');
+        console.warn('Root fields:', Object.keys(data));
+        console.warn('Data fields:', Object.keys(responseData));
       }
 
       return {
         success: true,
-        data: data,
-        message: 'Đăng nhập thành công'
+        data: {
+          user,
+          accessToken,
+          refreshToken
+        },
+        message: data.message || 'Đăng nhập thành công'
       };
     } catch (error) {
       console.error('Login error:', error);
       
-      // If server is not available, use mock authentication for demo
+      // Only use mock if server is completely unavailable (network error)
+      // DO NOT fallback for 403 or other HTTP errors - those indicate real auth issues
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.warn('Server not available, using mock authentication for demo');
-        return mockLogin(credentials);
-      }
-      
-      // If 403 or other server errors, also fallback to mock for demo
-      if (error instanceof Error && (error.message.includes('403') || error.message.includes('Truy cập bị từ chối'))) {
-        console.warn('Server returned 403, using mock authentication for demo');
+        console.warn('⚠️ Server not available, using mock authentication for demo');
         return mockLogin(credentials);
       }
       

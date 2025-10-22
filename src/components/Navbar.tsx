@@ -8,6 +8,11 @@ interface NavLink {
   to: string;
   label: string;
   className: string;
+  dropdown?: Array<{
+    to: string;
+    label: string;
+    icon: string;
+  }>;
 }
 
 const Navbar: React.FC = () => {
@@ -92,11 +97,23 @@ const Navbar: React.FC = () => {
   const navLinks: NavLink[] = [
     { to: "/", label: "Trang chủ", className: "home-link" },
     { to: "/products", label: "Mẫu xe", className: "products-link" },
-    { to: "/customers", label: "Quản lý khách hàng", className: "customers-link" },
-     { to: "/compare-slots", label: "So sánh mẫu xe", className: "compare-link" },
-    { to: "#services", label: "Dịch vụ", className: "services-link" },
+    { to: "/test-drive", label: "Lái thử", className: "test-drive-link" },
+    { 
+      to: "/customers", 
+      label: "Quản lý", 
+      className: "customers-link dropdown-parent",
+      dropdown: [
+        { to: "/customers", label: "Khách hàng", icon: "fa-users" },
+        { to: "/quote", label: "Tạo báo giá", icon: "fa-file-invoice-dollar" },
+        { to: "/promotions", label: "Khuyến mãi", icon: "fa-tags" },
+        { to: "/delivery-status", label: "Tình trạng giao xe", icon: "fa-truck" },
+        { to: "/installment", label: "Trả góp", icon: "fa-credit-card" },
+        { to: "/test-drive-schedule", label: "Lịch hẹn lái thử", icon: "fa-calendar-check" },
+        { to: "/feedback", label: "Phản hồi và xử lý khiếu nại", icon: "fa-comments" }
+      ]
+    },
+    { to: "/compare-slots", label: "So sánh xe", className: "compare-link" },
     { to: "/contact", label: "Liên hệ", className: "contact-link" }
-   
   ];
 
   return (
@@ -111,20 +128,38 @@ const Navbar: React.FC = () => {
 
         <ul className="navbar__links">
           {navLinks.map((link, index) => (
-            <li key={index} className="nav-item">
+            <li key={index} className={`nav-item ${link.dropdown ? 'has-dropdown' : ''}`}>
               {link.to.startsWith('#') ? (
                 <button 
                   className={`nav-link ${link.className}`} 
                   onClick={() => handleSectionScroll(link.to.substring(1))}
                 >
                   <span>{link.label}</span>
+                  {link.dropdown && <i className="fas fa-chevron-down dropdown-icon"></i>}
                   <div className="nav-underline"></div>
                 </button>
               ) : (
                 <Link className={`nav-link ${link.className}`} to={link.to}>
                   <span>{link.label}</span>
+                  {link.dropdown && <i className="fas fa-chevron-down dropdown-icon"></i>}
                   <div className="nav-underline"></div>
                 </Link>
+              )}
+              
+              {/* Dropdown Menu */}
+              {link.dropdown && (
+                <div className="nav-dropdown-menu">
+                  {link.dropdown.map((item, idx) => (
+                    <Link 
+                      key={idx} 
+                      to={item.to} 
+                      className="nav-dropdown-item"
+                    >
+                      <i className={`fas ${item.icon}`}></i>
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
               )}
             </li>
           ))}

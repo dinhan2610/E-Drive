@@ -101,9 +101,16 @@
         transition: all 0.3s ease;
         position: relative;
         padding: 1rem 0;
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         background: none;
         border: none;
+
+        .dropdown-icon {
+          font-size: 1rem;
+          transition: transform 0.3s ease;
+        }
 
         &:hover {
           color: $text-orange;
@@ -111,6 +118,10 @@
           .nav-underline {
             width: 100%;
             background: linear-gradient(90deg, $text-orange, #ff6b4d);
+          }
+
+          .dropdown-icon {
+            transform: rotate(180deg);
           }
         }
 
@@ -132,6 +143,64 @@
             width: 100%;
             background: linear-gradient(90deg, $text-orange, #ff6b4d);
           }
+        }
+      }
+
+      // Dropdown Menu Styles
+      &.has-dropdown {
+        .nav-dropdown-menu {
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+          padding: 1rem 0;
+          min-width: 280px;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateX(-50%) translateY(-10px);
+          transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          z-index: 1000;
+          border: 1px solid rgba(250, 66, 38, 0.1);
+
+          .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            padding: 1.2rem 2rem;
+            color: $text-black;
+            text-decoration: none;
+            font-size: 1.4rem;
+            font-weight: 500;
+            font-family: $text-font;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+
+            i {
+              font-size: 1.6rem;
+              width: 20px;
+              color: $text-orange;
+              transition: all 0.3s ease;
+            }
+
+            &:hover {
+              background: linear-gradient(90deg, rgba(250, 66, 38, 0.05), transparent);
+              border-left-color: $text-orange;
+              padding-left: 2.5rem;
+
+              i {
+                transform: scale(1.2);
+              }
+            }
+          }
+        }
+
+        &:hover .nav-dropdown-menu {
+          opacity: 1;
+          visibility: visible;
+          transform: translateX(-50%) translateY(0);
         }
       }
     }

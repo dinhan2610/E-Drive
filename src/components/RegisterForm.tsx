@@ -73,9 +73,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     
     if (name === 'fullName') {
       if (value.trim() && value.trim().length < 2) {
-        fieldErrors.fullName = 'Họ tên phải có ít nhất 2 ký tự';
+        fieldErrors.fullName = 'Tên đại lý phải có ít nhất 2 ký tự';
       } else if (value.trim() && !/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/.test(value)) {
-        fieldErrors.fullName = 'Họ tên chỉ được chứa chữ cái và khoảng trắng';
+        fieldErrors.fullName = 'Tên đại lý chỉ được chứa chữ cái và khoảng trắng';
       } else {
         fieldErrors.fullName = undefined;
       }
@@ -342,7 +342,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 <input
                   type="text"
                   name="fullName"
-                  placeholder="Họ và tên *"
+                  placeholder="Tên đại lý *"
                   value={formData.fullName}
                   onChange={handleInputChange}
                   className={errors.fullName ? 'error' : ''}

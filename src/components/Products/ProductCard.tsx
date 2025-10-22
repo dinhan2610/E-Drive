@@ -133,7 +133,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
             type="button"
             className={`${styles.button} ${styles.ghost}`}
             onClick={handleViewDetails}
-            disabled={!item.inStock}
           >
             Chi tiết
           </button>
@@ -143,7 +142,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onClick={handleContactDealer}
             disabled={!item.inStock}
           >
-            {item.inStock ? 'Liên hệ hãng' : 'Hết hàng'}
+            {item.inStock ? 'Đặt hàng' : 'Hết hàng'}
           </button>
         </div>
       </div>

@@ -22,60 +22,7 @@ export const SuccessModal: FC<ModalProps> = ({
   userName,
   onContinue
 }) => {
-  if (!isOpen) {
-    return null;
-  }
-
-  const handleContinue = () => {
-    if (onContinue) {
-      onContinue();
-    } else {
-      onClose();
-    }
-  };
-
-  // Dynamic content based on type
-  const getModalContent = () => {
-    switch (type) {
-      case 'register':
-        return {
-          icon: 'fas fa-car',
-          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%)',
-          iconShadow: 'rgba(255, 77, 48, 0.4)',
-          mainTitle: title || 'Chào mừng đến với E-Drive!',
-          subtitle: userName ? `Xin chào ${userName}!` : 'Tài khoản đã được tạo thành công!',
-          description: message || 'Bạn đã trở thành thành viên của E-Drive. Hãy khám phá những chiếc xe tuyệt vời và trải nghiệm dịch vụ đẳng cấp!',
-          buttonText: 'Bắt đầu khám phá',
-          bgColor: '#ff4d30'
-        };
-      case 'login':
-        return {
-          icon: 'fas fa-circle-check',
-          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%)',
-          iconShadow: 'rgba(255, 77, 48, 0.4)',
-          mainTitle: title || 'Chào mừng trở lại E-Drive!',
-          subtitle: userName ? `Xin chào ${userName}!` : 'Đăng nhập thành công!',
-          description: message || 'Sẵn sàng khám phá những chiếc xe tuyệt vời và trải nghiệm dịch vụ chất lượng cao nhất!',
-          buttonText: 'Bắt đầu khám phá',
-          bgColor: '#ff4d30'
-        };
-      default:
-        return {
-          icon: 'fas fa-check-circle',
-          iconBg: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-          iconShadow: 'rgba(16, 185, 129, 0.3)',
-          mainTitle: title || 'Đặt lịch thành công!',
-          subtitle: '',
-          description: message || 'Chúng tôi sẽ liên hệ với bạn để xác nhận lịch hẹn trong thời gian sớm nhất. Cảm ơn bạn đã tin tưởng E-Drive!',
-          buttonText: 'Hoàn tất',
-          bgColor: '#10B981'
-        };
-    }
-  };
-
-  const content = getModalContent();
-
-  // Add CSS animations
+  // Add CSS animations - MUST be called before any conditional returns (React hooks rules)
   React.useEffect(() => {
     if (!document.head.querySelector('#success-modal-animations')) {
       const style = document.createElement('style');
@@ -200,6 +147,60 @@ export const SuccessModal: FC<ModalProps> = ({
       document.head.appendChild(style);
     }
   }, []);
+
+  // NOW safe to do conditional returns after hooks
+  if (!isOpen) {
+    return null;
+  }
+
+  const handleContinue = () => {
+    if (onContinue) {
+      onContinue();
+    } else {
+      onClose();
+    }
+  };
+
+  // Dynamic content based on type
+  const getModalContent = () => {
+    switch (type) {
+      case 'register':
+        return {
+          icon: 'fas fa-car',
+          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%)',
+          iconShadow: 'rgba(255, 77, 48, 0.4)',
+          mainTitle: title || 'Chào mừng đến với E-Drive!',
+          subtitle: userName ? `Xin chào ${userName}!` : 'Tài khoản đã được tạo thành công!',
+          description: message || 'Bạn đã trở thành thành viên của E-Drive. Hãy khám phá những chiếc xe tuyệt vời và trải nghiệm dịch vụ đẳng cấp!',
+          buttonText: 'Bắt đầu khám phá',
+          bgColor: '#ff4d30'
+        };
+      case 'login':
+        return {
+          icon: 'fas fa-circle-check',
+          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%)',
+          iconShadow: 'rgba(255, 77, 48, 0.4)',
+          mainTitle: title || 'Chào mừng trở lại E-Drive!',
+          subtitle: userName ? `Xin chào ${userName}!` : 'Đăng nhập thành công!',
+          description: message || 'Sẵn sàng khám phá những chiếc xe tuyệt vời và trải nghiệm dịch vụ chất lượng cao nhất!',
+          buttonText: 'Bắt đầu khám phá',
+          bgColor: '#ff4d30'
+        };
+      default:
+        return {
+          icon: 'fas fa-check-circle',
+          iconBg: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+          iconShadow: 'rgba(16, 185, 129, 0.3)',
+          mainTitle: title || 'Đặt lịch thành công!',
+          subtitle: '',
+          description: message || 'Chúng tôi sẽ liên hệ với bạn để xác nhận lịch hẹn trong thời gian sớm nhất. Cảm ơn bạn đã tin tưởng E-Drive!',
+          buttonText: 'Hoàn tất',
+          bgColor: '#10B981'
+        };
+    }
+  };
+
+  const content = getModalContent();
 
   const modalContent = (
     <div style={{

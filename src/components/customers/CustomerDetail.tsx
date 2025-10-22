@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { Customer } from '../../types/customer';
-import { CUSTOMER_STATUS_CONFIG } from '../../types/customer';
-import { formatPhoneNumber, getRelativeTime } from '../../services/customersApi';
 import styles from '../../styles/CustomersStyles/CustomerDetail.module.scss';
 
 interface CustomerDetailProps {
@@ -19,11 +17,25 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({
   onEdit,
   onDelete
 }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'testDrives' | 'orders'>('info');
+
+  // Format phone number utility
+  const formatPhoneNumber = (phone: string): string => {
+    if (!phone) return '-';
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
+    }
+    return phone;
+  };
+
+  // Format date utility
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+  };
 
   if (!isOpen || !customer) return null;
-
-  const statusConfig = CUSTOMER_STATUS_CONFIG[customer.status];
 
   const handleEdit = () => {
     if (onEdit && customer) {
@@ -63,15 +75,11 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({
               <h2 id="customer-detail-title" className={styles.customerName}>
                 {customer.fullName}
               </h2>
-              <div 
-                className={styles.statusBadge}
-                style={{
-                  color: statusConfig.color,
-                  backgroundColor: statusConfig.bgColor,
-                  borderColor: statusConfig.borderColor
-                }}
-              >
-                {statusConfig.label}
+              <div className={styles.customerMeta}>
+                <span>
+                  <i className="fas fa-id-card" style={{marginRight: '6px'}}></i>
+                  {customer.idCardNo}
+                </span>
               </div>
             </div>
           </div>
@@ -108,210 +116,92 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className={styles.tabs}>
-          <button
-            type="button"
-            className={`${styles.tab} ${activeTab === 'info' ? styles.active : ''}`}
-            onClick={() => setActiveTab('info')}
-          >
-            <i className="fas fa-user" />
-            Thông tin
-          </button>
-          <button
-            type="button"
-            className={`${styles.tab} ${activeTab === 'testDrives' ? styles.active : ''}`}
-            onClick={() => setActiveTab('testDrives')}
-          >
-            <i className="fas fa-car" />
-            Lái thử ({customer.testDrives?.length || 0})
-          </button>
-          <button
-            type="button"
-            className={`${styles.tab} ${activeTab === 'orders' ? styles.active : ''}`}
-            onClick={() => setActiveTab('orders')}
-          >
-            <i className="fas fa-shopping-cart" />
-            Đơn hàng ({customer.orders?.length || 0})
-          </button>
-        </div>
-
         {/* Content */}
         <div className={styles.content}>
-          {activeTab === 'info' && (
-            <div className={styles.infoTab}>
-              <div className={styles.infoSection}>
-                <h3 className={styles.sectionTitle}>
-                  <i className="fas fa-address-card" />
-                  Thông tin liên hệ
-                </h3>
-                <div className={styles.infoGrid}>
+          <div className={styles.infoTab}>
+            <div className={styles.infoSection}>
+              <h3 className={styles.sectionTitle}>
+                <i className="fas fa-user" />
+                Thông tin cá nhân
+              </h3>
+              <div className={styles.infoGrid}>
+                <div className={styles.infoItem}>
+                  <div className={styles.infoLabel}>
+                    <i className="fas fa-birthday-cake" />
+                    Ngày sinh
+                  </div>
+                  <div className={styles.infoValue}>
+                    {formatDate(customer.dob)}
+                  </div>
+                </div>
+                
+                <div className={styles.infoItem}>
+                  <div className={styles.infoLabel}>
+                    <i className="fas fa-venus-mars" />
+                    Giới tính
+                  </div>
+                  <div className={styles.infoValue}>
+                    {customer.gender}
+                  </div>
+                </div>
+
+                <div className={styles.infoItem}>
+                  <div className={styles.infoLabel}>
+                    <i className="fas fa-id-card" />
+                    CCCD/CMND
+                  </div>
+                  <div className={styles.infoValue}>
+                    {customer.idCardNo}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.infoSection}>
+              <h3 className={styles.sectionTitle}>
+                <i className="fas fa-address-card" />
+                Thông tin liên hệ
+              </h3>
+              <div className={styles.infoGrid}>
+                <div className={styles.infoItem}>
+                  <div className={styles.infoLabel}>
+                    <i className="fas fa-phone" />
+                    Số điện thoại
+                  </div>
+                  <div className={styles.infoValue}>
+                    <a href={`tel:${customer.phone}`} className={styles.phoneLink}>
+                      <i className="fas fa-phone-alt" style={{marginRight: '8px', fontSize: '12px'}}></i>
+                      {formatPhoneNumber(customer.phone)}
+                    </a>
+                  </div>
+                </div>
+                
+                {customer.email && (
                   <div className={styles.infoItem}>
                     <div className={styles.infoLabel}>
-                      <i className="fas fa-phone" />
-                      Số điện thoại
+                      <i className="fas fa-envelope" />
+                      Email
                     </div>
                     <div className={styles.infoValue}>
-                      <a href={`tel:${customer.phone}`} className={styles.phoneLink}>
-                        <i className="fas fa-phone-alt" style={{marginRight: '8px', fontSize: '12px'}}></i>
-                        {formatPhoneNumber(customer.phone)}
+                      <a href={`mailto:${customer.email}`} className={styles.emailLink}>
+                        {customer.email}
                       </a>
                     </div>
                   </div>
-                  
-                  {customer.email && (
-                    <div className={styles.infoItem}>
-                      <div className={styles.infoLabel}>
-                        <i className="fas fa-envelope" />
-                        Email
-                      </div>
-                      <div className={styles.infoValue}>
-                        <a href={`mailto:${customer.email}`} className={styles.emailLink}>
-                          {customer.email}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                )}
 
-              {customer.interestedModel && (
-                <div className={styles.infoSection}>
-                  <h3 className={styles.sectionTitle}>
-                    <i className="fas fa-car" />
-                    Sở thích
-                  </h3>
-                  <div className={styles.infoGrid}>
-                    <div className={styles.infoItem}>
-                      <div className={styles.infoLabel}>
-                        <i className="fas fa-heart" />
-                        Mẫu xe quan tâm
-                      </div>
-                      <div className={styles.infoValue}>{customer.interestedModel}</div>
-                    </div>
+                <div className={styles.infoItem}>
+                  <div className={styles.infoLabel}>
+                    <i className="fas fa-map-marker-alt" />
+                    Địa chỉ
                   </div>
-                </div>
-              )}
-
-              {customer.notes && (
-                <div className={styles.infoSection}>
-                  <h3 className={styles.sectionTitle}>
-                    <i className="fas fa-sticky-note" />
-                    Ghi chú
-                  </h3>
-                  <div className={styles.notesContent}>
-                    {customer.notes}
-                  </div>
-                </div>
-              )}
-
-              <div className={styles.infoSection}>
-                <h3 className={styles.sectionTitle}>
-                  <i className="fas fa-clock" />
-                  Thời gian
-                </h3>
-                <div className={styles.infoGrid}>
-                  <div className={styles.infoItem}>
-                    <div className={styles.infoLabel}>
-                      <i className="fas fa-plus" />
-                      Tạo lúc
-                    </div>
-                    <div className={styles.infoValue}>
-                      {getRelativeTime(customer.createdAt)}
-                      <div className={styles.absoluteTime}>
-                        {new Date(customer.createdAt).toLocaleString('vi-VN')}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className={styles.infoItem}>
-                    <div className={styles.infoLabel}>
-                      <i className="fas fa-edit" />
-                      Cập nhật lúc
-                    </div>
-                    <div className={styles.infoValue}>
-                      {getRelativeTime(customer.updatedAt)}
-                      <div className={styles.absoluteTime}>
-                        {new Date(customer.updatedAt).toLocaleString('vi-VN')}
-                      </div>
-                    </div>
+                  <div className={styles.infoValue}>
+                    {customer.address}
                   </div>
                 </div>
               </div>
             </div>
-          )}
-
-          {activeTab === 'testDrives' && (
-            <div className={styles.listTab}>
-              {customer.testDrives && customer.testDrives.length > 0 ? (
-                <div className={styles.itemsList}>
-                  {customer.testDrives.map((testDrive) => (
-                    <div key={testDrive.id} className={styles.listItem}>
-                      <div className={styles.itemIcon}>
-                        <i className="fas fa-car" />
-                      </div>
-                      <div className={styles.itemContent}>
-                        <div className={styles.itemTitle}>{testDrive.model}</div>
-                        <div className={styles.itemDate}>
-                          {new Date(testDrive.date).toLocaleDateString('vi-VN')}
-                        </div>
-                        {testDrive.result && (
-                          <div className={`${styles.itemResult} ${
-                            testDrive.result === 'Positive' ? styles.positive : styles.negative
-                          }`}>
-                            {testDrive.result}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.emptyState}>
-                  <i className="fas fa-car" />
-                  <h3>Chưa có lái thử</h3>
-                  <p>Khách hàng chưa thực hiện lái thử nào.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'orders' && (
-            <div className={styles.listTab}>
-              {customer.orders && customer.orders.length > 0 ? (
-                <div className={styles.itemsList}>
-                  {customer.orders.map((order) => (
-                    <div key={order.id} className={styles.listItem}>
-                      <div className={styles.itemIcon}>
-                        <i className="fas fa-shopping-cart" />
-                      </div>
-                      <div className={styles.itemContent}>
-                        <div className={styles.itemTitle}>{order.model}</div>
-                        <div className={styles.itemDate}>
-                          {new Date(order.date).toLocaleDateString('vi-VN')}
-                        </div>
-                        <div className={styles.itemAmount}>
-                          {new Intl.NumberFormat('vi-VN', {
-                            style: 'currency',
-                            currency: 'VND'
-                          }).format(order.amount)}
-                        </div>
-                        <div className={`${styles.itemStatus} ${styles[order.status.toLowerCase()]}`}>
-                          {order.status}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.emptyState}>
-                  <i className="fas fa-shopping-cart" />
-                  <h3>Chưa có đơn hàng</h3>
-                  <p>Khách hàng chưa có đơn hàng nào.</p>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

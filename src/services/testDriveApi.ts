@@ -199,5 +199,298 @@ interface TestDriveBookingRequest {
     }
   };
 
-  export { TestDriveApiError };
-  export type { TestDriveBookingRequest, TestDriveBookingResponse, ApiError };
+// ===== ADMIN API FUNCTIONS =====
+
+interface TestDriveAdminResponse {
+  id: number;
+  customerId: number;
+  dealerId: number;
+  vehicleId: number;
+  scheduleDatetime: string;
+  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+}
+
+interface TestDriveDetailResponse {
+  statusCode: number;
+  message: string;
+  data: TestDriveAdminResponse;
+}
+
+interface TestDriveListResponse {
+  content: TestDriveAdminResponse[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
+/**
+ * Get all test drive bookings (Admin)
+ * GET /api/test-drive?page=0&size=10
+ * Note: API returns array directly, not paginated response
+ */
+export const getTestDriveBookings = async (
+  page: number = 0,
+  size: number = 10
+): Promise<TestDriveAdminResponse[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new TestDriveApiError('Unauthorized - No token found', 'AUTH_ERROR');
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/test-drive?page=${page}&size=${size}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': '*/*',
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new TestDriveApiError('Unauthorized - Invalid token', 'AUTH_ERROR');
+      }
+      throw new TestDriveApiError(
+        `Failed to fetch test drive bookings: ${response.statusText}`,
+        'API_ERROR'
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (error instanceof TestDriveApiError) {
+      throw error;
+    }
+    throw new TestDriveApiError(
+      'Failed to fetch test drive bookings',
+      'UNKNOWN_ERROR',
+      error
+    );
+  }
+};
+
+/**
+ * Get test drive booking detail by ID (Admin)
+ * GET /api/test-drive/{id}
+ */
+export const getTestDriveById = async (id: number): Promise<TestDriveAdminResponse> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new TestDriveApiError('Unauthorized - No token found', 'AUTH_ERROR');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/test-drive/${id}`, {
+      method: 'GET',
+      headers: {
+        'Accept': '*/*',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new TestDriveApiError('Unauthorized - Invalid token', 'AUTH_ERROR');
+      }
+      if (response.status === 404) {
+        throw new TestDriveApiError('Test drive booking not found', 'NOT_FOUND');
+      }
+      throw new TestDriveApiError(
+        `Failed to fetch test drive detail: ${response.statusText}`,
+        'API_ERROR'
+      );
+    }
+
+    const result: TestDriveDetailResponse = await response.json();
+    return result.data;
+  } catch (error) {
+    if (error instanceof TestDriveApiError) {
+      throw error;
+    }
+    throw new TestDriveApiError(
+      'Failed to fetch test drive detail',
+      'UNKNOWN_ERROR',
+      error
+    );
+  }
+};
+
+/**
+ * Cancel test drive booking (Admin)
+ * POST /api/test-drive/{id}/cancel?reason={reason}
+ */
+export const cancelTestDrive = async (
+  id: number,
+  reason: string
+): Promise<TestDriveAdminResponse> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new TestDriveApiError('Unauthorized - No token found', 'AUTH_ERROR');
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/test-drive/${id}/cancel?reason=${encodeURIComponent(reason)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Accept': '*/*',
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new TestDriveApiError('Unauthorized - Invalid token', 'AUTH_ERROR');
+      }
+      if (response.status === 404) {
+        throw new TestDriveApiError('Test drive booking not found', 'NOT_FOUND');
+      }
+      if (response.status === 400) {
+        const errorData = await response.json();
+        throw new TestDriveApiError(
+          errorData.message || 'Cannot cancel this booking',
+          'BAD_REQUEST'
+        );
+      }
+      throw new TestDriveApiError(
+        `Failed to cancel test drive: ${response.statusText}`,
+        'API_ERROR'
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (error instanceof TestDriveApiError) {
+      throw error;
+    }
+    throw new TestDriveApiError(
+      'Failed to cancel test drive booking',
+      'UNKNOWN_ERROR',
+      error
+    );
+  }
+};
+
+/**
+ * Complete test drive booking (Admin)
+ * POST /api/test-drive/{id}/complete
+ */
+export const completeTestDrive = async (id: number): Promise<TestDriveAdminResponse> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new TestDriveApiError('Unauthorized - No token found', 'AUTH_ERROR');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/test-drive/${id}/complete`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new TestDriveApiError('Unauthorized - Invalid token', 'AUTH_ERROR');
+      }
+      if (response.status === 404) {
+        throw new TestDriveApiError('Test drive booking not found', 'NOT_FOUND');
+      }
+      if (response.status === 400) {
+        const errorData = await response.json();
+        throw new TestDriveApiError(
+          errorData.message || 'Cannot complete this booking',
+          'BAD_REQUEST'
+        );
+      }
+      throw new TestDriveApiError(
+        `Failed to complete test drive: ${response.statusText}`,
+        'API_ERROR'
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (error instanceof TestDriveApiError) {
+      throw error;
+    }
+    throw new TestDriveApiError(
+      'Failed to complete test drive booking',
+      'UNKNOWN_ERROR',
+      error
+    );
+  }
+};
+
+/**
+ * Confirm test drive booking (Admin)
+ * POST /api/test-drive/{id}/confirm
+ */
+export const confirmTestDrive = async (id: number): Promise<TestDriveAdminResponse> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new TestDriveApiError('Unauthorized - No token found', 'AUTH_ERROR');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/test-drive/${id}/confirm`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new TestDriveApiError('Unauthorized - Invalid token', 'AUTH_ERROR');
+      }
+      if (response.status === 404) {
+        throw new TestDriveApiError('Test drive booking not found', 'NOT_FOUND');
+      }
+      if (response.status === 400) {
+        const errorData = await response.json();
+        throw new TestDriveApiError(
+          errorData.message || 'Cannot confirm this booking',
+          'BAD_REQUEST'
+        );
+      }
+      throw new TestDriveApiError(
+        `Failed to confirm test drive: ${response.statusText}`,
+        'API_ERROR'
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (error instanceof TestDriveApiError) {
+      throw error;
+    }
+    throw new TestDriveApiError(
+      'Failed to confirm test drive booking',
+      'UNKNOWN_ERROR',
+      error
+    );
+  }
+};
+
+export { TestDriveApiError };
+export type { 
+  TestDriveBookingRequest, 
+  TestDriveBookingResponse, 
+  ApiError,
+  TestDriveAdminResponse,
+  TestDriveDetailResponse,
+  TestDriveListResponse
+};

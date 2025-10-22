@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import HeroPages from '../components/HeroPages';
 import Footer from '../components/Footer';
+import { getProfile, updateProfile } from '../services/profileApi';
 import '../styles/ProfileStyles/_profile.scss';
 
 interface UserProfile {
@@ -17,6 +17,8 @@ interface UserProfile {
   dealerStatus: 'active' | 'pending' | 'inactive';
   totalSales: number;
   commission: number;
+  username?: string;
+  role?: string;
 }
 
 const ProfilePage: React.FC = () => {
@@ -31,7 +33,8 @@ const ProfilePage: React.FC = () => {
     phone: '',
     address: '',
     company: '',
-    dealerName: ''
+    dealerName: '',
+    dealerCode: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -42,37 +45,78 @@ const ProfilePage: React.FC = () => {
 
   const [avatarPreview, setAvatarPreview] = useState<string>('');
 
-  // Load user data from localStorage
+  // Load user data from API
   useEffect(() => {
-    const userData = localStorage.getItem('e-drive-user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      const mockUserProfile: UserProfile = {
-        id: parsedUser.id || '1',
-        fullName: parsedUser.fullName || parsedUser.name || 'Người dùng E-Drive',
-        email: parsedUser.email || 'user@edrive.com',
-        phone: parsedUser.phone || '0901234567',
-        address: parsedUser.address || 'TP. Hồ Chí Minh',
-        company: parsedUser.company || 'E-Drive Dealer',
-        dealerName: parsedUser.dealerName || 'Đại lý chính thức E-Drive',
-        avatar: parsedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(parsedUser.fullName || parsedUser.name || 'User')}&background=ff4d30&color=fff&size=200`,
-        joinDate: parsedUser.joinDate || new Date().toLocaleDateString('vi-VN'),
-        dealerStatus: 'active',
-        totalSales: 42,
-        commission: 125000000
-      };
-      
-      setUser(mockUserProfile);
-      setFormData({
-        fullName: mockUserProfile.fullName,
-        email: mockUserProfile.email,
-        phone: mockUserProfile.phone,
-        address: mockUserProfile.address,
-        company: mockUserProfile.company,
-        dealerName: mockUserProfile.dealerName
-      });
-      setAvatarPreview(mockUserProfile.avatar);
-    }
+    const loadProfile = async () => {
+      try {
+        const apiProfile = await getProfile();
+        
+        // Map API data to UI format (keep UI compatible)
+        const mockUserProfile: UserProfile = {
+          id: String(apiProfile.id),
+          fullName: apiProfile.fullName,
+          email: apiProfile.email,
+          phone: apiProfile.phone,
+          address: '', // API doesn't have this
+          company: '', // API doesn't have this
+          dealerName: apiProfile.dealerName || 'E-Drive',
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apiProfile.fullName)}&background=ff4d30&color=fff&size=200`,
+          joinDate: new Date().toLocaleDateString('vi-VN'),
+          dealerStatus: 'active',
+          totalSales: 42,
+          commission: 125000000,
+          username: apiProfile.username,
+          role: apiProfile.role
+        };
+        
+        setUser(mockUserProfile);
+        setFormData({
+          fullName: mockUserProfile.fullName,
+          email: mockUserProfile.email,
+          phone: mockUserProfile.phone,
+          address: mockUserProfile.address,
+          company: mockUserProfile.company,
+          dealerName: mockUserProfile.dealerName,
+          dealerCode: apiProfile.dealerId ? `DL${String(apiProfile.dealerId).padStart(6, '0')}` : ''
+        });
+        setAvatarPreview(mockUserProfile.avatar);
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        // Fallback to localStorage if API fails
+        const userData = localStorage.getItem('e-drive-user');
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          const mockUserProfile: UserProfile = {
+            id: parsedUser.id || '1',
+            fullName: parsedUser.fullName || parsedUser.name || 'Người dùng E-Drive',
+            email: parsedUser.email || 'user@edrive.com',
+            phone: parsedUser.phone || '0901234567',
+            address: parsedUser.address || 'TP. Hồ Chí Minh',
+            company: parsedUser.company || 'E-Drive Dealer',
+            dealerName: parsedUser.dealerName || 'Đại lý chính thức E-Drive',
+            avatar: parsedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(parsedUser.fullName || parsedUser.name || 'User')}&background=ff4d30&color=fff&size=200`,
+            joinDate: parsedUser.joinDate || new Date().toLocaleDateString('vi-VN'),
+            dealerStatus: 'active',
+            totalSales: 42,
+            commission: 125000000
+          };
+          
+          setUser(mockUserProfile);
+          setFormData({
+            fullName: mockUserProfile.fullName,
+            email: mockUserProfile.email,
+            phone: mockUserProfile.phone,
+            address: mockUserProfile.address,
+            company: mockUserProfile.company,
+            dealerName: mockUserProfile.dealerName,
+            dealerCode: parsedUser.dealerCode || ''
+          });
+          setAvatarPreview(mockUserProfile.avatar);
+        }
+      }
+    };
+
+    loadProfile();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -105,15 +149,25 @@ const ProfilePage: React.FC = () => {
   const handleSaveProfile = async () => {
     setIsSaving(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      const updatedUser = {
-        ...user,
-        ...formData,
-        avatar: avatarPreview
+    try {
+      // Call real API
+      const updatedProfile = await updateProfile({
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone
+      });
+      
+      // Update UI with API response
+      const updatedUser: UserProfile = {
+        ...user!,
+        fullName: updatedProfile.fullName,
+        email: updatedProfile.email,
+        phone: updatedProfile.phone
       };
       
-      setUser(updatedUser as UserProfile);
+      setUser(updatedUser);
+      
+      // Also update localStorage for compatibility with other pages
       localStorage.setItem('e-drive-user', JSON.stringify(updatedUser));
       
       // Dispatch event để cập nhật navbar
@@ -124,7 +178,11 @@ const ProfilePage: React.FC = () => {
       
       // Show success message
       alert('Cập nhật thông tin thành công!');
-    }, 1500);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setIsSaving(false);
+      alert('Cập nhật thất bại. Vui lòng thử lại!');
+    }
   };
 
   const handleChangePassword = () => {
@@ -160,8 +218,6 @@ const ProfilePage: React.FC = () => {
 
   return (
     <>
-      <HeroPages name="Hồ sơ cá nhân" />
-      
       <div className="profile-container">
         <div className="profile-sidebar">
           {/* User Avatar & Basic Info */}
@@ -263,14 +319,26 @@ const ProfilePage: React.FC = () => {
 
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Họ và tên</label>
+                  <label>Tên đại lý</label>
                   <input 
                     type="text"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    placeholder="Nhập họ và tên"
+                    placeholder="Nhập tên đại lý"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Mã đại lý</label>
+                  <input 
+                    type="text"
+                    name="dealerCode"
+                    value={formData.dealerCode}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    placeholder="Nhập mã đại lý"
                   />
                 </div>
 
@@ -298,29 +366,9 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Công ty</label>
-                  <input 
-                    type="text"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    placeholder="Nhập tên công ty"
-                  />
-                </div>
+                
 
-                <div className="form-group full-width">
-                  <label>Tên đại lý</label>
-                  <input 
-                    type="text"
-                    name="dealerName"
-                    value={formData.dealerName}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    placeholder="Nhập tên đại lý"
-                  />
-                </div>
+               
 
                 <div className="form-group full-width">
                   <label>Địa chỉ</label>

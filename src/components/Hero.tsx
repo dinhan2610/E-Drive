@@ -1,19 +1,16 @@
 import BgShape from "../images/hero/hero-bg.png";
 import HeroCar from "../images/hero/main-car.png";
-import { useState, type FC } from "react";
+import { type FC } from "react";
+import { useNavigate } from "react-router-dom";
 import '../styles/HeroStyles/_hero.scss';
-import { BookCarModal } from "./BookCar";
 
 const Hero: FC = () => {
-  const [isTestDriveModalOpen, setIsTestDriveModalOpen] = useState<boolean>(false);
+  const navigate = useNavigate();
 
   const handleTestDriveClick = () => {
-    setIsTestDriveModalOpen(true);
+    navigate('/test-drive');
   };
 
-  const handleCloseTestDriveModal = () => {
-    setIsTestDriveModalOpen(false);
-  };
   return (
     <section id="home" className="hero-section">
       <div className="container">
@@ -54,12 +51,6 @@ const Hero: FC = () => {
             />
           </div>
         </div>
-
-        {/* Test Drive Modal */}
-        <BookCarModal 
-          isOpen={isTestDriveModalOpen} 
-          onClose={handleCloseTestDriveModal} 
-        />
       </section>
   );
 }
