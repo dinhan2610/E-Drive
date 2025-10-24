@@ -8,7 +8,7 @@ interface AdminLayoutProps {
   onTabChange: (tab: string) => void;
   counters: {
     cars: number;
-    users: number;
+    dealers: number;
     bookings: number;
     testDrives: number;
   };
@@ -27,9 +27,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
     switch (activeTab) {
       case 'dashboard': return 'Dashboard';
       case 'cars': return 'Quản lý xe';
-      case 'users': return 'Người dùng';
+      case 'dealers': return 'Đại lý';
       case 'bookings': return 'Đặt xe';
-      case 'testdrives': return 'Lái thử';
       case 'analytics': return 'Thống kê';
       case 'settings': return 'Cài đặt';
       default: return 'Dashboard';
@@ -40,9 +39,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
     switch (activeTab) {
       case 'dashboard': return 'fas fa-chart-line';
       case 'cars': return 'fas fa-car';
-      case 'users': return 'fas fa-users';
+      case 'dealers': return 'fas fa-store';
       case 'bookings': return 'fas fa-calendar-alt';
-      case 'testdrives': return 'fas fa-car-side';
       case 'analytics': return 'fas fa-chart-bar';
       case 'settings': return 'fas fa-cog';
       default: return 'fas fa-chart-line';
@@ -91,14 +89,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
               <span>Quản lý xe ({counters.cars})</span>
             </div>
             <div
-              className={`${styles.navItem} ${activeTab === 'users' ? styles.active : ''}`}
+              className={`${styles.navItem} ${activeTab === 'dealers' ? styles.active : ''}`}
               onClick={() => {
-                onTabChange('users');
+                onTabChange('dealers');
                 setSidebarOpen(false);
               }}
             >
-              <i className="fas fa-users"></i>
-              <span>Người dùng ({counters.users})</span>
+              <i className="fas fa-store"></i>
+              <span>Đại lý ({counters.dealers})</span>
             </div>
             <div
               className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}
@@ -109,16 +107,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
             >
               <i className="fas fa-calendar-alt"></i>
               <span>Đặt xe ({counters.bookings})</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'testdrives' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('testdrives');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-car-side"></i>
-              <span>Lái thử ({counters.testDrives})</span>
             </div>
           </div>
 

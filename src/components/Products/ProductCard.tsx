@@ -22,9 +22,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
       setImageError(true);
       // Try fallback to existing images
       const fallbackImages = [
-        'src/images/cars-big/audia1.jpg',
-        'src/images/cars-big/bmw320.jpg',
-        'src/images/cars-big/golf6.jpg',
+        '/src/images/cars-big/audia1.jpg',
+        '/src/images/cars-big/bmw320.jpg',
+        '/src/images/cars-big/golf6.jpg',
       ];
       const randomFallback = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
       setImageSrc(randomFallback);

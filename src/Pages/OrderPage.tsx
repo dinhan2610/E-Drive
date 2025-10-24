@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { formatPrice } from '../utils/productUtils';
+import { createOrder, OrderApiError } from '../services/orderApi';
 import Footer from '../components/Footer';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/OrderPage.module.scss';
@@ -101,20 +102,38 @@ const OrderPage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Prepare full delivery address
+      const fullAddress = `${formData.address}, ${formData.ward}, ${formData.district}, ${formData.city}`;
+      
+      // Calculate delivery date (7 days from now as default)
+      const deliveryDate = new Date();
+      deliveryDate.setDate(deliveryDate.getDate() + 7);
+      const desiredDeliveryDate = deliveryDate.toISOString().split('T')[0];
 
-    console.log('Order submitted:', {
-      product: {
-        id: product.id,
-        name: product.name,
-        price: product.price
-      },
-      customer: formData
-    });
+      // Create order via API (backend only accepts CASH for now)
+      const order = await createOrder({
+        vehicleId: String(product.id),
+        quantity: '1',
+        desiredDeliveryDate,
+        deliveryNote: formData.notes || 'Không có ghi chú',
+        deliveryAddress: fullAddress,
+        paymentMethod: 'CASH'
+      });
 
-    setIsSubmitting(false);
-    setShowSuccess(true);
+      console.log('Order created successfully:', order);
+      setShowSuccess(true);
+      
+    } catch (error) {
+      console.error('Error creating order:', error);
+      if (error instanceof OrderApiError) {
+        alert(`Lỗi: ${error.message}`);
+      } else {
+        alert('Không thể tạo đơn hàng. Vui lòng thử lại sau.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSuccessClose = () => {

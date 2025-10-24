@@ -11,8 +11,8 @@ export function convertVehicleToProduct(vehicle: VehicleApiResponse): Product {
     slug: `${vehicle.modelName.toLowerCase().replace(/\s+/g, '-')}-${vehicle.version.toLowerCase()}`,
     price: vehicle.priceRetail,
     originalPrice: vehicle.priceRetail,
-    image: `src/images/cars-big/car-${vehicle.vehicleId}.jpg`, // Simple image path
-    images: [`src/images/cars-big/car-${vehicle.vehicleId}.jpg`],
+    image: `/src/images/cars-big/car-${vehicle.vehicleId}.jpg`, // Absolute path from root
+    images: [`/src/images/cars-big/car-${vehicle.vehicleId}.jpg`],
     
     // Chỉ dùng data từ API
     rangeKm: vehicle.rangeKm,
@@ -88,7 +88,14 @@ export async function fetchVehiclesFromApi(params: ApiParams = {}): Promise<{ ve
 // Create new vehicle in database
 export async function createVehicle(vehicleData: Omit<VehicleApiResponse, 'vehicleId'>): Promise<VehicleApiResponse> {
   const url = `${API_BASE_URL}/vehicles`;
-  console.log('🚗 Creating vehicle:', url, vehicleData);
+  
+  // Loại bỏ các field undefined/null
+  const cleanedData = Object.fromEntries(
+    Object.entries(vehicleData).filter(([_, value]) => value !== undefined && value !== null)
+  );
+  
+  console.log('🚗 Creating vehicle at:', url);
+  console.log('📤 Request body:', JSON.stringify(cleanedData, null, 2));
 
   try {
     const response = await fetch(url, {
@@ -97,7 +104,7 @@ export async function createVehicle(vehicleData: Omit<VehicleApiResponse, 'vehic
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify(vehicleData),
+      body: JSON.stringify(cleanedData),
     });
 
     // Xử lý response text trước khi parse JSON
@@ -109,16 +116,20 @@ export async function createVehicle(vehicleData: Omit<VehicleApiResponse, 'vehic
       try {
         const errorData = JSON.parse(responseText);
         console.error('❌ API Error Response:', errorData);
+        console.error('❌ Full error details:', JSON.stringify(errorData, null, 2));
         
         // Trả về thông báo lỗi chi tiết từ API
         if (errorData.message) {
           throw new Error(`API Error (${response.status}): ${errorData.message}`);
+        } else if (errorData.error) {
+          throw new Error(`API Error (${response.status}): ${errorData.error}`);
         } else {
           throw new Error(`API Error (${response.status}): ${response.statusText}`);
         }
       } catch (parseError) {
-        // Nếu không parse được JSON, trả về thông báo lỗi cơ bản
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        // Nếu không parse được JSON, log raw response
+        console.error('❌ Raw error response:', responseText);
+        throw new Error(`API request failed: ${response.status} ${response.statusText}. Response: ${responseText}`);
       }
     }
 
@@ -135,26 +146,29 @@ export async function createVehicle(vehicleData: Omit<VehicleApiResponse, 'vehic
     // Xử lý các format response khác nhau
     let createdVehicle: VehicleApiResponse | null = null;
 
-    // Format 1: ApiCreateResponse với data array
-    if (data.statusCode === 200 && data.data && Array.isArray(data.data) && data.data.length > 0) {
-      createdVehicle = data.data[0];
+    // Format 1: ApiCreateResponse với data object (như trong hình - ưu tiên cao nhất)
+    if ((data.statusCode === 200 || data.statusCode === 201) && data.data && typeof data.data === 'object' && !Array.isArray(data.data) && 'vehicleId' in data.data) {
+      createdVehicle = data.data as VehicleApiResponse;
+      console.log('✅ Format 1: Response với statusCode + data object');
     }
-    // Format 2: ApiCreateResponse với data object
-    else if (data.statusCode === 200 && data.data && !Array.isArray(data.data) && data.data.vehicleId) {
-      createdVehicle = data.data;
+    // Format 2: ApiCreateResponse với data array
+    else if ((data.statusCode === 200 || data.statusCode === 201) && data.data && Array.isArray(data.data) && data.data.length > 0) {
+      createdVehicle = data.data[0];
+      console.log('✅ Format 2: Response với data array');
     }
     // Format 3: Direct VehicleApiResponse
-    else if (data.vehicleId && (data as any).modelName) {
+    else if ('vehicleId' in data && 'modelName' in data) {
       createdVehicle = data as unknown as VehicleApiResponse;
+      console.log('✅ Format 3: Direct VehicleApiResponse');
     }
-    // Format 4: Response với message thành công nhưng không có data
+    // Format 4: Response với message thành công nhưng không có data chi tiết
     else if (data.statusCode === 200 || data.statusCode === 201) {
       console.log('🔄 API trả về thành công nhưng không có data, tạo từ input data...');
       // Tạo vehicle data từ input + vehicleId từ response hoặc timestamp
       createdVehicle = {
-        vehicleId: data.vehicleId || Date.now(), // Fallback ID
+        vehicleId: (data as any).vehicleId || (data.data as any)?.vehicleId || Date.now(),
         ...vehicleData
-      };
+      } as VehicleApiResponse;
     }
 
     if (createdVehicle) {
