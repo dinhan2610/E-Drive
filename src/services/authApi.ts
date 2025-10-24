@@ -3,7 +3,10 @@ interface RegisterRequest {
   email: string;
   phone: string;
   dealerName: string;
-  address: string;
+  houseNumberAndStreet: string;
+  wardOrCommune: string;
+  district: string;
+  provinceOrCity: string;
   username: string;
   password: string;
   confirmPassword: string;

@@ -17,7 +17,10 @@ interface FormData {
   email: string;
   phone: string;
   dealerName: string;
-  address: string;
+  houseNumberAndStreet: string;
+  wardOrCommune: string;
+  district: string;
+  provinceOrCity: string;
   password: string;
   confirmPassword: string;
   agreeToTerms: boolean;
@@ -29,7 +32,10 @@ interface FormErrors {
   email?: string;
   phone?: string;
   dealerName?: string;
-  address?: string;
+  houseNumberAndStreet?: string;
+  wardOrCommune?: string;
+  district?: string;
+  provinceOrCity?: string;
   password?: string;
   confirmPassword?: string;
   agreeToTerms?: string;
@@ -48,7 +54,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     email: '',
     phone: '',
     dealerName: '',
-    address: '',
+    houseNumberAndStreet: '',
+    wardOrCommune: '',
+    district: '',
+    provinceOrCity: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false
@@ -118,11 +127,35 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       }
     }
     
-    if (name === 'address') {
+    if (name === 'houseNumberAndStreet') {
       if (value.trim() && value.trim().length < 5) {
-        fieldErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+        fieldErrors.houseNumberAndStreet = 'Số nhà và tên đường phải có ít nhất 5 ký tự';
       } else {
-        fieldErrors.address = undefined;
+        fieldErrors.houseNumberAndStreet = undefined;
+      }
+    }
+    
+    if (name === 'wardOrCommune') {
+      if (value.trim() && value.trim().length < 2) {
+        fieldErrors.wardOrCommune = 'Phường/Xã phải có ít nhất 2 ký tự';
+      } else {
+        fieldErrors.wardOrCommune = undefined;
+      }
+    }
+    
+    if (name === 'district') {
+      if (value.trim() && value.trim().length < 2) {
+        fieldErrors.district = 'Quận/Huyện phải có ít nhất 2 ký tự';
+      } else {
+        fieldErrors.district = undefined;
+      }
+    }
+    
+    if (name === 'provinceOrCity') {
+      if (value.trim() && value.trim().length < 2) {
+        fieldErrors.provinceOrCity = 'Tỉnh/Thành phố phải có ít nhất 2 ký tự';
+      } else {
+        fieldErrors.provinceOrCity = undefined;
       }
     }
     
@@ -195,11 +228,29 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.dealerName = 'Tên đại lý phải có ít nhất 2 ký tự';
     }
     
-    // Address validation
-    if (!formData.address.trim()) {
-      newErrors.address = 'Địa chỉ là bắt buộc';
-    } else if (formData.address.trim().length < 5) {
-      newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+    // Address validations
+    if (!formData.houseNumberAndStreet.trim()) {
+      newErrors.houseNumberAndStreet = 'Số nhà và tên đường là bắt buộc';
+    } else if (formData.houseNumberAndStreet.trim().length < 5) {
+      newErrors.houseNumberAndStreet = 'Số nhà và tên đường phải có ít nhất 5 ký tự';
+    }
+    
+    if (!formData.wardOrCommune.trim()) {
+      newErrors.wardOrCommune = 'Phường/Xã là bắt buộc';
+    } else if (formData.wardOrCommune.trim().length < 2) {
+      newErrors.wardOrCommune = 'Phường/Xã phải có ít nhất 2 ký tự';
+    }
+    
+    if (!formData.district.trim()) {
+      newErrors.district = 'Quận/Huyện là bắt buộc';
+    } else if (formData.district.trim().length < 2) {
+      newErrors.district = 'Quận/Huyện phải có ít nhất 2 ký tự';
+    }
+    
+    if (!formData.provinceOrCity.trim()) {
+      newErrors.provinceOrCity = 'Tỉnh/Thành phố là bắt buộc';
+    } else if (formData.provinceOrCity.trim().length < 2) {
+      newErrors.provinceOrCity = 'Tỉnh/Thành phố phải có ít nhất 2 ký tự';
     }
 
     // Password validation
@@ -244,7 +295,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         email: formData.email,
         phone: formData.phone,
         dealerName: formData.dealerName,
-        address: formData.address,
+        houseNumberAndStreet: formData.houseNumberAndStreet,
+        wardOrCommune: formData.wardOrCommune,
+        district: formData.district,
+        provinceOrCity: formData.provinceOrCity,
         username: formData.username,
         password: formData.password,
         confirmPassword: formData.confirmPassword
@@ -261,7 +315,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           email: formData.email,
           phone: formData.phone,
           dealerName: formData.dealerName,
-          address: formData.address,
+          houseNumberAndStreet: formData.houseNumberAndStreet,
+          wardOrCommune: formData.wardOrCommune,
+          district: formData.district,
+          provinceOrCity: formData.provinceOrCity,
           name: formData.fullName
         };
         localStorage.setItem('e-drive-user', JSON.stringify(userData));
@@ -277,7 +334,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           email: '',
           phone: '',
           dealerName: '',
-          address: '',
+          houseNumberAndStreet: '',
+          wardOrCommune: '',
+          district: '',
+          provinceOrCity: '',
           password: '',
           confirmPassword: '',
           agreeToTerms: false
@@ -468,24 +528,88 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           </div>
 
-          <div className="form-group">
-            <div className="input-wrapper">
-              <i className="fas fa-map-marker-alt input-icon"></i>
-              <input
-                type="text"
-                name="address"
-                placeholder="Địa chỉ *"
-                value={formData.address}
-                onChange={handleInputChange}
-                className={errors.address ? 'error' : ''}
-              />
+          <div className="form-row">
+            <div className="form-group">
+              <div className="input-wrapper">
+                <i className="fas fa-map-marker-alt input-icon"></i>
+                <input
+                  type="text"
+                  name="houseNumberAndStreet"
+                  placeholder="Số nhà và tên đường *"
+                  value={formData.houseNumberAndStreet}
+                  onChange={handleInputChange}
+                  className={errors.houseNumberAndStreet ? 'error' : ''}
+                />
+              </div>
+              {errors.houseNumberAndStreet && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.houseNumberAndStreet}
+                </span>
+              )}
             </div>
-            {errors.address && (
-              <span className="field-error">
-                <i className="fa-solid fa-exclamation-circle"></i>
-                {errors.address}
-              </span>
-            )}
+
+            <div className="form-group">
+              <div className="input-wrapper">
+                <i className="fas fa-map-pin input-icon"></i>
+                <input
+                  type="text"
+                  name="wardOrCommune"
+                  placeholder="Phường/Xã *"
+                  value={formData.wardOrCommune}
+                  onChange={handleInputChange}
+                  className={errors.wardOrCommune ? 'error' : ''}
+                />
+              </div>
+              {errors.wardOrCommune && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.wardOrCommune}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <div className="input-wrapper">
+                <i className="fas fa-city input-icon"></i>
+                <input
+                  type="text"
+                  name="district"
+                  placeholder="Quận/Huyện *"
+                  value={formData.district}
+                  onChange={handleInputChange}
+                  className={errors.district ? 'error' : ''}
+                />
+              </div>
+              {errors.district && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.district}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <div className="input-wrapper">
+                <i className="fas fa-map-marked-alt input-icon"></i>
+                <input
+                  type="text"
+                  name="provinceOrCity"
+                  placeholder="Tỉnh/Thành phố *"
+                  value={formData.provinceOrCity}
+                  onChange={handleInputChange}
+                  className={errors.provinceOrCity ? 'error' : ''}
+                />
+              </div>
+              {errors.provinceOrCity && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.provinceOrCity}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="form-group">
