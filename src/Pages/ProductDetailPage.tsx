@@ -54,7 +54,7 @@ const ProductDetailPage: React.FC = () => {
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
-    target.src = 'src/images/cars-big/audia1.jpg'; // Fallback image
+    target.src = '/src/images/cars-big/audia1.jpg'; // Fallback image
   };
 
   const handleOrder = () => {

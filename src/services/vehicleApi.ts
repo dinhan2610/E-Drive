@@ -11,8 +11,8 @@ export function convertVehicleToProduct(vehicle: VehicleApiResponse): Product {
     slug: `${vehicle.modelName.toLowerCase().replace(/\s+/g, '-')}-${vehicle.version.toLowerCase()}`,
     price: vehicle.priceRetail,
     originalPrice: vehicle.priceRetail,
-    image: `src/images/cars-big/car-${vehicle.vehicleId}.jpg`, // Simple image path
-    images: [`src/images/cars-big/car-${vehicle.vehicleId}.jpg`],
+    image: `/src/images/cars-big/car-${vehicle.vehicleId}.jpg`, // Absolute path from root
+    images: [`/src/images/cars-big/car-${vehicle.vehicleId}.jpg`],
     
     // Chỉ dùng data từ API
     rangeKm: vehicle.rangeKm,

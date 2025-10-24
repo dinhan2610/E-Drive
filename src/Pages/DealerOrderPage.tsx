@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { getProfile } from '../services/profileApi';
+import { createOrder, type CreateOrderRequest } from '../services/orderApi';
 import Footer from '../components/Footer';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/DealerOrderPage.module.scss';
@@ -254,14 +255,41 @@ const DealerOrderPage: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // TODO: Backend currently only accepts CASH (converted to FULL internally)
+      // Will need to update when BANK_TRANSFER support is added
+      const apiPaymentMethod = 'CASH';
 
-    console.log('Dealer order submitted:', formData);
-    console.log('Order total:', calculateTotal());
+      // Create order for the first product (or iterate if multiple products needed)
+      const firstProduct = formData.selectedProducts[0];
+      
+      const orderRequest: CreateOrderRequest = {
+        vehicleId: String(firstProduct.productId),
+        quantity: String(firstProduct.quantity),
+        desiredDeliveryDate: formData.preferredDeliveryDate || new Date().toISOString().split('T')[0],
+        deliveryNote: formData.deliveryNote || '',
+        deliveryAddress: formData.deliveryAddress || formData.address || '',
+        paymentMethod: apiPaymentMethod,
+      };
 
-    setIsSubmitting(false);
-    setShowSuccess(true);
+      console.log('Creating order with data:', orderRequest);
+      const createdOrder = await createOrder(orderRequest);
+      console.log('Order created successfully:', createdOrder);
+
+      // Check if online payment method
+      if (formData.paymentMethod === 'bank-transfer') {
+        // Navigate to payment page for online payment
+        navigate(`/orders/${createdOrder.orderId}/payment`);
+      } else {
+        // Show success modal for other payment methods
+        setShowSuccess(true);
+      }
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      alert(`Lỗi khi tạo đơn hàng: ${error.message || 'Vui lòng thử lại'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSuccessClose = () => {
@@ -666,7 +694,7 @@ const DealerOrderPage: React.FC = () => {
                   ) : (
                     <>
                       <i className="fas fa-check-circle"></i>
-                      Xác nhận đặt hàng
+                      {formData.paymentMethod === 'bank-transfer' ? 'Thanh toán' : 'Xác nhận đặt hàng'}
                     </>
                   )}
                 </button>

@@ -12,6 +12,7 @@ interface NavLink {
     to: string;
     label: string;
     icon: string;
+    state?: any;
   }>;
 }
 
@@ -97,7 +98,6 @@ const Navbar: React.FC = () => {
   const navLinks: NavLink[] = [
     { to: "/", label: "Trang chủ", className: "home-link" },
     { to: "/products", label: "Mẫu xe", className: "products-link" },
-    { to: "/test-drive", label: "Lái thử", className: "test-drive-link" },
     { 
       to: "/customers", 
       label: "Quản lý", 
@@ -105,10 +105,10 @@ const Navbar: React.FC = () => {
       dropdown: [
         { to: "/customers", label: "Khách hàng", icon: "fa-users" },
         { to: "/quote", label: "Tạo báo giá", icon: "fa-file-invoice-dollar" },
+        { to: "/drive", label: "Quản lý lái thử", icon: "fa-car-side" },
         { to: "/promotions", label: "Khuyến mãi", icon: "fa-tags" },
         { to: "/delivery-status", label: "Tình trạng giao xe", icon: "fa-truck" },
         { to: "/installment", label: "Trả góp", icon: "fa-credit-card" },
-        { to: "/test-drive-schedule", label: "Lịch hẹn lái thử", icon: "fa-calendar-check" },
         { to: "/feedback", label: "Phản hồi và xử lý khiếu nại", icon: "fa-comments" }
       ]
     },
@@ -152,7 +152,8 @@ const Navbar: React.FC = () => {
                   {link.dropdown.map((item, idx) => (
                     <Link 
                       key={idx} 
-                      to={item.to} 
+                      to={item.to}
+                      state={item.state}
                       className="nav-dropdown-item"
                     >
                       <i className={`fas ${item.icon}`}></i>
