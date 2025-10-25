@@ -182,16 +182,6 @@ const CustomersPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            
-            <div className={styles.heroRight}>
-              <button 
-                className={styles.createButton}
-                onClick={handleCreateCustomer}
-              >
-                <i className="fas fa-plus" />
-                Thêm khách hàng
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -249,6 +239,15 @@ const CustomersPage: React.FC = () => {
                 Xóa bộ lọc
               </button>
             )}
+
+            {/* Add Customer Button */}
+            <button 
+              className={styles.createButton}
+              onClick={handleCreateCustomer}
+            >
+              <i className="fas fa-plus" />
+              Thêm khách hàng
+            </button>
           </div>
         </div>
         </div>
