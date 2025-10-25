@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle } from '../services/vehicleApi';
-import { getTestDriveBookings, cancelTestDrive, completeTestDrive, confirmTestDrive, type TestDriveAdminResponse } from '../services/testDriveApi';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, type Dealer } from '../services/dealerApi';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
@@ -164,51 +164,13 @@ interface CarWithStatus extends CarType {
   lastMaintenance: string;
 }
 
-interface TestDriveBooking extends TestDriveAdminResponse {
-  // Extended fields for display (will be fetched from related APIs)
-  customerName?: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  vehicleName?: string;
-  dealerName?: string;
-}
 
-
-
-// Helper functions for test drive datetime
-const formatDate = (datetime: string) => {
-  try {
-    const date = new Date(datetime);
-    return date.toLocaleDateString('vi-VN');
-  } catch {
-    return datetime;
-  }
-};
-
-const formatTime = (datetime: string) => {
-  try {
-    const date = new Date(datetime);
-    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return datetime;
-  }
-};
-
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'PENDING': return 'Chờ xác nhận';
-    case 'CONFIRMED': return 'Đã xác nhận';
-    case 'COMPLETED': return 'Hoàn thành';
-    case 'CANCELLED': return 'Đã hủy';
-    case 'NO_SHOW': return 'Không đến';
-    default: return status;
-  }
-};
 
 const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'dealers' | 'bookings' | 'testdrives' | 'analytics' | 'settings'>('dashboard');
+  const location = useLocation();
+  const initialTab = (location.state as any)?.tab || 'dashboard';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'dealers' | 'bookings' | 'analytics' | 'settings'>(initialTab);
   const [cars, setCars] = useState<CarWithStatus[]>([]);
-  const [testDrives, setTestDrives] = useState<TestDriveBooking[]>([]);
 
   // Helper function để set token từ console
   // Usage: window.setAdminToken('your-token-here')
@@ -216,11 +178,6 @@ const AdminPage: React.FC = () => {
     (window as any).setAdminToken = (token: string) => {
       localStorage.setItem('token', token);
       console.log('✅ Token đã được set! Reload trang để áp dụng.');
-      console.log('💡 Hoặc gọi: window.reloadTestDrives() để load lại data');
-    };
-    
-    (window as any).reloadTestDrives = () => {
-      window.location.reload();
     };
     
     (window as any).getToken = () => {
@@ -232,11 +189,9 @@ const AdminPage: React.FC = () => {
     console.log('💡 Helper functions available:');
     console.log('  - window.setAdminToken("your-token") - Set token mới');
     console.log('  - window.getToken() - Xem token hiện tại');
-    console.log('  - window.reloadTestDrives() - Reload trang');
     
     return () => {
       delete (window as any).setAdminToken;
-      delete (window as any).reloadTestDrives;
       delete (window as any).getToken;
     };
   }, []);
@@ -368,7 +323,7 @@ const AdminPage: React.FC = () => {
           // Map API fields to UI fields
           id: v.vehicleId,
           name: `${v.modelName} ${v.version}`,
-          img: `src/images/cars-big/car-${v.vehicleId}.jpg`,
+          img: `/src/images/cars-big/car-${v.vehicleId}.jpg`,
           mark: v.modelName,
           model: v.version || v.modelName,
           year: (v as any).manufactureYear || 2024,
@@ -438,36 +393,6 @@ const AdminPage: React.FC = () => {
       }
     ];
     setBookings(mockBookings);
-    
-    // Load test drive bookings from API
-    const loadTestDrives = async () => {
-      // Check if user is logged in
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.warn('No token found, skipping test drives load');
-        setTestDrives([]);
-        return;
-      }
-
-      try {
-        const response = await getTestDriveBookings(0, 100); // Get first 100
-        const testDrivesData: TestDriveBooking[] = response.map((td: TestDriveAdminResponse) => ({
-          ...td,
-          // These will be filled later when we have customer/vehicle APIs
-          customerName: `Customer #${td.customerId}`,
-          vehicleName: `Vehicle #${td.vehicleId}`,
-          dealerName: `Dealer #${td.dealerId}`
-        }));
-        setTestDrives(testDrivesData);
-        console.log('✅ Test drives loaded:', testDrivesData.length);
-      } catch (error: any) {
-        console.error('❌ Failed to load test drives:', error.message || error);
-        // Keep empty array on error
-        setTestDrives([]);
-      }
-    };
-
-    loadTestDrives();
 
     // Calculate enhanced stats
     setStats({
@@ -570,40 +495,6 @@ const AdminPage: React.FC = () => {
       style: 'currency',
       currency: 'VND'
     }).format(amount);
-  };
-
-  // Test Drive Handlers
-  const handleConfirmTestDrive = async (id: number) => {
-    try {
-      const updated = await confirmTestDrive(id);
-      setTestDrives(prev => prev.map(td => td.id === id ? { ...td, status: updated.status } : td));
-      alert('Đã xác nhận lịch lái thử thành công!');
-    } catch (error: any) {
-      alert(error.message || 'Không thể xác nhận lịch lái thử');
-    }
-  };
-
-  const handleCompleteTestDrive = async (id: number) => {
-    try {
-      const updated = await completeTestDrive(id);
-      setTestDrives(prev => prev.map(td => td.id === id ? { ...td, status: updated.status } : td));
-      alert('Đã đánh dấu hoàn thành lịch lái thử!');
-    } catch (error: any) {
-      alert(error.message || 'Không thể hoàn thành lịch lái thử');
-    }
-  };
-
-  const handleCancelTestDrive = async (id: number) => {
-    const reason = prompt('Nhập lý do hủy:');
-    if (!reason) return;
-    
-    try {
-      const updated = await cancelTestDrive(id, reason);
-      setTestDrives(prev => prev.map(td => td.id === id ? { ...td, status: updated.status } : td));
-      alert('Đã hủy lịch lái thử thành công!');
-    } catch (error: any) {
-      alert(error.message || 'Không thể hủy lịch lái thử');
-    }
   };
 
   // Dealer Handlers
@@ -841,7 +732,7 @@ const AdminPage: React.FC = () => {
         cars: cars.length,
         dealers: dealers.length,
         bookings: bookings.length,
-        testDrives: testDrives.length
+        testDrives: 0
       }}
     >
       {/* Success Message Notification */}
@@ -1278,114 +1169,6 @@ const AdminPage: React.FC = () => {
                           </button>
                           <button className={styles.approveButton} title="Duyệt">
                             <i className="fas fa-check"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'testdrives' && (
-          <div className={styles.testDrivesManagement}>
-            <div className={styles.sectionHeader}>
-              <h3>Quản lý đăng ký lái thử</h3>
-              <div className={styles.filterButtons}>
-                <button className={`${styles.filterButton} ${styles.active}`}>
-                  Tất cả ({testDrives.length})
-                </button>
-                <button className={styles.filterButton}>
-                  Chờ xác nhận ({testDrives.filter(td => td.status === 'PENDING').length})
-                </button>
-                <button className={styles.filterButton}>
-                  Đã xác nhận ({testDrives.filter(td => td.status === 'CONFIRMED').length})
-                </button>
-                <button className={styles.filterButton}>
-                  Hoàn thành ({testDrives.filter(td => td.status === 'COMPLETED').length})
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.testDrivesTable}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Khách hàng</th>
-                    <th>Liên hệ</th>
-                    <th>Xe lái thử</th>
-                    <th>Đại lý</th>
-                    <th>Thời gian</th>
-                    <th>Trạng thái</th>
-                    <th>Ghi chú</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {testDrives.map(testDrive => (
-                    <tr key={testDrive.id}>
-                      <td>#{testDrive.id}</td>
-                      <td>
-                        <div>
-                          <div style={{fontWeight: 'bold'}}>{testDrive.customerName}</div>
-                          <div style={{fontSize: '12px', color: '#666'}}>
-                            Customer ID: {testDrive.customerId}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div>
-                          <div style={{fontSize: '12px'}}>ID: {testDrive.customerId}</div>
-                          <div style={{fontSize: '12px', color: '#666'}}>Dealer: {testDrive.dealerId}</div>
-                        </div>
-                      </td>
-                      <td>{testDrive.vehicleName}</td>
-                      <td>{testDrive.dealerName}</td>
-                      <td>
-                        <div>
-                          <div>{formatDate(testDrive.scheduleDatetime)}</div>
-                          <div style={{fontSize: '12px', color: '#666'}}>{formatTime(testDrive.scheduleDatetime)}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`${styles.statusBadge} ${styles[testDrive.status.toLowerCase()]}`}>
-                          {getStatusLabel(testDrive.status)}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis'}}>
-                          -
-                        </div>
-                      </td>
-                      <td>
-                        <div className={styles.tableActions}>
-                          {testDrive.status === 'PENDING' && (
-                            <button 
-                              className={styles.approveButton} 
-                              title="Xác nhận"
-                              onClick={() => handleConfirmTestDrive(testDrive.id)}
-                            >
-                              <i className="fas fa-check"></i>
-                            </button>
-                          )}
-                          {testDrive.status === 'CONFIRMED' && (
-                            <button 
-                              className={styles.completeButton} 
-                              title="Hoàn thành"
-                              onClick={() => handleCompleteTestDrive(testDrive.id)}
-                            >
-                              <i className="fas fa-flag-checkered"></i>
-                            </button>
-                          )}
-                          <button 
-                            className={styles.cancelButton} 
-                            title="Hủy"
-                            onClick={() => handleCancelTestDrive(testDrive.id)}
-                          >
-                            <i className="fas fa-times"></i>
                           </button>
                         </div>
                       </td>
@@ -1989,7 +1772,7 @@ const AdminPage: React.FC = () => {
                       const created: CarWithStatus = {
                         id: createdVehicle.vehicleId,
                         name: `${createdVehicle.modelName} ${createdVehicle.version}`.trim(),
-                        img: 'src/images/cars-big/carforbox.jpg',
+                        img: '/src/images/cars-big/carforbox.jpg',
                         mark: createdVehicle.modelName,
                         model: createdVehicle.version,
                         year: newCar.manufactureYear,

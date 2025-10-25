@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { DEALERS } from "../constants/carData";
 import { SuccessModal } from "../components/SuccessModal";
 import { fetchVehiclesFromApi } from "../services/vehicleApi";
-import { bookTestDrive, TestDriveApiError } from "../services/testDriveApi";
+import { createTestDrive, TestDriveApiError } from "../services/testDriveApi";
 import type { VehicleApiResponse } from "../types/product";
 import Footer from "../components/Footer";
 import styles from "../styles/TestDriveStyles/TestDrivePage.module.scss";
@@ -239,21 +239,15 @@ const TestDrivePage: React.FC = () => {
     setSubmitError(null);
 
     try {
-      // Parse time to hour and minute
-      const [hours, minutes] = formData.time.split(':').map(Number);
+      // Create ISO 8601 datetime string
+      const scheduleDatetime = `${formData.date}T${formData.time}:00`;
       
-      await bookTestDrive({
-        fullName: formData.name,
-        phone: formData.phone.replace(/[\s\-]/g, ''),
-        email: formData.email || '',
-        idCardNo: formData.citizenId.replace(/[\s\-\.]/g, ''),
-        dealerId: 1, // Using default dealer ID, TODO: map dealer string to ID
+      await createTestDrive({
+        customerId: 1, // TODO: Get from logged in user
+        dealerId: 1, // TODO: Map dealer string to ID
         vehicleId: parseInt(formData.model),
-        date: formData.date,
-        hour: hours,
-        minute: minutes,
-        note: formData.note || '',
-        agreePolicy: formData.confirmInfo
+        scheduleDatetime,
+        status: 'PENDING'
       });
 
       setIsSuccessModalOpen(true);
