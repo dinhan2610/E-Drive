@@ -17,7 +17,7 @@ export interface CreateOrderRequest {
 }
 
 export interface Order {
-  orderId: number;
+  orderId: number | string;  // Can be number or UUID string
   subtotal: number;
   dealerDiscount: number;
   vatAmount: number;
@@ -56,18 +56,25 @@ export class OrderApiError extends Error {
 export const createOrder = async (orderRequest: CreateOrderRequest): Promise<Order> => {
   try {
     const response = await api.post<any>('/api/orders', orderRequest);
-    console.log('📦 Raw order response:', response.data);
+    console.log('📦 Raw create order response:', response.data);
     
-    // Handle different response formats
-    const orderData = response.data;
+    // Handle response format: { statusCode, message, data: {...} }
+    let orderData = response.data;
+    
+    // If response is wrapped in { data: {...} }, extract it
+    if (orderData.data && orderData.statusCode) {
+      orderData = orderData.data;
+    }
+    
+    console.log('✅ Order data:', orderData);
     
     // Map field names if backend uses different names
     const normalizedOrder: Order = {
       orderId: orderData.orderId || orderData.id || orderData.orderID,
       subtotal: orderData.subtotal || 0,
-      dealerDiscount: orderData.dealerDiscount || 0,
+      dealerDiscount: orderData.totalDiscount || orderData.dealerDiscount || 0,
       vatAmount: orderData.vatAmount || 0,
-      grandTotal: orderData.grandTotal || orderData.totalAmount || 0,
+      grandTotal: orderData.totalPrice || orderData.grandTotal || orderData.totalAmount || 0,
       desiredDeliveryDate: orderData.desiredDeliveryDate || '',
       deliveryAddress: orderData.deliveryAddress || '',
       deliveryNote: orderData.deliveryNote || '',
@@ -92,23 +99,49 @@ export const createOrder = async (orderRequest: CreateOrderRequest): Promise<Ord
 export const getOrders = async (): Promise<Order[]> => {
   try {
     const response = await api.get<any>('/api/orders');
+    console.log('📦 Get orders response:', response.data);
     const data = response.data;
     
+    let orders: any[] = [];
+    
     // Handle different response formats
-    if (Array.isArray(data)) {
-      return data as Order[];
+    // Format 1: { statusCode, message, data: [...] }
+    if (data.data && data.statusCode && Array.isArray(data.data)) {
+      orders = data.data;
+    }
+    // Format 2: Direct array
+    else if (Array.isArray(data)) {
+      orders = data;
+    }
+    // Format 3: { data: [...] }
+    else if (data && Array.isArray(data.data)) {
+      orders = data.data;
+    }
+    // Format 4: { content: [...] }
+    else if (data && Array.isArray(data.content)) {
+      orders = data.content;
+    } else {
+      console.error('Unexpected response format:', data);
+      return [];
     }
     
-    if (data && Array.isArray(data.data)) {
-      return data.data as Order[];
-    }
+    console.log('✅ Orders array:', orders);
     
-    if (data && Array.isArray(data.content)) {
-      return data.content as Order[];
-    }
-    
-    console.error('Unexpected response format:', data);
-    return [];
+    // Map backend field names to frontend Order interface
+    return orders.map(order => ({
+      orderId: order.orderId,
+      subtotal: order.subtotal || 0,
+      dealerDiscount: order.totalDiscount || order.dealerDiscount || 0,
+      vatAmount: order.vatAmount || 0,
+      grandTotal: order.totalPrice || order.grandTotal || 0,
+      desiredDeliveryDate: order.desiredDeliveryDate || '',
+      deliveryAddress: order.deliveryAddress || '',
+      deliveryNote: order.deliveryNote || '',
+      orderStatus: order.orderStatus || 'PENDING',
+      paymentStatus: order.paymentStatus || 'PENDING',
+      paymentMethod: order.paymentMethod || 'CASH',
+      orderItems: order.orderItems || []
+    }));
     
   } catch (error: any) {
     console.error('Error fetching orders:', error);
@@ -120,10 +153,36 @@ export const getOrders = async (): Promise<Order[]> => {
 /**
  * GET /api/orders/{id} - Get order by ID
  */
-export const getOrderById = async (id: number): Promise<Order> => {
+export const getOrderById = async (id: number | string): Promise<Order> => {
   try {
-    const response = await api.get<Order>(`/api/orders/${id}`);
-    return response.data;
+    const response = await api.get<any>(`/api/orders/${id}`);
+    console.log('📦 Get order by ID response:', response.data);
+    
+    // Handle response format: { statusCode, message, data: {...} }
+    let orderData = response.data;
+    
+    // If response is wrapped in { data: {...} }, extract it
+    if (orderData.data && orderData.statusCode) {
+      orderData = orderData.data;
+    }
+    
+    console.log('✅ Order data:', orderData);
+    
+    // Map backend field names to frontend Order interface
+    return {
+      orderId: orderData.orderId,
+      subtotal: orderData.subtotal || 0,
+      dealerDiscount: orderData.totalDiscount || orderData.dealerDiscount || 0,
+      vatAmount: orderData.vatAmount || 0,
+      grandTotal: orderData.totalPrice || orderData.grandTotal || 0,
+      desiredDeliveryDate: orderData.desiredDeliveryDate || '',
+      deliveryAddress: orderData.deliveryAddress || '',
+      deliveryNote: orderData.deliveryNote || '',
+      orderStatus: orderData.orderStatus || 'PENDING',
+      paymentStatus: orderData.paymentStatus || 'PENDING',
+      paymentMethod: orderData.paymentMethod || 'CASH',
+      orderItems: orderData.orderItems || []
+    };
   } catch (error: any) {
     console.error('Error fetching order:', error);
     

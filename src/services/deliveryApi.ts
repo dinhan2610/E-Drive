@@ -30,7 +30,7 @@ export class DeliveryApiError extends Error {
  * POST /api/deliveries/orders/{orderId}/confirm-delivery
  * Xác nhận đã nhận hàng cho đơn hàng
  */
-export const confirmDelivery = async (orderId: number): Promise<ConfirmDeliveryResponse> => {
+export const confirmDelivery = async (orderId: number | string): Promise<ConfirmDeliveryResponse> => {
   try {
     console.log(`🚚 Confirming delivery for order ${orderId}...`);
     const response = await api.post<ConfirmDeliveryResponse>(

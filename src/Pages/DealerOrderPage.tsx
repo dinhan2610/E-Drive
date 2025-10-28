@@ -4,6 +4,7 @@ import type { Product } from '../types/product';
 import { getProfile } from '../services/profileApi';
 import { createOrder, getOrders, type CreateOrderRequest, type Order } from '../services/orderApi';
 import { confirmDelivery, DeliveryApiError } from '../services/deliveryApi';
+import { startVnPay } from '../services/paymentApi';
 import Footer from '../components/Footer';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/DealerOrderPage.module.scss';
@@ -49,6 +50,7 @@ const DealerOrderPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const incomingProduct = location.state?.product as Product | undefined;
+  const initialTab = (location.state?.activeTab as 'create' | 'list') || 'create';
   
   // Check authentication on mount
   useEffect(() => {
@@ -67,12 +69,15 @@ const DealerOrderPage: React.FC = () => {
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   
   // Tab management
-  const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'list'>(initialTab);
   
   // Orders list
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
-  const [confirmingOrderId, setConfirmingOrderId] = useState<number | null>(null);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<number | string | null>(null);
+  const [payingOrderId, setPayingOrderId] = useState<number | string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetail, setShowOrderDetail] = useState(false);
   
   const [formData, setFormData] = useState<DealerOrderForm>({
     dealerName: '',
@@ -173,7 +178,7 @@ const DealerOrderPage: React.FC = () => {
     }
   };
 
-  const handleConfirmDelivery = async (orderId: number) => {
+  const handleConfirmDelivery = async (orderId: number | string) => {
     if (!window.confirm('Bạn xác nhận đã nhận đủ hàng cho đơn hàng này?')) {
       return;
     }
@@ -204,6 +209,33 @@ const DealerOrderPage: React.FC = () => {
     } finally {
       setConfirmingOrderId(null);
     }
+  };
+
+  const handlePayment = async (orderId: number | string) => {
+    setPayingOrderId(orderId as any);
+    try {
+      console.log(`💳 Initiating VNPay payment for order ${orderId}...`);
+      
+      // Remove '#' prefix if exists (orderId might be displayed as "#84d8772d-...")
+      const cleanOrderId = typeof orderId === 'string' ? orderId.replace('#', '') : orderId;
+      console.log('🔍 Clean order ID:', cleanOrderId);
+      
+      const vnpayResponse = await startVnPay(cleanOrderId);
+      
+      console.log('✅ VNPay URL received:', vnpayResponse.paymentUrl);
+      
+      // Redirect to VNPay sandbox
+      window.location.href = vnpayResponse.paymentUrl;
+    } catch (error: any) {
+      console.error('❌ Error initiating payment:', error);
+      alert(`Không thể khởi tạo thanh toán: ${error.message || 'Vui lòng thử lại.'}`);
+      setPayingOrderId(null);
+    }
+  };
+
+  const handleViewOrderDetail = (order: Order) => {
+    setSelectedOrder(order);
+    setShowOrderDetail(true);
   };
 
   // Auto-add product from navigation state
@@ -375,8 +407,22 @@ const DealerOrderPage: React.FC = () => {
 
       // Check if online payment method
       if (formData.paymentMethod === 'bank-transfer') {
-        // Navigate to payment page for online payment
-        navigate(`/orders/${createdOrder.orderId}/payment`);
+        // Initiate VNPay payment and redirect to sandbox
+        console.log('💳 Initiating VNPay payment for new order:', createdOrder.orderId);
+        
+        try {
+          const vnpayResponse = await startVnPay(createdOrder.orderId);
+          console.log('✅ VNPay URL received:', vnpayResponse.paymentUrl);
+          
+          // Redirect to VNPay sandbox
+          window.location.href = vnpayResponse.paymentUrl;
+        } catch (paymentError: any) {
+          console.error('❌ Error initiating VNPay:', paymentError);
+          alert(`Đơn hàng đã tạo thành công nhưng không thể khởi tạo thanh toán VNPay.\n\nVui lòng vào "Đơn hàng của tôi" để thanh toán sau.`);
+          
+          // Switch to orders list tab to show the created order
+          setActiveTab('list');
+        }
       } else {
         // Show success modal for other payment methods
         setShowSuccess(true);
@@ -753,7 +799,9 @@ const DealerOrderPage: React.FC = () => {
                   {isSubmitting ? (
                     <>
                       <i className="fas fa-spinner fa-spin"></i>
-                      Đang xử lý...
+                      {formData.paymentMethod === 'bank-transfer' 
+                        ? 'Đang chuyển đến VNPay...' 
+                        : 'Đang xử lý...'}
                     </>
                   ) : (
                     <>
@@ -792,7 +840,12 @@ const DealerOrderPage: React.FC = () => {
               ) : (
                 <div className={styles.ordersGrid}>
                   {orders.map(order => (
-                    <div key={order.orderId} className={styles.orderCard}>
+                    <div 
+                      key={order.orderId} 
+                      className={styles.orderCard}
+                      onClick={() => handleViewOrderDetail(order)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className={styles.orderHeader}>
                         <h3>Đơn hàng #{order.orderId}</h3>
                         <span className={`${styles.status} ${styles[order.orderStatus.toLowerCase()]}`}>
@@ -821,7 +874,7 @@ const DealerOrderPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className={styles.orderActions}>
+                      <div className={styles.orderActions} onClick={(e) => e.stopPropagation()}>
                         {order.orderStatus === 'SHIPPED' && (
                           <button
                             type="button"
@@ -846,11 +899,21 @@ const DealerOrderPage: React.FC = () => {
                         {order.paymentStatus === 'PENDING' && (
                           <button
                             type="button"
-                            onClick={() => navigate(`/orders/${order.orderId}/payment`)}
+                            onClick={() => handlePayment(order.orderId)}
+                            disabled={payingOrderId === order.orderId}
                             className={styles.payButton}
                           >
-                            <i className="fas fa-credit-card"></i>
-                            Thanh toán
+                            {payingOrderId === order.orderId ? (
+                              <>
+                                <i className="fas fa-spinner fa-spin"></i>
+                                Đang chuyển hướng...
+                              </>
+                            ) : (
+                              <>
+                                <i className="fas fa-credit-card"></i>
+                                Thanh toán
+                              </>
+                            )}
                           </button>
                         )}
                       </div>
@@ -870,6 +933,135 @@ const DealerOrderPage: React.FC = () => {
         title="Đặt hàng thành công!"
         message={`Đơn hàng của bạn đã được ghi nhận. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất. Mã đơn hàng: DH-${Date.now()}`}
       />
+
+      {/* Order Detail Modal */}
+      {showOrderDetail && selectedOrder && (
+        <div className={styles.modalOverlay} onClick={() => setShowOrderDetail(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2>Chi tiết đơn hàng #{selectedOrder.orderId}</h2>
+              <button onClick={() => setShowOrderDetail(false)} className={styles.closeBtn}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              {/* Order Status */}
+              <div className={styles.detailSection}>
+                <h3>Trạng thái</h3>
+                <div className={styles.statusRow}>
+                  <div>
+                    <span className={styles.label}>Đơn hàng:</span>
+                    <span className={`${styles.badge} ${styles[selectedOrder.orderStatus.toLowerCase()]}`}>
+                      {selectedOrder.orderStatus}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={styles.label}>Thanh toán:</span>
+                    <span className={`${styles.badge} ${styles[selectedOrder.paymentStatus.toLowerCase()]}`}>
+                      {selectedOrder.paymentStatus}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Items */}
+              {selectedOrder.orderItems && selectedOrder.orderItems.length > 0 && (
+                <div className={styles.detailSection}>
+                  <h3>Danh sách xe</h3>
+                  <div className={styles.itemsList}>
+                    {selectedOrder.orderItems.map((item, index) => (
+                      <div key={index} className={styles.orderItem}>
+                        <div className={styles.itemInfo}>
+                          <strong>{item.vehicleName || `Vehicle #${item.vehicleId}`}</strong>
+                          <span className={styles.itemQuantity}>Số lượng: {item.quantity}</span>
+                        </div>
+                        <div className={styles.itemPrice}>
+                          <div>{formatPrice(item.unitPrice)} x {item.quantity}</div>
+                          <strong>{formatPrice(item.unitPrice * item.quantity)}</strong>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pricing Breakdown */}
+              <div className={styles.detailSection}>
+                <h3>Tổng quan thanh toán</h3>
+                <div className={styles.pricingBreakdown}>
+                  <div className={styles.priceRow}>
+                    <span>Tạm tính:</span>
+                    <span>{formatPrice(selectedOrder.subtotal)}</span>
+                  </div>
+                  {selectedOrder.dealerDiscount > 0 && (
+                    <div className={styles.priceRow}>
+                      <span>Chiết khấu đại lý:</span>
+                      <span className={styles.discount}>-{formatPrice(selectedOrder.dealerDiscount)}</span>
+                    </div>
+                  )}
+                  <div className={styles.priceRow}>
+                    <span>VAT (10%):</span>
+                    <span>{formatPrice(selectedOrder.vatAmount)}</span>
+                  </div>
+                  <div className={`${styles.priceRow} ${styles.total}`}>
+                    <strong>Tổng cộng:</strong>
+                    <strong className={styles.totalPrice}>{formatPrice(selectedOrder.grandTotal)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery Information */}
+              <div className={styles.detailSection}>
+                <h3>Thông tin giao hàng</h3>
+                <div className={styles.deliveryInfo}>
+                  <div className={styles.infoItem}>
+                    <i className="fas fa-calendar"></i>
+                    <div>
+                      <strong>Ngày giao dự kiến</strong>
+                      <span>{selectedOrder.desiredDeliveryDate}</span>
+                    </div>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <i className="fas fa-map-marker-alt"></i>
+                    <div>
+                      <strong>Địa chỉ giao hàng</strong>
+                      <span>{selectedOrder.deliveryAddress}</span>
+                    </div>
+                  </div>
+                  {selectedOrder.deliveryNote && (
+                    <div className={styles.infoItem}>
+                      <i className="fas fa-sticky-note"></i>
+                      <div>
+                        <strong>Ghi chú</strong>
+                        <span>{selectedOrder.deliveryNote}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button onClick={() => setShowOrderDetail(false)} className={styles.closeButton}>
+                Đóng
+              </button>
+              {selectedOrder.paymentStatus === 'PENDING' && (
+                <button 
+                  onClick={() => {
+                    setShowOrderDetail(false);
+                    handlePayment(selectedOrder.orderId);
+                  }}
+                  className={styles.payButton}
+                >
+                  <i className="fas fa-credit-card"></i>
+                  Thanh toán ngay
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </>

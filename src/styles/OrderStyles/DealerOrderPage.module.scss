@@ -1549,3 +1549,364 @@
     box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3);
   }
 }
+
+// Order Detail Modal
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 2rem;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2.5rem 3rem;
+  border-bottom: 2px solid #f8f9fa;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+  border-radius: 20px 20px 0 0;
+
+  h2 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+    font-family: $titles-font;
+  }
+
+  .closeBtn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #6c757d;
+
+    i {
+      font-size: 1.8rem;
+    }
+
+    &:hover {
+      background: #ff4d30;
+      color: white;
+      transform: rotate(90deg);
+    }
+  }
+}
+
+.modalBody {
+  padding: 3rem;
+}
+
+.detailSection {
+  margin-bottom: 3rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 1.5rem;
+    font-family: $titles-font;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    &::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: linear-gradient(135deg, #ff4d30 0%, #e63946 100%);
+      border-radius: 2px;
+    }
+  }
+}
+
+.statusRow {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+
+  > div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+}
+
+.badge {
+  padding: 0.6rem 1.4rem;
+  border-radius: 20px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  &.confirmed {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
+
+  &.processing {
+    background: #cfe2ff;
+    color: #084298;
+  }
+
+  &.shipped {
+    background: #d3f9d8;
+    color: #0f5132;
+  }
+
+  &.delivered {
+    background: #d1e7dd;
+    color: #0a3622;
+  }
+
+  &.cancelled {
+    background: #f8d7da;
+    color: #842029;
+  }
+
+  &.paid {
+    background: #d1e7dd;
+    color: #0a3622;
+  }
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.orderItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  gap: 2rem;
+
+  @include respond-to('md') {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .itemInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    strong {
+      font-size: 1.6rem;
+      color: #212529;
+    }
+  }
+
+  .itemQuantity {
+    font-size: 1.3rem;
+    color: #6c757d;
+  }
+
+  .itemPrice {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    div {
+      font-size: 1.3rem;
+      color: #6c757d;
+    }
+
+    strong {
+      font-size: 1.6rem;
+      color: #ff4d30;
+      font-weight: 700;
+    }
+
+    @include respond-to('md') {
+      align-self: flex-end;
+    }
+  }
+}
+
+.pricingBreakdown {
+  background: #f8f9fa;
+  padding: 2rem;
+  border-radius: 12px;
+
+  .priceRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    font-size: 1.5rem;
+
+    span {
+      color: #6c757d;
+    }
+
+    strong {
+      color: #212529;
+    }
+
+    &.total {
+      padding-top: 1.5rem;
+      margin-top: 1rem;
+      border-top: 2px solid #dee2e6;
+      font-size: 1.8rem;
+
+      span {
+        color: #212529;
+        font-weight: 700;
+      }
+
+      .totalPrice {
+        color: #ff4d30;
+        font-size: 2.4rem;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+.deliveryInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  .infoItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+
+    i {
+      font-size: 2rem;
+      color: #ff4d30;
+      margin-top: 0.2rem;
+      flex-shrink: 0;
+    }
+
+    div {
+      flex: 1;
+
+      strong {
+        display: block;
+        font-size: 1.4rem;
+        color: #212529;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+
+      span {
+        display: block;
+        font-size: 1.5rem;
+        color: #495057;
+        line-height: 1.6;
+      }
+    }
+  }
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.5rem;
+  padding: 2rem 3rem;
+  border-top: 2px solid #f8f9fa;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  border-radius: 0 0 20px 20px;
+
+  button {
+    padding: 1.2rem 3rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: $text-font;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+
+    i {
+      font-size: 1.6rem;
+    }
+  }
+}
+
+.closeButton {
+  background: #f8f9fa;
+  color: #495057;
+
+  &:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
