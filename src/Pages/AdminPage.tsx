@@ -4,8 +4,10 @@ import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle } from '../services/vehicleApi';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
+import { getOrders, getOrderById, cancelOrder, type Order } from '../services/orderApi';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
+import modalStyles from '../styles/AdminStyles/OrderDetailModal.module.scss';
 import AdminLayout from '../components/AdminLayout';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SuccessNotification from '../components/SuccessNotification';
@@ -146,16 +148,23 @@ interface AdminStats {
 }
 
 interface Booking {
-  id: number;
+  id: number | string;
   userId: number;
   userName: string;
+  dealerName: string;
   carId: number;
   carName: string;
   startDate: string;
   endDate: string;
-  status: 'pending' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   totalAmount: number;
   paymentStatus: 'pending' | 'paid' | 'refunded';
+  deliveryAddress: string;
+  orderItems: Array<{
+    vehicleName: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
 }
 
 interface CarWithStatus extends CarType {
@@ -330,6 +339,11 @@ const AdminPage: React.FC = () => {
     pendingMaintenance: 0
   });
 
+  // Order detail modal
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetail, setShowOrderDetail] = useState(false);
+  const [loadingOrderDetail, setLoadingOrderDetail] = useState(false);
+
   // Notification is auto-hidden by SuccessNotification component
 
   useEffect(() => {
@@ -395,47 +409,157 @@ const AdminPage: React.FC = () => {
       }
     })();
 
-    // Mock bookings data
-    const mockBookings: Booking[] = [
-      {
-        id: 1,
-        userId: 1,
-        userName: 'Nguyễn Văn A',
-        carId: 1,
-        carName: 'VW Golf 6',
-        startDate: '2024-10-10',
-        endDate: '2024-10-15',
-        status: 'confirmed',
-        totalAmount: 1850000,
-        paymentStatus: 'paid'
-      },
-      {
-        id: 2,
-        userId: 2,
-        userName: 'Trần Thị B',
-        carId: 2,
-        carName: 'Audi A1 S-Line',
-        startDate: '2024-10-12',
-        endDate: '2024-10-14',
-        status: 'pending',
-        totalAmount: 900000,
-        paymentStatus: 'pending'
-      }
-    ];
-    setBookings(mockBookings);
+    // Fetch orders from API
+    const fetchOrdersData = async () => {
+      try {
+        console.log('🔄 Fetching orders from API...');
+        const ordersData = await getOrders();
+        console.log('📦 Orders fetched:', ordersData);
+        
+        // Map Order data to Booking interface
+        const mappedBookings: Booking[] = ordersData.map((order: Order) => {
+          // Get first order item for car name
+          const firstItem = order.orderItems && order.orderItems.length > 0 
+            ? order.orderItems[0] 
+            : null;
+          
+          // Map order status to booking status
+          let bookingStatus: Booking['status'] = 'pending';
+          if (order.orderStatus === 'PENDING') bookingStatus = 'pending';
+          else if (order.orderStatus === 'CONFIRMED') bookingStatus = 'confirmed';
+          else if (order.orderStatus === 'PROCESSING') bookingStatus = 'processing';
+          else if (order.orderStatus === 'SHIPPED') bookingStatus = 'shipped';
+          else if (order.orderStatus === 'DELIVERED') bookingStatus = 'delivered';
+          else if (order.orderStatus === 'CANCELLED') bookingStatus = 'cancelled';
+          
+          // Map payment status
+          let paymentSt: Booking['paymentStatus'] = 'pending';
+          if (order.paymentStatus === 'PENDING') paymentSt = 'pending';
+          else if (order.paymentStatus === 'PAID') paymentSt = 'paid';
+          
+          return {
+            id: order.orderId,
+            userId: order.dealerId || 0,
+            userName: order.dealerName || 'N/A',
+            dealerName: order.dealerName || 'N/A',
+            carId: firstItem?.vehicleId || 0,
+            carName: firstItem?.vehicleName || 'N/A',
+            startDate: order.orderDate || order.desiredDeliveryDate || 'N/A',
+            endDate: order.actualDeliveryDate || order.desiredDeliveryDate || 'N/A',
+            status: bookingStatus,
+            totalAmount: order.grandTotal || 0,
+            paymentStatus: paymentSt,
+            deliveryAddress: order.deliveryAddress || '',
+            orderItems: order.orderItems || []
+          };
+        });
+        
+        setBookings(mappedBookings);
+        console.log('✅ Bookings mapped:', mappedBookings);
 
     // Calculate enhanced stats
     setStats({
       totalCars: cars.length || 0,
       totalUsers: dealers.length,
-      totalRevenue: 125000000,
-      monthlyBookings: 45,
-      activeBookings: mockBookings.filter(b => b.status === 'ongoing').length,
-      totalBookings: mockBookings.length,
+          totalRevenue: mappedBookings.reduce((sum, b) => sum + b.totalAmount, 0),
+          monthlyBookings: mappedBookings.filter(b => {
+            const orderDate = new Date(b.startDate);
+            const now = new Date();
+            return orderDate.getMonth() === now.getMonth() && 
+                   orderDate.getFullYear() === now.getFullYear();
+          }).length,
+          activeBookings: mappedBookings.filter(b => 
+            b.status === 'processing' || b.status === 'shipped'
+          ).length,
+          totalBookings: mappedBookings.length,
       avgRating: 4.6,
       pendingMaintenance: 0
     });
+      } catch (error) {
+        console.error('❌ Error fetching orders:', error);
+        
+        // Fallback to empty bookings
+        setBookings([]);
+        setStats({
+          totalCars: cars.length || 0,
+          totalUsers: dealers.length,
+          totalRevenue: 0,
+          monthlyBookings: 0,
+          activeBookings: 0,
+          totalBookings: 0,
+          avgRating: 0,
+          pendingMaintenance: 0
+        });
+      }
+    };
+    
+    fetchOrdersData();
   }, []); // Empty dependency array - only run once on mount
+
+  // Handle view order detail
+  const handleViewOrderDetail = async (orderId: number | string) => {
+    setLoadingOrderDetail(true);
+    setShowOrderDetail(true);
+    
+    try {
+      console.log('🔍 Fetching order detail for ID:', orderId);
+      const orderDetail = await getOrderById(orderId);
+      setSelectedOrder(orderDetail);
+      console.log('✅ Order detail loaded:', orderDetail);
+    } catch (error) {
+      console.error('❌ Error loading order detail:', error);
+      alert('Không thể tải chi tiết đơn hàng. Vui lòng thử lại.');
+      setShowOrderDetail(false);
+    } finally {
+      setLoadingOrderDetail(false);
+    }
+  };
+
+  // Handle cancel order
+  const handleCancelOrder = async (orderId: number | string, orderInfo: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Hủy đơn hàng',
+      message: `Bạn có chắc chắn muốn hủy đơn hàng "${orderInfo}"?\n\nHành động này không thể hoàn tác!`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          console.log('🚫 Cancelling order:', orderId);
+
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang hủy đơn hàng...',
+            type: 'info'
+          });
+
+          await cancelOrder(orderId);
+
+          // Remove from bookings list
+          setBookings(prev => prev.filter(b => b.id !== orderId));
+
+          // Show success notification
+          setNotification({
+            isVisible: true,
+            message: '✅ Đơn hàng đã được hủy thành công',
+            type: 'success'
+          });
+
+          console.log('✅ Order cancelled successfully');
+        } catch (error) {
+          console.error('❌ Error cancelling order:', error);
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể hủy đơn hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
 
   const handleDeleteCar = async (carId: number, carName: string) => {
     // Hiển thị dialog xác nhận trước khi xóa
@@ -742,8 +866,8 @@ const AdminPage: React.FC = () => {
       message: `Bạn có chắc chắn muốn xóa đại lý "${dealerName}"?\n\nHành động này không thể hoàn tác!`,
       type: 'danger',
       onConfirm: async () => {
-        try {
-          console.log('🗑️ Deleting dealer with ID:', dealerId);
+    try {
+      console.log('🗑️ Deleting dealer with ID:', dealerId);
           
           // Show loading notification
           setNotification({
@@ -755,17 +879,17 @@ const AdminPage: React.FC = () => {
           const result = await deleteDealer(dealerId);
           
           if (result.success) {
-            // Remove from dealers list
-            setDealers(prev => prev.filter(d => d.dealerId !== dealerId));
-            
+      // Remove from dealers list
+      setDealers(prev => prev.filter(d => d.dealerId !== dealerId));
+      
             // Show success notification
             setNotification({
               isVisible: true,
               message: `✅ ${result.message}`,
               type: 'success'
             });
-            
-            console.log('✅ Dealer deleted successfully');
+      
+      console.log('✅ Dealer deleted successfully');
           } else {
             // Show error notification
             setNotification({
@@ -774,8 +898,8 @@ const AdminPage: React.FC = () => {
               type: 'error'
             });
           }
-        } catch (error) {
-          console.error('❌ Error deleting dealer:', error);
+    } catch (error) {
+      console.error('❌ Error deleting dealer:', error);
           setNotification({
             isVisible: true,
             message: `❌ Không thể xóa đại lý "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
@@ -1336,7 +1460,10 @@ const AdminPage: React.FC = () => {
                   Chờ duyệt ({bookings.filter(b => b.status === 'pending').length})
                 </button>
                 <button className={styles.filterButton}>
-                  Đang thuê ({bookings.filter(b => b.status === 'ongoing').length})
+                  Đang xử lý ({bookings.filter(b => b.status === 'processing' || b.status === 'shipped').length})
+                </button>
+                <button className={styles.filterButton}>
+                  Đã giao ({bookings.filter(b => b.status === 'delivered').length})
                 </button>
               </div>
             </div>
@@ -1345,11 +1472,11 @@ const AdminPage: React.FC = () => {
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Khách hàng</th>
+                    <th>Mã đơn</th>
+                    <th>Đại lý</th>
                     <th>Xe</th>
-                    <th>Ngày thuê</th>
-                    <th>Ngày trả</th>
+                    <th>Ngày đặt</th>
+                    <th>Ngày giao dự kiến</th>
                     <th>Tổng tiền</th>
                     <th>Trạng thái</th>
                     <th>Thanh toán</th>
@@ -1359,8 +1486,10 @@ const AdminPage: React.FC = () => {
                 <tbody>
                   {bookings.map(booking => (
                     <tr key={booking.id}>
-                      <td>#{booking.id}</td>
-                      <td>{booking.userName}</td>
+                      <td title={String(booking.id)}>
+                        #{typeof booking.id === 'string' ? booking.id.substring(0, 8) + '...' : booking.id}
+                      </td>
+                      <td>{booking.dealerName}</td>
                       <td>{booking.carName}</td>
                       <td>{booking.startDate}</td>
                       <td>{booking.endDate}</td>
@@ -1368,9 +1497,10 @@ const AdminPage: React.FC = () => {
                       <td>
                         <span className={`${styles.statusBadge} ${styles[booking.status]}`}>
                           {booking.status === 'pending' && 'Chờ duyệt'}
-                          {booking.status === 'confirmed' && 'Đã duyệt'}
-                          {booking.status === 'ongoing' && 'Đang thuê'}
-                          {booking.status === 'completed' && 'Hoàn thành'}
+                          {booking.status === 'confirmed' && 'Đã xác nhận'}
+                          {booking.status === 'processing' && 'Đang xử lý'}
+                          {booking.status === 'shipped' && 'Đang giao'}
+                          {booking.status === 'delivered' && 'Đã giao'}
                           {booking.status === 'cancelled' && 'Đã hủy'}
                         </span>
                       </td>
@@ -1383,13 +1513,24 @@ const AdminPage: React.FC = () => {
                       </td>
                       <td>
                         <div className={styles.tableActions}>
-                          <button className={styles.viewButton} title="Xem chi tiết">
+                          <button 
+                            className={styles.viewButton} 
+                            title="Xem chi tiết"
+                            onClick={() => handleViewOrderDetail(booking.id)}
+                          >
                             <i className="fas fa-eye"></i>
                           </button>
-                          <button className={styles.editButton} title="Chỉnh sửa">
-                            <i className="fas fa-edit"></i>
+                          <button 
+                            className={styles.deleteButton} 
+                            title="Hủy đơn hàng"
+                            onClick={() => handleCancelOrder(
+                              booking.id, 
+                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
+                            )}
+                          >
+                            <i className="fas fa-times"></i>
                           </button>
-                          <button className={styles.approveButton} title="Duyệt">
+                          <button className={styles.approveButton} title="Duyệt đơn hàng">
                             <i className="fas fa-check"></i>
                           </button>
                         </div>
@@ -1398,6 +1539,169 @@ const AdminPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Order Detail Modal */}
+        {showOrderDetail && (
+          <div className={modalStyles.modalOverlay} onClick={() => setShowOrderDetail(false)}>
+            <div className={modalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <div className={modalStyles.modalHeader}>
+                <h2>
+                  <i className="fas fa-file-invoice"></i>
+                  Chi tiết đơn hàng
+                </h2>
+                <button 
+                  onClick={() => setShowOrderDetail(false)} 
+                  className={modalStyles.closeBtn}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+
+              <div className={modalStyles.modalBody}>
+                {loadingOrderDetail ? (
+                  <div className={modalStyles.loading}>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <p>Đang tải thông tin đơn hàng...</p>
+                  </div>
+                ) : selectedOrder ? (
+                  <>
+                    {/* Order Info Section */}
+                    <div className={modalStyles.detailSection}>
+                      <h3><i className="fas fa-info-circle"></i> Thông tin đơn hàng</h3>
+                      <div className={modalStyles.infoGrid}>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Mã đơn hàng:</span>
+                          <span className={modalStyles.value} title={String(selectedOrder.orderId)}>
+                            #{typeof selectedOrder.orderId === 'string' 
+                              ? selectedOrder.orderId.substring(0, 12) + '...' 
+                              : selectedOrder.orderId}
+                          </span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Đại lý:</span>
+                          <span className={modalStyles.value}>{selectedOrder.dealerName || 'N/A'}</span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Ngày đặt:</span>
+                          <span className={modalStyles.value}>{selectedOrder.orderDate || 'N/A'}</span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Ngày giao dự kiến:</span>
+                          <span className={modalStyles.value}>{selectedOrder.desiredDeliveryDate}</span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Trạng thái đơn hàng:</span>
+                          <span className={`${modalStyles.badge} ${modalStyles[selectedOrder.orderStatus.toLowerCase()]}`}>
+                            {selectedOrder.orderStatus}
+                          </span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Trạng thái thanh toán:</span>
+                          <span className={`${modalStyles.badge} ${modalStyles[selectedOrder.paymentStatus.toLowerCase()]}`}>
+                            {selectedOrder.paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Order Items Section */}
+                    {selectedOrder.orderItems && selectedOrder.orderItems.length > 0 && (
+                      <div className={modalStyles.detailSection}>
+                        <h3><i className="fas fa-car"></i> Danh sách xe</h3>
+                        <table className={modalStyles.itemsTable}>
+                          <thead>
+                            <tr>
+                              <th>Tên xe</th>
+                              <th>Số lượng</th>
+                              <th>Đơn giá</th>
+                              <th>Tạm tính</th>
+                              <th>Chiết khấu</th>
+                              <th>Thành tiền</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedOrder.orderItems.map((item, index) => (
+                              <tr key={index}>
+                                <td>{item.vehicleName}</td>
+                                <td>{item.quantity}</td>
+                                <td>{formatCurrency(item.unitPrice)}</td>
+                                <td>{formatCurrency(item.itemSubtotal)}</td>
+                                <td className={modalStyles.discount}>-{formatCurrency(item.itemDiscount)}</td>
+                                <td><strong>{formatCurrency(item.itemTotal)}</strong></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Pricing Summary Section */}
+                    <div className={modalStyles.detailSection}>
+                      <h3><i className="fas fa-calculator"></i> Tổng quan thanh toán</h3>
+                      <div className={modalStyles.pricingSummary}>
+                        <div className={modalStyles.priceRow}>
+                          <span>Tạm tính:</span>
+                          <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                        </div>
+                        {selectedOrder.dealerDiscount > 0 && (
+                          <div className={modalStyles.priceRow}>
+                            <span>Chiết khấu đại lý:</span>
+                            <span className={modalStyles.discount}>-{formatCurrency(selectedOrder.dealerDiscount)}</span>
+                          </div>
+                        )}
+                        <div className={modalStyles.priceRow}>
+                          <span>VAT (10%):</span>
+                          <span>{formatCurrency(selectedOrder.vatAmount)}</span>
+                        </div>
+                        <div className={`${modalStyles.priceRow} ${modalStyles.total}`}>
+                          <strong>Tổng cộng:</strong>
+                          <strong className={modalStyles.totalPrice}>{formatCurrency(selectedOrder.grandTotal)}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery Info Section */}
+                    <div className={modalStyles.detailSection}>
+                      <h3><i className="fas fa-truck"></i> Thông tin giao hàng</h3>
+                      <div className={modalStyles.deliveryInfo}>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Địa chỉ:</span>
+                          <span className={modalStyles.value}>{selectedOrder.deliveryAddress}</span>
+                        </div>
+                        {selectedOrder.deliveryNote && (
+                          <div className={modalStyles.infoRow}>
+                            <span className={modalStyles.label}>Ghi chú:</span>
+                            <span className={modalStyles.value}>{selectedOrder.deliveryNote}</span>
+                          </div>
+                        )}
+                        {selectedOrder.actualDeliveryDate && (
+                          <div className={modalStyles.infoRow}>
+                            <span className={modalStyles.label}>Ngày giao thực tế:</span>
+                            <span className={modalStyles.value}>{selectedOrder.actualDeliveryDate}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className={modalStyles.error}>
+                    <i className="fas fa-exclamation-triangle"></i>
+                    <p>Không thể tải thông tin đơn hàng</p>
+                  </div>
+                )}
+              </div>
+
+              <div className={modalStyles.modalFooter}>
+                <button 
+                  onClick={() => setShowOrderDetail(false)} 
+                  className={modalStyles.closeButton}
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
         )}

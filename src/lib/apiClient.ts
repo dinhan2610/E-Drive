@@ -21,8 +21,13 @@ const api = axios.create({
 // Request interceptor - attach JWT token
 api.interceptors.request.use(
   (config) => {
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    // Try to get token from multiple sources
+    const token = accessToken || 
+                  localStorage.getItem('accessToken') || 
+                  localStorage.getItem('token');
+    
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -40,10 +45,13 @@ api.interceptors.response.use(
       
       // Handle 401 - unauthorized
       if (status === 401) {
-        // Clear token and redirect to login
+        // Clear token and redirect to home (login modal will appear)
         setAccessToken(null);
         localStorage.removeItem('accessToken');
-        window.location.href = '/login';
+        localStorage.removeItem('token');
+        localStorage.removeItem('e-drive-user');
+        localStorage.removeItem('isLoggedIn');
+        window.location.href = '/';
       }
       
       // Handle 403 - forbidden
