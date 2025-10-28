@@ -9,6 +9,7 @@ interface AdminLayoutProps {
   counters: {
     cars: number;
     dealers: number;
+    unverifiedDealers: number;
     bookings: number;
     testDrives: number;
   };
@@ -96,7 +97,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
               }}
             >
               <i className="fas fa-store"></i>
-              <span>Đại lý ({counters.dealers})</span>
+              <span>
+                Đại lý ({counters.dealers})
+                {counters.unverifiedDealers > 0 && (
+                  <span className={styles.pendingBadge}>{counters.unverifiedDealers}</span>
+                )}
+              </span>
             </div>
             <div
               className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}

@@ -3,10 +3,12 @@ import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle } from '../services/vehicleApi';
-import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, type Dealer } from '../services/dealerApi';
+import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
 import AdminLayout from '../components/AdminLayout';
+import ConfirmDialog from '../components/ConfirmDialog';
+import SuccessNotification from '../components/SuccessNotification';
 
 // Add animation styles
 const animationStyles = `
@@ -261,11 +263,35 @@ const AdminPage: React.FC = () => {
   const [isUpdatingVehicle, setIsUpdatingVehicle] = useState<boolean>(false);
   const [newCarErrors, setNewCarErrors] = useState<Record<string, string>>({});
   const [editCarErrors, setEditCarErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [notification, setNotification] = useState<{
+    isVisible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    isVisible: false,
+    message: '',
+    type: 'success'
+  });
   const [dealers, setDealers] = useState<Dealer[]>([]);
+  const [unverifiedAccounts, setUnverifiedAccounts] = useState<UnverifiedAccount[]>([]);
+  const [dealerViewMode, setDealerViewMode] = useState<'verified' | 'unverified'>('verified');
   const [showAddDealerModal, setShowAddDealerModal] = useState<boolean>(false);
   const [showViewDealerModal, setShowViewDealerModal] = useState<boolean>(false);
   const [showEditDealerModal, setShowEditDealerModal] = useState<boolean>(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {}
+  });
+  const [verifyingUserId, setVerifyingUserId] = useState<number | null>(null);
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
   const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
   const [isCreatingDealer, setIsCreatingDealer] = useState<boolean>(false);
@@ -304,15 +330,7 @@ const AdminPage: React.FC = () => {
     pendingMaintenance: 0
   });
 
-  // Auto hide success message after 3 seconds
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => {
-        setSuccessMessage('');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
+  // Notification is auto-hidden by SuccessNotification component
 
   useEffect(() => {
     // Fetch vehicles from API for Cars management tab
@@ -362,6 +380,18 @@ const AdminPage: React.FC = () => {
       } catch (error) {
         console.error('❌ Failed to load dealers:', error);
         setDealers([]);
+      }
+    })();
+
+    // Fetch unverified accounts from API
+    (async () => {
+      try {
+        const accounts = await fetchUnverifiedAccounts();
+        setUnverifiedAccounts(accounts);
+        console.log('✅ Loaded unverified accounts:', accounts);
+      } catch (error) {
+        console.error('❌ Failed to load unverified accounts:', error);
+        setUnverifiedAccounts([]);
       }
     })();
 
@@ -534,9 +564,12 @@ const AdminPage: React.FC = () => {
       // Update dealers list
       setDealers(prev => [...prev, createdDealer]);
 
-      // Show success message
-      setSuccessMessage('✅ Đã thêm đại lý thành công!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      // Show success notification
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã thêm đại lý thành công!',
+        type: 'success'
+      });
 
       // Reset form and close modal
       setNewDealer({
@@ -660,9 +693,12 @@ const AdminPage: React.FC = () => {
         d.dealerId === editingDealer.dealerId ? updatedDealer : d
       ));
 
-      // Show success message
-      setSuccessMessage('✅ Đã cập nhật đại lý thành công!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      // Show success notification
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã cập nhật đại lý thành công!',
+        type: 'success'
+      });
 
       // Close modal
       setShowEditDealerModal(false);
@@ -699,29 +735,144 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const handleDeleteDealer = async (dealerId: number, dealerName: string) => {
-    const confirmDelete = window.confirm(
-      `Bạn có chắc chắn muốn xóa đại lý "${dealerName}"?\n\nHành động này không thể hoàn tác!`
-    );
-    
-    if (!confirmDelete) return;
+  const handleDeleteDealer = (dealerId: number, dealerName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xóa đại lý',
+      message: `Bạn có chắc chắn muốn xóa đại lý "${dealerName}"?\n\nHành động này không thể hoàn tác!`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          console.log('🗑️ Deleting dealer with ID:', dealerId);
+          
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang xóa đại lý...',
+            type: 'info'
+          });
 
-    try {
-      console.log('🗑️ Deleting dealer with ID:', dealerId);
-      await deleteDealer(dealerId);
-      
-      // Remove from dealers list
-      setDealers(prev => prev.filter(d => d.dealerId !== dealerId));
-      
-      // Show success message
-      setSuccessMessage('✅ Đã xóa đại lý thành công!');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-      console.log('✅ Dealer deleted successfully');
-    } catch (error) {
-      console.error('❌ Error deleting dealer:', error);
-      alert(`❌ Không thể xóa đại lý "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`);
-    }
+          const result = await deleteDealer(dealerId);
+          
+          if (result.success) {
+            // Remove from dealers list
+            setDealers(prev => prev.filter(d => d.dealerId !== dealerId));
+            
+            // Show success notification
+            setNotification({
+              isVisible: true,
+              message: `✅ ${result.message}`,
+              type: 'success'
+            });
+            
+            console.log('✅ Dealer deleted successfully');
+          } else {
+            // Show error notification
+            setNotification({
+              isVisible: true,
+              message: `❌ ${result.message}`,
+              type: 'error'
+            });
+          }
+        } catch (error) {
+          console.error('❌ Error deleting dealer:', error);
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể xóa đại lý "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const handleVerifyAccount = (userId: number, dealerName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác minh tài khoản đại lý',
+      message: `Bạn có chắc chắn muốn xác minh tài khoản đại lý "${dealerName}"?\n\nSau khi xác minh, tài khoản sẽ được kích hoạt và có thể đăng nhập vào hệ thống.`,
+      type: 'success',
+      onConfirm: async () => {
+        try {
+          console.log('✅ Verifying account with user ID:', userId);
+          
+          // Set loading state
+          setVerifyingUserId(userId);
+          
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang xử lý xác minh...',
+            type: 'info'
+          });
+          
+          const result = await verifyAccount(userId);
+
+          if (result.success) {
+            console.log('✅ Account verified successfully, reloading data...');
+            
+            // Reload both lists from server to ensure sync
+            try {
+              // Reload unverified accounts (critical)
+              const unverifiedList = await fetchUnverifiedAccounts();
+              setUnverifiedAccounts(unverifiedList);
+              
+              // Reload dealers (optional, may fail with 401 if not admin)
+              try {
+                const dealerList = await fetchDealers();
+                setDealers(dealerList);
+                console.log('✅ Dealers reloaded:', dealerList.length);
+              } catch (dealerError) {
+                console.warn('⚠️ Could not reload dealers list (may not have permission):', dealerError);
+                // This is OK - the important thing is removing from unverified list
+              }
+              
+              console.log('✅ Unverified accounts reloaded:', unverifiedList.length);
+              
+              // Show success notification
+              const message = result.alreadyVerified 
+                ? `ℹ️ Tài khoản "${dealerName}" đã được xác minh trước đó. Danh sách đã được cập nhật.`
+                : `✅ Đã xác minh tài khoản "${dealerName}" thành công! Email xác nhận đã được gửi.`;
+              
+              setNotification({
+                isVisible: true,
+                message,
+                type: result.alreadyVerified ? 'info' : 'success'
+              });
+            } catch (reloadError) {
+              console.error('❌ Error reloading unverified accounts:', reloadError);
+              // Fallback: just remove from local state
+              setUnverifiedAccounts(prev => prev.filter(account => account.userId !== userId));
+              
+              setNotification({
+                isVisible: true,
+                message: `✅ Đã xác minh tài khoản "${dealerName}". Danh sách đã được cập nhật cục bộ.`,
+                type: 'success'
+              });
+            }
+          } else {
+            setNotification({
+              isVisible: true,
+              message: `❌ Xác minh thất bại: ${result.message}`,
+              type: 'error'
+            });
+          }
+        } catch (error) {
+          console.error('❌ Error verifying account:', error);
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể xác minh tài khoản "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Clear loading state
+          setVerifyingUserId(null);
+        }
+      }
+    });
   };
 
   return (
@@ -731,33 +882,19 @@ const AdminPage: React.FC = () => {
       counters={{
         cars: cars.length,
         dealers: dealers.length,
+        unverifiedDealers: unverifiedAccounts.length,
         bookings: bookings.length,
         testDrives: 0
       }}
     >
-      {/* Success Message Notification */}
-      {successMessage && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          backgroundColor: '#4CAF50',
-          color: 'white',
-          padding: '16px 24px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          fontSize: '16px',
-          fontWeight: '500',
-          animation: 'slideInRight 0.3s ease-out'
-        }}>
-          <i className="fas fa-check-circle" style={{ fontSize: '20px' }}></i>
-          {successMessage}
-        </div>
-      )}
+      {/* Success Notification */}
+      <SuccessNotification
+        isVisible={notification.isVisible}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification(prev => ({ ...prev, isVisible: false }))}
+        duration={5000}
+      />
 
       {/* Dashboard Content */}
       {activeTab === 'dashboard' && (
@@ -766,7 +903,7 @@ const AdminPage: React.FC = () => {
             <div className={sidebarStyles.statHeader}>
               <div className={sidebarStyles.statInfo}>
                 <div className={sidebarStyles.statLabel}>Tổng số xe</div>
-                <h2 className={sidebarStyles.statValue}>{stats.totalCars}</h2>
+                <h2 className={sidebarStyles.statValue}>{cars.length}</h2>
               </div>
               <div className={`${sidebarStyles.statIcon} ${sidebarStyles.primary}`}>
                 <i className="fas fa-car"></i>
@@ -783,11 +920,11 @@ const AdminPage: React.FC = () => {
           <div className={sidebarStyles.statCard}>
             <div className={sidebarStyles.statHeader}>
               <div className={sidebarStyles.statInfo}>
-                <div className={sidebarStyles.statLabel}>Người dùng</div>
-                <h2 className={sidebarStyles.statValue}>{stats.totalUsers}</h2>
+                <div className={sidebarStyles.statLabel}>Đại lý</div>
+                <h2 className={sidebarStyles.statValue}>{dealers.length}</h2>
               </div>
               <div className={`${sidebarStyles.statIcon} ${sidebarStyles.success}`}>
-                <i className="fas fa-users"></i>
+                <i className="fas fa-store"></i>
               </div>
             </div>
             <div className={sidebarStyles.statFooter}>
@@ -1031,15 +1168,23 @@ const AdminPage: React.FC = () => {
           <div className={styles.usersManagement}>
             <div className={styles.sectionHeader}>
               <h3>Quản lý đại lý</h3>
+              <div className={styles.filterButtons}>
               <button 
-                className={styles.addButton}
-                onClick={() => setShowAddDealerModal(true)}
-              >
-                <i className="fas fa-plus"></i>
-                Thêm đại lý
+                  className={`${styles.filterButton} ${dealerViewMode === 'verified' ? styles.active : ''}`}
+                  onClick={() => setDealerViewMode('verified')}
+                >
+                  Đã xác minh ({dealers.length})
+                </button>
+                <button 
+                  className={`${styles.filterButton} ${dealerViewMode === 'unverified' ? styles.active : ''}`}
+                  onClick={() => setDealerViewMode('unverified')}
+                >
+                  Chờ xác minh ({unverifiedAccounts.length})
               </button>
+              </div>
             </div>
 
+            {dealerViewMode === 'verified' ? (
             <div className={styles.usersTable}>
               <table>
                 <thead>
@@ -1099,6 +1244,83 @@ const AdminPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className={styles.usersTable}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Tên đại lý</th>
+                      <th colSpan={3}>Địa chỉ đầy đủ</th>
+                      <th>Người liên hệ</th>
+                      <th>SĐT</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unverifiedAccounts.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                          <i className="fas fa-inbox" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
+                          <p>Không có tài khoản nào đang chờ xác minh</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      unverifiedAccounts.map(account => (
+                        <tr key={account.userId}>
+                          <td>#{account.userId}</td>
+                          <td>
+                            <div style={{fontWeight: 'bold'}}>{account.dealerName}</div>
+                            <div style={{fontSize: '11px', color: '#888'}}>@{account.username}</div>
+                          </td>
+                          <td colSpan={3}>
+                            <div style={{fontSize: '13px'}}>{account.dealerAddress}</div>
+                            {account.registrationDate && (
+                              <div style={{fontSize: '11px', color: '#888', marginTop: '4px'}}>
+                                Đăng ký: {new Date(account.registrationDate).toLocaleDateString('vi-VN')}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{fontSize: '13px'}}>{account.fullName}</div>
+                            <div style={{fontSize: '11px', color: '#888'}}>{account.email}</div>
+                          </td>
+                          <td>{account.phone}</td>
+                          <td>
+                            <div className={styles.tableActions}>
+                              <button 
+                                className={styles.viewButton} 
+                                title="Xem chi tiết"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button 
+                                className={styles.approveButton} 
+                                title="Xác minh"
+                                onClick={() => handleVerifyAccount(account.userId, account.dealerName)}
+                                disabled={verifyingUserId === account.userId}
+                              >
+                                {verifyingUserId === account.userId ? (
+                                  <i className="fas fa-spinner fa-spin"></i>
+                                ) : (
+                                  <i className="fas fa-check"></i>
+                                )}
+                              </button>
+                              <button
+                                className={styles.deleteButton}
+                                title="Từ chối"
+                              >
+                                <i className="fas fa-times"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -1818,8 +2040,12 @@ const AdminPage: React.FC = () => {
                         totalCars: prevStats.totalCars + 1
                       }));
 
-                      // Success - hiển thị success message
-                      setSuccessMessage('✅ Đã thêm xe mới thành công!');
+                      // Success - hiển thị success notification
+                      setNotification({
+                        isVisible: true,
+                        message: '✅ Đã thêm xe mới thành công!',
+                        type: 'success'
+                      });
                       console.log('✅ Đã thêm xe mới thành công!');
                     } catch (error) {
                       console.error('❌ Lỗi khi thêm xe:', error);
@@ -2358,8 +2584,12 @@ const AdminPage: React.FC = () => {
                         manufactureYear: new Date().getFullYear()
                       });
 
-                      // Success - hiển thị success message
-                      setSuccessMessage('✅ Đã cập nhật xe thành công!');
+                      // Success - hiển thị success notification
+                      setNotification({
+                        isVisible: true,
+                        message: '✅ Đã cập nhật xe thành công!',
+                        type: 'success'
+                      });
                       console.log('✅ Đã cập nhật xe thành công!');
                     } catch (error) {
                       console.error('❌ Lỗi khi cập nhật xe:', error);
@@ -3322,6 +3552,18 @@ const AdminPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        confirmText="OK"
+        cancelText="Hủy"
+      />
     </AdminLayout>
   );
 };

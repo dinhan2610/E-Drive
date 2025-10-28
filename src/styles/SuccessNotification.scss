@@ -1,0 +1,147 @@
+// Success Notification
+.success-notification {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  min-width: 360px;
+  max-width: 480px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  transform: translateX(120%);
+  transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 10001;
+
+  &.show {
+    transform: translateX(0);
+  }
+
+  &.success {
+    border-left: 4px solid #10b981;
+  }
+
+  &.error {
+    border-left: 4px solid #ef4444;
+  }
+
+  &.warning {
+    border-left: 4px solid #fbbf24;
+  }
+
+  &.info {
+    border-left: 4px solid #3b82f6;
+  }
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.notification-icon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.success {
+    color: #10b981;
+  }
+
+  &.error {
+    color: #ef4444;
+  }
+
+  &.warning {
+    color: #fbbf24;
+  }
+
+  &.info {
+    color: #3b82f6;
+  }
+}
+
+.notification-message {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 18px;
+  transition: all 0.2s;
+  border-radius: 6px;
+
+  &:hover {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+}
+
+.notification-progress {
+  height: 4px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  animation: shrink linear forwards;
+
+  .success & {
+    background: linear-gradient(90deg, #10b981, #059669);
+  }
+
+  .error & {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+  }
+
+  .warning & {
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  }
+
+  .info & {
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+  }
+}
+
+@keyframes shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+// Responsive
+@media (max-width: 640px) {
+  .success-notification {
+    top: 16px;
+    right: 16px;
+    left: 16px;
+    min-width: auto;
+    max-width: none;
+  }
+
+  .notification-content {
+    padding: 14px 16px;
+  }
+
+  .notification-message {
+    font-size: 14px;
+  }
+}
+

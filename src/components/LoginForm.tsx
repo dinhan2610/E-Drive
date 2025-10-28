@@ -114,18 +114,24 @@ const LoginForm: React.FC<LoginFormProps> = ({
         password: formData.password
       });
       
-      if (result.success) {
+      if (result.success && result.data) {
+        const { user } = result.data;
+        
         // Set user name for success modal
-        setLoggedInUserName(result.data?.user?.fullName || result.data?.user?.username || formData.username);
+        setLoggedInUserName(user?.fullName || user?.name || formData.username);
         
         // Store user data for persistence
         const userData = {
-          ...result.data?.user,
-          fullName: result.data?.user?.fullName || result.data?.user?.username || formData.username,
-          name: result.data?.user?.fullName || result.data?.user?.username || formData.username
+          ...user,
+          fullName: user?.fullName || user?.name || formData.username,
+          name: user?.fullName || user?.name || formData.username,
+          username: formData.username
         };
+        
         localStorage.setItem('e-drive-user', JSON.stringify(userData));
         localStorage.setItem('isLoggedIn', 'true');
+        
+        console.log('💾 Đã lưu thông tin user:', userData);
         
         // Dispatch login success event
         window.dispatchEvent(new Event('loginSuccess'));
@@ -133,7 +139,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
         // Reset form
         setFormData({ username: '', password: '' });
         
-        // Show success modal immediately (don't close login form yet)
+        // Show success modal immediately
         setShowSuccessModal(true);
         
         // Call onLoginSuccess callback if provided
@@ -146,6 +152,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       }
       
     } catch (error) {
+      console.error('Login error:', error);
       setErrors({
         general: 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.'
       });

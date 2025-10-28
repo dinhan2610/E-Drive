@@ -8,7 +8,6 @@ interface RegisterFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToLogin: () => void;
-  onRegisterSuccess?: (userData: any) => void;
 }
 
 interface FormData {
@@ -45,8 +44,7 @@ interface FormErrors {
 const RegisterForm: React.FC<RegisterFormProps> = ({ 
   isOpen, 
   onClose, 
-  onSwitchToLogin, 
-  onRegisterSuccess 
+  onSwitchToLogin
 }) => {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -308,25 +306,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         // Set user name for success modal
         setRegisteredUserName(formData.fullName);
         
-        // Store user data for persistence
-        const userData = {
-          fullName: formData.fullName,
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          dealerName: formData.dealerName,
-          houseNumberAndStreet: formData.houseNumberAndStreet,
-          wardOrCommune: formData.wardOrCommune,
-          district: formData.district,
-          provinceOrCity: formData.provinceOrCity,
-          name: formData.fullName
-        };
-        localStorage.setItem('e-drive-user', JSON.stringify(userData));
-        localStorage.setItem('isLoggedIn', 'true');
-        
-        // Dispatch register success event
-        window.dispatchEvent(new Event('registerSuccess'));
-        
         // Reset form
         setFormData({
           fullName: '',
@@ -343,13 +322,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           agreeToTerms: false
         });
         
-        // Show success modal immediately (don't close register form yet)
+        // Show success modal with verification pending message
         setShowSuccessModal(true);
-        
-        // Call onRegisterSuccess callback if provided
-        if (onRegisterSuccess) {
-          onRegisterSuccess(userData);
-        }
       } else {
         setErrors({ general: result.message || 'Đăng ký thất bại' });
       }
@@ -700,9 +674,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         }}
         type="register"
         userName={registeredUserName}
+        title="Đăng ký thành công!"
+        message="Tài khoản của bạn đã được tạo và đang chờ admin xác minh. Vui lòng đợi email thông báo hoặc liên hệ admin để được hỗ trợ. Cảm ơn bạn đã đăng ký!"
         onContinue={() => {
           setShowSuccessModal(false);
-          // Switch to login form instead of closing
+          // Switch to login form after admin verification message
           onSwitchToLogin();
         }}
       />

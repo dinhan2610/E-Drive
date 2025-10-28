@@ -107,6 +107,12 @@
     text-align: center;
   }
 
+  span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   &:hover {
     background: rgba(255, 255, 255, 0.08);
     color: white;
@@ -128,6 +134,28 @@
       background: white;
       border-radius: 2px;
     }
+  }
+}
+
+.pendingBadge {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
   }
 }
 

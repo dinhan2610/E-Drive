@@ -36,12 +36,6 @@ const AuthManager: React.FC<AuthManagerProps> = ({
     }
   };
 
-  const handleRegisterSuccess = (userData: any) => {
-    if (onAuthSuccess) {
-      onAuthSuccess(userData);
-    }
-  };
-
   const handleClose = () => {
     // Reset về initial mode khi đóng modal
     setCurrentMode(initialMode);
@@ -69,7 +63,6 @@ const AuthManager: React.FC<AuthManagerProps> = ({
           isOpen={isOpen}
           onClose={handleClose}
           onSwitchToLogin={handleSwitchToLogin}
-          onRegisterSuccess={handleRegisterSuccess}
         />
       )}
     </>
