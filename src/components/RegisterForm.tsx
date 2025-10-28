@@ -17,7 +17,10 @@ interface FormData {
   email: string;
   phone: string;
   dealerName: string;
-  address: string;
+  houseNumberAndStreet: string;
+  wardOrCommune: string;
+  district: string;
+  provinceOrCity: string;
   password: string;
   confirmPassword: string;
   agreeToTerms: boolean;
@@ -29,7 +32,10 @@ interface FormErrors {
   email?: string;
   phone?: string;
   dealerName?: string;
-  address?: string;
+  houseNumberAndStreet?: string;
+  wardOrCommune?: string;
+  district?: string;
+  provinceOrCity?: string;
   password?: string;
   confirmPassword?: string;
   agreeToTerms?: string;
@@ -48,7 +54,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     email: '',
     phone: '',
     dealerName: '',
-    address: '',
+    houseNumberAndStreet: '',
+    wardOrCommune: '',
+    district: '',
+    provinceOrCity: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false
@@ -118,11 +127,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       }
     }
     
-    if (name === 'address') {
-      if (value.trim() && value.trim().length < 5) {
-        fieldErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+    // Address field validations
+    if (name === 'houseNumberAndStreet' || name === 'wardOrCommune' || 
+        name === 'district' || name === 'provinceOrCity') {
+      if (value.trim() && value.trim().length < 2) {
+        fieldErrors[name] = 'Trường này phải có ít nhất 2 ký tự';
       } else {
-        fieldErrors.address = undefined;
+        fieldErrors[name] = undefined;
       }
     }
     
@@ -195,11 +206,23 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.dealerName = 'Tên đại lý phải có ít nhất 2 ký tự';
     }
     
-    // Address validation
-    if (!formData.address.trim()) {
-      newErrors.address = 'Địa chỉ là bắt buộc';
-    } else if (formData.address.trim().length < 5) {
-      newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+    // Address validations - detailed fields
+    if (!formData.houseNumberAndStreet.trim()) {
+      newErrors.houseNumberAndStreet = 'Số nhà và tên đường là bắt buộc';
+    } else if (formData.houseNumberAndStreet.trim().length < 3) {
+      newErrors.houseNumberAndStreet = 'Số nhà và tên đường phải có ít nhất 3 ký tự';
+    }
+
+    if (!formData.wardOrCommune.trim()) {
+      newErrors.wardOrCommune = 'Phường/Xã là bắt buộc';
+    }
+
+    if (!formData.district.trim()) {
+      newErrors.district = 'Quận/Huyện là bắt buộc';
+    }
+
+    if (!formData.provinceOrCity.trim()) {
+      newErrors.provinceOrCity = 'Tỉnh/Thành phố là bắt buộc';
     }
 
     // Password validation
@@ -238,30 +261,34 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     setErrors({});
 
     try {
-      // Call API
+      // Call API with new address structure
       const result = await authApi.register({
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        dealerName: formData.dealerName,
-        address: formData.address,
         username: formData.username,
         password: formData.password,
-        confirmPassword: formData.confirmPassword
+        confirmPassword: formData.confirmPassword,
+        email: formData.email,
+        phone: formData.phone,
+        fullName: formData.fullName,
+        dealerName: formData.dealerName,
+        houseNumberAndStreet: formData.houseNumberAndStreet,
+        wardOrCommune: formData.wardOrCommune,
+        district: formData.district,
+        provinceOrCity: formData.provinceOrCity
       });
       
       if (result.success) {
         // Set user name for success modal
         setRegisteredUserName(formData.fullName);
         
-        // Store user data for persistence
+        // Store user data for persistence with full address
+        const fullAddress = `${formData.houseNumberAndStreet}, ${formData.wardOrCommune}, ${formData.district}, ${formData.provinceOrCity}`;
         const userData = {
           fullName: formData.fullName,
           username: formData.username,
           email: formData.email,
           phone: formData.phone,
           dealerName: formData.dealerName,
-          address: formData.address,
+          address: fullAddress,
           name: formData.fullName
         };
         localStorage.setItem('e-drive-user', JSON.stringify(userData));
@@ -277,7 +304,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           email: '',
           phone: '',
           dealerName: '',
-          address: '',
+          houseNumberAndStreet: '',
+          wardOrCommune: '',
+          district: '',
+          provinceOrCity: '',
           password: '',
           confirmPassword: '',
           agreeToTerms: false
@@ -468,22 +498,83 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           </div>
 
+          {/* Address Fields - Split into 4 separate inputs */}
           <div className="form-group">
             <div className="input-wrapper">
               <i className="fas fa-map-marker-alt input-icon"></i>
               <input
                 type="text"
-                name="address"
-                placeholder="Địa chỉ *"
-                value={formData.address}
+                name="houseNumberAndStreet"
+                placeholder="Số nhà và tên đường *"
+                value={formData.houseNumberAndStreet}
                 onChange={handleInputChange}
-                className={errors.address ? 'error' : ''}
+                className={errors.houseNumberAndStreet ? 'error' : ''}
               />
             </div>
-            {errors.address && (
+            {errors.houseNumberAndStreet && (
               <span className="field-error">
                 <i className="fa-solid fa-exclamation-circle"></i>
-                {errors.address}
+                {errors.houseNumberAndStreet}
+              </span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <div className="input-wrapper">
+              <i className="fas fa-map-marker-alt input-icon"></i>
+              <input
+                type="text"
+                name="wardOrCommune"
+                placeholder="Phường/Xã *"
+                value={formData.wardOrCommune}
+                onChange={handleInputChange}
+                className={errors.wardOrCommune ? 'error' : ''}
+              />
+            </div>
+            {errors.wardOrCommune && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.wardOrCommune}
+              </span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <div className="input-wrapper">
+              <i className="fas fa-map-marker-alt input-icon"></i>
+              <input
+                type="text"
+                name="district"
+                placeholder="Quận/Huyện *"
+                value={formData.district}
+                onChange={handleInputChange}
+                className={errors.district ? 'error' : ''}
+              />
+            </div>
+            {errors.district && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.district}
+              </span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <div className="input-wrapper">
+              <i className="fas fa-map-marker-alt input-icon"></i>
+              <input
+                type="text"
+                name="provinceOrCity"
+                placeholder="Tỉnh/Thành phố *"
+                value={formData.provinceOrCity}
+                onChange={handleInputChange}
+                className={errors.provinceOrCity ? 'error' : ''}
+              />
+            </div>
+            {errors.provinceOrCity && (
+              <span className="field-error">
+                <i className="fa-solid fa-exclamation-circle"></i>
+                {errors.provinceOrCity}
               </span>
             )}
           </div>

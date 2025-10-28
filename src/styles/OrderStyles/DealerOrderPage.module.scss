@@ -181,46 +181,63 @@
 
 // Info Card Styles (Read-only dealer information)
 .infoCard {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border: 2px solid #dee2e6;
-  border-radius: 16px;
-  padding: 2.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
+  border: 2px solid #e9ecef;
+  border-radius: 20px;
+  padding: 3rem;
   margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  opacity: 0.95;
 }
 
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
+  gap: 2.5rem;
 
   @include respond-to('md') {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 2rem;
   }
 }
 
 .infoItem {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 1rem;
+
+  &.fullWidth {
+    grid-column: 1 / -1;
+  }
 
   label {
     font-size: 1.3rem;
     font-weight: 600;
-    color: #6c757d;
+    color: #868e96;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+
+    i {
+      color: #adb5bd;
+      font-size: 1.4rem;
+    }
   }
 
   .infoValue {
     font-size: 1.6rem;
-    font-weight: 600;
-    color: #868e96;
-    padding: 1.2rem 1.6rem;
-    background: rgba(255, 255, 255, 0.6);
-    border-radius: 10px;
-    border: 1px solid #dee2e6;
+    font-weight: 500;
+    color: #6c757d;
+    padding: 1.4rem 1.8rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #dee2e6;
     font-family: $text-font;
+    word-break: break-word;
+    cursor: not-allowed;
+    user-select: none;
   }
 }
 
@@ -1257,5 +1274,278 @@
         margin: 0;
       }
     }
+  }
+}
+
+// Tabs
+.tabs {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 4rem;
+  justify-content: center;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0;
+}
+
+.tab {
+  padding: 1.5rem 3rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #6c757d;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: $text-font;
+  position: relative;
+  bottom: -2px;
+
+  &:hover {
+    color: #ff4d30;
+  }
+
+  &.active {
+    color: #ff4d30;
+    border-bottom-color: #ff4d30;
+  }
+}
+
+// Orders List
+.ordersList {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem;
+
+  h2 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 3rem;
+    font-family: $titles-font;
+  }
+}
+
+.loading {
+  text-align: center;
+  padding: 6rem 2rem;
+  color: #6c757d;
+
+  i {
+    font-size: 4rem;
+    margin-bottom: 2rem;
+    color: #ff4d30;
+  }
+
+  p {
+    font-size: 1.6rem;
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 8rem 2rem;
+  color: #6c757d;
+
+  i {
+    font-size: 6rem;
+    margin-bottom: 2rem;
+    color: #adb5bd;
+  }
+
+  p {
+    font-size: 1.8rem;
+    margin-bottom: 3rem;
+  }
+}
+
+.createButton {
+  padding: 1.2rem 3rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: white;
+  background: #ff4d30;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: $text-font;
+
+  &:hover {
+    background: #e63946;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3);
+  }
+}
+
+.ordersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 2.5rem;
+
+  @include respond-to-max(lg) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.orderCard {
+  background: white;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #f8f9fa;
+
+  h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+    font-family: $titles-font;
+  }
+}
+
+.status {
+  padding: 0.6rem 1.4rem;
+  border-radius: 20px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  &.confirmed {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
+
+  &.processing {
+    background: #cfe2ff;
+    color: #084298;
+  }
+
+  &.shipped {
+    background: #d3f9d8;
+    color: #0f5132;
+  }
+
+  &.delivered {
+    background: #d1e7dd;
+    color: #0a3622;
+  }
+
+  &.cancelled {
+    background: #f8d7da;
+    color: #842029;
+  }
+
+  &.paid {
+    background: #d1e7dd;
+    color: #0a3622;
+  }
+}
+
+.orderInfo {
+  margin-bottom: 2rem;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.2rem;
+  gap: 1rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.label {
+  font-size: 1.4rem;
+  color: #6c757d;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.value {
+  font-size: 1.4rem;
+  color: #212529;
+  font-weight: 600;
+  text-align: right;
+  flex: 1;
+}
+
+.orderActions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #f8f9fa;
+}
+
+.confirmButton,
+.payButton {
+  flex: 1;
+  min-width: 180px;
+  padding: 1.2rem 2rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: $text-font;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+
+  i {
+    font-size: 1.6rem;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.confirmButton {
+  background: #28a745;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  }
+}
+
+.payButton {
+  background: #ff4d30;
+  color: white;
+
+  &:hover {
+    background: #e63946;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3);
   }
 }

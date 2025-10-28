@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { DEALERS } from "../constants/carData";
 import { SuccessModal } from "../components/SuccessModal";
 import { fetchVehiclesFromApi } from "../services/vehicleApi";
 import { createTestDrive, TestDriveApiError } from "../services/testDriveApi";
+import { fetchDealers, type Dealer } from "../services/dealerApi";
 import type { VehicleApiResponse } from "../types/product";
 import Footer from "../components/Footer";
 import styles from "../styles/TestDriveStyles/TestDrivePage.module.scss";
@@ -47,7 +47,12 @@ const TestDrivePage: React.FC = () => {
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
   
-  // Fetch vehicles on mount
+  // Dealers data from API
+  const [dealers, setDealers] = useState<Dealer[]>([]);
+  const [loadingDealers, setLoadingDealers] = useState(false);
+  const [dealerError, setDealerError] = useState<string | null>(null);
+  
+  // Fetch vehicles and dealers on mount
   useEffect(() => {
     const loadVehicles = async () => {
       setLoadingVehicles(true);
@@ -62,7 +67,23 @@ const TestDrivePage: React.FC = () => {
         setLoadingVehicles(false);
       }
     };
+    
+    const loadDealers = async () => {
+      setLoadingDealers(true);
+      setDealerError(null);
+      try {
+        const result = await fetchDealers();
+        setDealers(result);
+      } catch (error) {
+        console.error('Error loading dealers:', error);
+        setDealerError('Không thể tải danh sách đại lý. Vui lòng thử lại.');
+      } finally {
+        setLoadingDealers(false);
+      }
+    };
+    
     loadVehicles();
+    loadDealers();
   }, []);
   
   const [selectedHour, setSelectedHour] = useState<number>(9);
@@ -239,16 +260,31 @@ const TestDrivePage: React.FC = () => {
     setSubmitError(null);
 
     try {
-      // Create ISO 8601 datetime string
+      // Create test drive booking directly without creating customer
+      // Customer info will be stored in the test drive management system
       const scheduleDatetime = `${formData.date}T${formData.time}:00`;
       
-      await createTestDrive({
-        customerId: 1, // TODO: Get from logged in user
-        dealerId: 1, // TODO: Map dealer string to ID
+      // Create comprehensive note with customer information
+      const customerNote = `
+=== THÔNG TIN KHÁCH HÀNG ===
+Họ tên: ${formData.name}
+Số điện thoại: ${formData.phone}
+Email: ${formData.email || 'Không cung cấp'}
+CCCD: ${formData.citizenId}
+${formData.note ? `\nGhi chú: ${formData.note}` : ''}
+      `.trim();
+      
+      const testDrivePayload = {
+        customerId: 0, // 0 indicates guest/walk-in customer without account
+        dealerId: parseInt(formData.dealer),
         vehicleId: parseInt(formData.model),
         scheduleDatetime,
-        status: 'PENDING'
-      });
+        status: 'PENDING' as const,
+        note: customerNote
+      };
+      
+      console.log('Creating test drive with payload:', testDrivePayload);
+      await createTestDrive(testDrivePayload);
 
       setIsSuccessModalOpen(true);
       
@@ -532,15 +568,21 @@ const TestDrivePage: React.FC = () => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={errors.dealer ? styles.error : ''}
+                    disabled={loadingDealers}
                   >
-                    <option value="">Chọn đại lý</option>
-                    {DEALERS.map((dealer, index) => (
-                      <option key={index} value={dealer}>
-                        {dealer}
+                    <option value="">
+                      {loadingDealers ? 'Đang tải...' : 'Chọn đại lý'}
+                    </option>
+                    {dealers.map((dealer) => (
+                      <option key={dealer.dealerId} value={dealer.dealerId}>
+                        {dealer.dealerName} - {dealer.provinceOrCity}
                       </option>
                     ))}
                   </select>
                   {errors.dealer && <span className={styles.errorText}>{errors.dealer}</span>}
+                  {dealerError && (
+                    <span className={styles.errorText}>{dealerError}</span>
+                  )}
                 </div>
 
                 <div className={styles.formRow}>
@@ -671,8 +713,9 @@ const TestDrivePage: React.FC = () => {
       <SuccessModal
         isOpen={isSuccessModalOpen}
         onClose={handleCloseSuccess}
-        title="Đặt lịch thành công!"
-        message="Chúng tôi đã nhận được yêu cầu lái thử của bạn. Đội ngũ của chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất."
+        type="success"
+        title="Đặt lịch lái thử thành công!"
+        message="Cảm ơn bạn đã đăng ký lái thử xe điện E-Drive. Chúng tôi sẽ liên hệ với bạn để xác nhận lịch hẹn trong thời gian sớm nhất!"
       />
       
       <Footer />

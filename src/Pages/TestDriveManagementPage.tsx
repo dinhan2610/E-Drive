@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getTestDriveBookings, cancelTestDrive, completeTestDrive, confirmTestDrive, deleteTestDrive, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
+import { getTestDrivesByDealer, cancelTestDrive, completeTestDrive, confirmTestDrive, deleteTestDrive, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
 import styles from '../styles/TestDriveStyles/TestDriveManagement.module.scss';
 
 const formatDate = (datetime: string) => {
@@ -59,7 +59,24 @@ const TestDriveManagementPage: React.FC = () => {
   const loadTestDrives = async () => {
     try {
       setLoading(true);
-      const data = await getTestDriveBookings();
+      
+      // Lấy dealerId từ localStorage
+      const userData = localStorage.getItem('e-drive-user');
+      let dealerId = 1; // Default
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.dealerId) {
+            dealerId = user.dealerId;
+          }
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+        }
+      }
+      
+      console.log('Loading test drives for dealer:', dealerId);
+      const data = await getTestDrivesByDealer(dealerId);
       setTestDrives(data);
     } catch (error: any) {
       console.error('Error loading test drives:', error);
@@ -134,49 +151,6 @@ const TestDriveManagementPage: React.FC = () => {
             <div className={styles.headerText}>
               <h1>Quản lý lịch hẹn lái thử</h1>
               <p>Theo dõi và quản lý toàn bộ yêu cầu đăng ký lái thử xe điện</p>
-            </div>
-          </div>
-          <div className={styles.headerStats}>
-            <div className={styles.quickStat}>
-              <span className={styles.statLabel}>Tổng số</span>
-              <span className={styles.statValue}>{testDrives.length}</span>
-            </div>
-            <div className={styles.quickStat}>
-              <span className={styles.statLabel}>Chờ xử lý</span>
-              <span className={`${styles.statValue} ${styles.pending}`}>
-                {testDrives.filter(td => td.status === 'PENDING').length}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.statsCards}>
-          <div className={styles.statCard}>
-            <i className="fas fa-list"></i>
-            <div>
-              <h3>{testDrives.length}</h3>
-              <p>Tổng số</p>
-            </div>
-          </div>
-          <div className={`${styles.statCard} ${styles.pending}`}>
-            <i className="fas fa-clock"></i>
-            <div>
-              <h3>{testDrives.filter(td => td.status === 'PENDING').length}</h3>
-              <p>Chờ xác nhận</p>
-            </div>
-          </div>
-          <div className={`${styles.statCard} ${styles.confirmed}`}>
-            <i className="fas fa-check-circle"></i>
-            <div>
-              <h3>{testDrives.filter(td => td.status === 'CONFIRMED').length}</h3>
-              <p>Đã xác nhận</p>
-            </div>
-          </div>
-          <div className={`${styles.statCard} ${styles.completed}`}>
-            <i className="fas fa-flag-checkered"></i>
-            <div>
-              <h3>{testDrives.filter(td => td.status === 'COMPLETED').length}</h3>
-              <p>Hoàn thành</p>
             </div>
           </div>
         </div>

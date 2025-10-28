@@ -122,8 +122,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
         const userData = {
           ...result.data?.user,
           fullName: result.data?.user?.fullName || result.data?.user?.username || formData.username,
-          name: result.data?.user?.fullName || result.data?.user?.username || formData.username
+          name: result.data?.user?.fullName || result.data?.user?.username || formData.username,
+          // Ensure dealerId is preserved if present
+          dealerId: result.data?.user?.dealerId || result.data?.user?.dealer_id || null
         };
+        
+        console.log('💾 Storing user data with dealerId:', userData.dealerId);
         localStorage.setItem('e-drive-user', JSON.stringify(userData));
         localStorage.setItem('isLoggedIn', 'true');
         

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { getProfile } from '../services/profileApi';
-import { createOrder, type CreateOrderRequest } from '../services/orderApi';
+import { createOrder, getOrders, type CreateOrderRequest, type Order } from '../services/orderApi';
+import { confirmDelivery, DeliveryApiError } from '../services/deliveryApi';
 import Footer from '../components/Footer';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/DealerOrderPage.module.scss';
@@ -49,10 +50,29 @@ const DealerOrderPage: React.FC = () => {
   const location = useLocation();
   const incomingProduct = location.state?.product as Product | undefined;
   
+  // Check authentication on mount
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    if (!token) {
+      console.warn('No access token found, redirecting to login');
+      navigate('/login', { replace: true });
+      return;
+    }
+  }, [navigate]);
+  
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableVehicles, setAvailableVehicles] = useState<any[]>([]);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
+  const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
+  
+  // Tab management
+  const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
+  
+  // Orders list
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<number | null>(null);
   
   const [formData, setFormData] = useState<DealerOrderForm>({
     dealerName: '',
@@ -80,24 +100,33 @@ const DealerOrderPage: React.FC = () => {
   useEffect(() => {
     const loadDealerProfile = async () => {
       try {
+        console.log('🔄 Loading dealer profile...');
         const profile = await getProfile();
         
-        // Auto-fill dealer information
+        // Store dealerId for debugging
+        setCurrentDealerId(profile.dealerId);
+        console.log('✅ Current dealer ID:', profile.dealerId);
+        
+        // Auto-fill dealer information from profile API
         setFormData(prev => ({
           ...prev,
-          dealerName: profile.fullName || '',
+          dealerName: profile.agencyName || profile.fullName || '',
           dealerCode: profile.dealerId ? `DL${String(profile.dealerId).padStart(6, '0')}` : '',
-          contactPerson: profile.fullName || '',
+          contactPerson: profile.contactPerson || profile.fullName || '',
           email: profile.email || '',
-          phone: profile.phone || '',
-          // Keep existing address fields empty or use from localStorage if available
+          phone: profile.agencyPhone || profile.phoneNumber || '',
+          address: profile.streetAddress || '',
+          ward: profile.ward || '',
+          district: profile.district || '',
+          city: profile.city || '',
         }));
 
         console.log('✅ Dealer profile loaded:', profile);
-      } catch (error) {
-        console.warn('⚠️ Could not load profile, trying localStorage fallback');
+      } catch (error: any) {
+        console.error('❌ Error loading profile:', error);
         
-        // Fallback to localStorage
+        // Don't redirect if just API error, only if 401 (handled by interceptor)
+        // Try localStorage fallback
         const userData = localStorage.getItem('e-drive-user');
         if (userData) {
           try {
@@ -121,6 +150,61 @@ const DealerOrderPage: React.FC = () => {
 
     loadDealerProfile();
   }, []);
+
+  // Load orders when switching to list tab
+  useEffect(() => {
+    if (activeTab === 'list') {
+      loadOrders();
+    }
+  }, [activeTab]);
+
+  const loadOrders = async () => {
+    setIsLoadingOrders(true);
+    try {
+      console.log('🔄 Loading orders...');
+      const fetchedOrders = await getOrders();
+      setOrders(fetchedOrders);
+      console.log('✅ Orders loaded:', fetchedOrders);
+    } catch (error: any) {
+      console.error('❌ Error loading orders:', error);
+      alert('Không thể tải danh sách đơn hàng: ' + error.message);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  };
+
+  const handleConfirmDelivery = async (orderId: number) => {
+    if (!window.confirm('Bạn xác nhận đã nhận đủ hàng cho đơn hàng này?')) {
+      return;
+    }
+
+    setConfirmingOrderId(orderId);
+    try {
+      console.log(`🚚 Confirming delivery for order ${orderId}...`);
+      await confirmDelivery(orderId);
+      
+      alert('✅ Đã xác nhận nhận hàng thành công!');
+      
+      // Reload orders to get updated status
+      await loadOrders();
+    } catch (error: any) {
+      console.error('❌ Error confirming delivery:', error);
+      
+      if (error instanceof DeliveryApiError) {
+        if (error.code === 'ORDER_NOT_FOUND') {
+          alert('Không tìm thấy đơn hàng. Vui lòng kiểm tra lại.');
+        } else if (error.code === 'FORBIDDEN') {
+          alert('Bạn không có quyền xác nhận đơn hàng này.');
+        } else {
+          alert(`Lỗi: ${error.message}`);
+        }
+      } else {
+        alert('Không thể xác nhận nhận hàng. Vui lòng thử lại.');
+      }
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
 
   // Auto-add product from navigation state
   useEffect(() => {
@@ -253,28 +337,41 @@ const DealerOrderPage: React.FC = () => {
       return;
     }
 
+    if (!formData.preferredDeliveryDate) {
+      alert('Vui lòng chọn ngày giao hàng mong muốn');
+      return;
+    }
+
+    if (!formData.deliveryAddress && !formData.address) {
+      alert('Vui lòng nhập địa chỉ giao hàng');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // TODO: Backend currently only accepts CASH (converted to FULL internally)
-      // Will need to update when BANK_TRANSFER support is added
-      const apiPaymentMethod = 'CASH';
+      // Build full delivery address
+      const fullDeliveryAddress = formData.deliveryAddress || 
+        `${formData.address}, ${formData.ward}, ${formData.district}, ${formData.city}`.trim();
 
-      // Create order for the first product (or iterate if multiple products needed)
-      const firstProduct = formData.selectedProducts[0];
-      
+      // Prepare order items array
+      const orderItems = formData.selectedProducts.map(product => ({
+        vehicleId: parseInt(product.productId),
+        quantity: product.quantity
+      }));
+
       const orderRequest: CreateOrderRequest = {
-        vehicleId: String(firstProduct.productId),
-        quantity: String(firstProduct.quantity),
-        desiredDeliveryDate: formData.preferredDeliveryDate || new Date().toISOString().split('T')[0],
+        orderItems: orderItems,
+        desiredDeliveryDate: formData.preferredDeliveryDate,
         deliveryNote: formData.deliveryNote || '',
-        deliveryAddress: formData.deliveryAddress || formData.address || '',
-        paymentMethod: apiPaymentMethod,
+        deliveryAddress: fullDeliveryAddress,
       };
 
       console.log('Creating order with data:', orderRequest);
+      console.log('Current dealer ID:', currentDealerId);
       const createdOrder = await createOrder(orderRequest);
       console.log('Order created successfully:', createdOrder);
+      console.log('Created order ID:', createdOrder.orderId);
 
       // Check if online payment method
       if (formData.paymentMethod === 'bank-transfer') {
@@ -317,6 +414,26 @@ const DealerOrderPage: React.FC = () => {
             <p>Dành cho đại lý - Đặt hàng số lượng lớn với giá ưu đãi</p>
           </div>
 
+          {/* Tabs */}
+          <div className={styles.tabs}>
+            <button
+              type="button"
+              className={`${styles.tab} ${activeTab === 'create' ? styles.active : ''}`}
+              onClick={() => setActiveTab('create')}
+            >
+              📝 Tạo đơn hàng mới
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${activeTab === 'list' ? styles.active : ''}`}
+              onClick={() => setActiveTab('list')}
+            >
+              📦 Đơn hàng của tôi
+            </button>
+          </div>
+
+          {/* Create Order Form */}
+          {activeTab === 'create' && (
           <div className={styles.content}>
             {/* Left: Form */}
             <form className={styles.form} onSubmit={handleSubmit}>
@@ -327,29 +444,42 @@ const DealerOrderPage: React.FC = () => {
                     <i className="fas fa-building"></i>
                     <h2>Thông tin đại lý</h2>
                   </div>
-                  
                 </div>
                 
                 <div className={styles.infoCard}>
                   <div className={styles.infoGrid}>
                     <div className={styles.infoItem}>
-                      <label>Tên đại lý</label>
+                      <label><i className="fas fa-store"></i> Tên đại lý</label>
                       <div className={styles.infoValue}>{formData.dealerName || '---'}</div>
                     </div>
 
                     <div className={styles.infoItem}>
-                      <label>Mã đại lý</label>
+                      <label><i className="fas fa-id-card"></i> Mã đại lý</label>
                       <div className={styles.infoValue}>{formData.dealerCode || '---'}</div>
                     </div>
 
                     <div className={styles.infoItem}>
-                      <label>Số điện thoại</label>
+                      <label><i className="fas fa-user"></i> Người liên hệ</label>
+                      <div className={styles.infoValue}>{formData.contactPerson || '---'}</div>
+                    </div>
+
+                    <div className={styles.infoItem}>
+                      <label><i className="fas fa-phone"></i> Số điện thoại</label>
                       <div className={styles.infoValue}>{formData.phone || '---'}</div>
                     </div>
 
                     <div className={styles.infoItem}>
-                      <label>Email</label>
+                      <label><i className="fas fa-envelope"></i> Email</label>
                       <div className={styles.infoValue}>{formData.email || '---'}</div>
+                    </div>
+
+                    <div className={`${styles.infoItem} ${styles.fullWidth}`}>
+                      <label><i className="fas fa-map-marker-alt"></i> Địa chỉ</label>
+                      <div className={styles.infoValue}>
+                        {formData.address && formData.ward && formData.district && formData.city
+                          ? `${formData.address}, ${formData.ward}, ${formData.district}, ${formData.city}`
+                          : formData.address || '---'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -357,78 +487,12 @@ const DealerOrderPage: React.FC = () => {
                 {/* Hidden inputs to maintain form data */}
                 <input type="hidden" name="dealerName" value={formData.dealerName} />
                 <input type="hidden" name="dealerCode" value={formData.dealerCode} />
+                <input type="hidden" name="contactPerson" value={formData.contactPerson} />
                 <input type="hidden" name="phone" value={formData.phone} />
                 <input type="hidden" name="email" value={formData.email} />
               </section>
 
-              {/* Address */}
-              <section className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <i className="fas fa-map-marker-alt"></i>
-                  <h2>Địa chỉ đại lý</h2>
-                </div>
-                <div className={styles.grid}>
-                  <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                    <label htmlFor="address">
-                      Địa chỉ cụ thể <span className={styles.required}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Số nhà, tên đường"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label htmlFor="ward">
-                      Phường/Xã <span className={styles.required}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="ward"
-                      name="ward"
-                      value={formData.ward}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Phường 1"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label htmlFor="district">
-                      Quận/Huyện <span className={styles.required}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="district"
-                      name="district"
-                      value={formData.district}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Quận 1"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label htmlFor="city">
-                      Tỉnh/Thành phố <span className={styles.required}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="TP. Hồ Chí Minh"
-                    />
-                  </div>
-                </div>
-              </section>
+             
 
               {/* Product Selection */}
               <section className={styles.section}>
@@ -701,6 +765,102 @@ const DealerOrderPage: React.FC = () => {
               </div>
             </form>
           </div>
+          )}
+
+          {/* Orders List */}
+          {activeTab === 'list' && (
+            <div className={styles.ordersList}>
+              <h2>Đơn hàng của tôi</h2>
+              
+              {isLoadingOrders ? (
+                <div className={styles.loading}>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <p>Đang tải danh sách đơn hàng...</p>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <i className="fas fa-inbox"></i>
+                  <p>Chưa có đơn hàng nào</p>
+                  <button 
+                    type="button"
+                    onClick={() => setActiveTab('create')}
+                    className={styles.createButton}
+                  >
+                    Tạo đơn hàng mới
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.ordersGrid}>
+                  {orders.map(order => (
+                    <div key={order.orderId} className={styles.orderCard}>
+                      <div className={styles.orderHeader}>
+                        <h3>Đơn hàng #{order.orderId}</h3>
+                        <span className={`${styles.status} ${styles[order.orderStatus.toLowerCase()]}`}>
+                          {order.orderStatus}
+                        </span>
+                      </div>
+                      
+                      <div className={styles.orderInfo}>
+                        <div className={styles.infoRow}>
+                          <span className={styles.label}>Tổng tiền:</span>
+                          <span className={styles.value}>{formatPrice(order.grandTotal)}</span>
+                        </div>
+                        <div className={styles.infoRow}>
+                          <span className={styles.label}>Ngày giao dự kiến:</span>
+                          <span className={styles.value}>{order.desiredDeliveryDate}</span>
+                        </div>
+                        <div className={styles.infoRow}>
+                          <span className={styles.label}>Địa chỉ giao hàng:</span>
+                          <span className={styles.value}>{order.deliveryAddress}</span>
+                        </div>
+                        <div className={styles.infoRow}>
+                          <span className={styles.label}>Thanh toán:</span>
+                          <span className={`${styles.value} ${styles[order.paymentStatus.toLowerCase()]}`}>
+                            {order.paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={styles.orderActions}>
+                        {order.orderStatus === 'SHIPPED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmDelivery(order.orderId)}
+                            disabled={confirmingOrderId === order.orderId}
+                            className={styles.confirmButton}
+                          >
+                            {confirmingOrderId === order.orderId ? (
+                              <>
+                                <i className="fas fa-spinner fa-spin"></i>
+                                Đang xác nhận...
+                              </>
+                            ) : (
+                              <>
+                                <i className="fas fa-check-circle"></i>
+                                Xác nhận đã nhận hàng
+                              </>
+                            )}
+                          </button>
+                        )}
+                        
+                        {order.paymentStatus === 'PENDING' && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/orders/${order.orderId}/payment`)}
+                            className={styles.payButton}
+                          >
+                            <i className="fas fa-credit-card"></i>
+                            Thanh toán
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 

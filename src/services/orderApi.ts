@@ -4,13 +4,16 @@ import api from "../lib/apiClient";
 
 // ===== TYPES =====
 
+export interface OrderItem {
+  vehicleId: number;
+  quantity: number;
+}
+
 export interface CreateOrderRequest {
-  vehicleId: string;
-  quantity: string;
+  orderItems: OrderItem[];
   desiredDeliveryDate: string; // Format: YYYY-MM-DD
   deliveryNote: string;
   deliveryAddress: string;
-  paymentMethod: 'CASH'; // Backend currently only accepts CASH (returns as FULL)
 }
 
 export interface Order {
@@ -25,6 +28,12 @@ export interface Order {
   orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
   paymentStatus: 'PENDING' | 'PAID' | 'CANCELLED';
   paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'INSTALLMENT' | 'FULL';
+  orderItems?: Array<{
+    vehicleId: number;
+    vehicleName?: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
 }
 
 export class OrderApiError extends Error {
@@ -44,10 +53,32 @@ export class OrderApiError extends Error {
 /**
  * POST /api/orders - Create new order
  */
-export const createOrder = async (orderData: CreateOrderRequest): Promise<Order> => {
+export const createOrder = async (orderRequest: CreateOrderRequest): Promise<Order> => {
   try {
-    const response = await api.post<Order>('/api/orders', orderData);
-    return response.data;
+    const response = await api.post<any>('/api/orders', orderRequest);
+    console.log('📦 Raw order response:', response.data);
+    
+    // Handle different response formats
+    const orderData = response.data;
+    
+    // Map field names if backend uses different names
+    const normalizedOrder: Order = {
+      orderId: orderData.orderId || orderData.id || orderData.orderID,
+      subtotal: orderData.subtotal || 0,
+      dealerDiscount: orderData.dealerDiscount || 0,
+      vatAmount: orderData.vatAmount || 0,
+      grandTotal: orderData.grandTotal || orderData.totalAmount || 0,
+      desiredDeliveryDate: orderData.desiredDeliveryDate || '',
+      deliveryAddress: orderData.deliveryAddress || '',
+      deliveryNote: orderData.deliveryNote || '',
+      orderStatus: orderData.orderStatus || 'PENDING',
+      paymentStatus: orderData.paymentStatus || 'PENDING',
+      paymentMethod: orderData.paymentMethod || 'CASH',
+      orderItems: orderData.orderItems || []
+    };
+    
+    console.log('✅ Normalized order:', normalizedOrder);
+    return normalizedOrder;
   } catch (error: any) {
     console.error('Error creating order:', error);
     const message = error.response?.data?.message || 'Không thể tạo đơn hàng';
@@ -95,6 +126,18 @@ export const getOrderById = async (id: number): Promise<Order> => {
     return response.data;
   } catch (error: any) {
     console.error('Error fetching order:', error);
+    
+    // Handle specific error codes
+    if (error.response?.status === 403) {
+      const message = 'Bạn không có quyền truy cập đơn hàng này. Vui lòng kiểm tra lại.';
+      throw new OrderApiError(message, 'FORBIDDEN', error);
+    }
+    
+    if (error.response?.status === 404) {
+      const message = 'Không tìm thấy đơn hàng. Đơn hàng có thể đã bị xóa.';
+      throw new OrderApiError(message, 'NOT_FOUND', error);
+    }
+    
     const message = error.response?.data?.message || 'Không thể tải thông tin đơn hàng';
     throw new OrderApiError(message, `HTTP_${error.response?.status}`, error);
   }
