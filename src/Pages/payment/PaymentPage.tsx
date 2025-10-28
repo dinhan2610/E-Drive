@@ -38,7 +38,16 @@ const PaymentPage: React.FC = () => {
         // Set default cash amount to grand total
         setCashAmount(data.grandTotal.toString());
       } catch (err: any) {
-        setError(err.message || 'Không thể tải thông tin đơn hàng');
+        console.error('❌ Failed to load order:', err);
+        
+        // Handle specific error codes
+        if (err.code === 'FORBIDDEN') {
+          setError('⚠️ Bạn không có quyền truy cập đơn hàng này. Đơn hàng này có thể thuộc về đại lý khác.');
+        } else if (err.code === 'NOT_FOUND') {
+          setError('❌ Không tìm thấy đơn hàng. Đơn hàng có thể đã bị xóa hoặc không tồn tại.');
+        } else {
+          setError(err.message || 'Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.');
+        }
       } finally {
         setLoading(false);
       }
@@ -136,7 +145,6 @@ const PaymentPage: React.FC = () => {
   if (!order) return null;
 
   const isPaidFull = order.paymentStatus === 'PAID';
-  const remaining = order.grandTotal - (order.grandTotal * 0); // Calculate remaining from order
 
   return (
     <div className={styles.wrap}>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getTestDriveBookings, cancelTestDrive, completeTestDrive, confirmTestDrive, deleteTestDrive, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
+import { getTestDrivesByDealer, deleteTestDrive, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
+import TestDriveDetailModal from '../components/testDrive/TestDriveDetailModal';
+import TestDriveEditModal from '../components/testDrive/TestDriveEditModal';
 import styles from '../styles/TestDriveStyles/TestDriveManagement.module.scss';
 
 const formatDate = (datetime: string) => {
@@ -21,7 +23,7 @@ const formatTime = (datetime: string) => {
 };
 
 const getStatusLabel = (status: string) => {
-  switch (status) {
+  switch(status) {
     case 'PENDING': return 'Chờ xác nhận';
     case 'CONFIRMED': return 'Đã xác nhận';
     case 'COMPLETED': return 'Hoàn thành';
@@ -33,8 +35,20 @@ const getStatusLabel = (status: string) => {
 
 const TestDriveManagementPage: React.FC = () => {
   const [testDrives, setTestDrives] = useState<TestDrive[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTestDrive, setSelectedTestDrive] = useState<TestDrive | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [testDriveToEdit, setTestDriveToEdit] = useState<TestDrive | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('vi-VN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+  };
 
   useEffect(() => {
     // Helper function to set token from console
@@ -58,52 +72,37 @@ const TestDriveManagementPage: React.FC = () => {
 
   const loadTestDrives = async () => {
     try {
-      setLoading(true);
-      const data = await getTestDriveBookings();
+      setIsLoading(true);
+      
+      // Lấy dealerId từ localStorage
+      const userData = localStorage.getItem('e-drive-user');
+      let dealerId = 1; // Default
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.dealerId) {
+            dealerId = user.dealerId;
+          }
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+        }
+      }
+      
+      console.log('Loading test drives for dealer:', dealerId);
+      const data = await getTestDrivesByDealer(dealerId);
       setTestDrives(data);
+      setError(null);
     } catch (error: any) {
       console.error('Error loading test drives:', error);
       
       if (error instanceof TestDriveApiError) {
-        alert(error.message);
+        setError(error.message);
       } else {
-        alert('Không thể tải danh sách lái thử');
+        setError('Không thể tải danh sách lái thử');
       }
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConfirmTestDrive = async (id: number) => {
-    try {
-      const updated = await confirmTestDrive(id);
-      setTestDrives(prev => prev.map(td => td.testdriveId === id ? { ...td, status: updated.status } : td));
-      alert('Đã xác nhận lịch lái thử thành công!');
-    } catch (error: any) {
-      alert(error.message || 'Không thể xác nhận lịch lái thử');
-    }
-  };
-
-  const handleCompleteTestDrive = async (id: number) => {
-    try {
-      const updated = await completeTestDrive(id);
-      setTestDrives(prev => prev.map(td => td.testdriveId === id ? { ...td, status: updated.status } : td));
-      alert('Đã đánh dấu hoàn thành lịch lái thử!');
-    } catch (error: any) {
-      alert(error.message || 'Không thể hoàn thành lịch lái thử');
-    }
-  };
-
-  const handleCancelTestDrive = async (id: number) => {
-    const reason = prompt('Nhập lý do hủy:');
-    if (!reason) return;
-    
-    try {
-      const updated = await cancelTestDrive(id, reason);
-      setTestDrives(prev => prev.map(td => td.testdriveId === id ? { ...td, status: updated.status } : td));
-      alert('Đã hủy lịch lái thử thành công!');
-    } catch (error: any) {
-      alert(error.message || 'Không thể hủy lịch lái thử');
+      setIsLoading(false);
     }
   };
 
@@ -117,6 +116,28 @@ const TestDriveManagementPage: React.FC = () => {
     } catch (error: any) {
       alert(error.message || 'Không thể xóa lịch lái thử');
     }
+  };
+
+  const handleViewDetail = (testDrive: TestDrive) => {
+    setSelectedTestDrive(testDrive);
+    setShowDetailModal(true);
+  };
+
+  const handleEdit = (testDrive: TestDrive) => {
+    setSelectedTestDrive(testDrive);
+    setShowEditModal(true);
+  };
+
+  const handleEditFromDetail = () => {
+    setShowDetailModal(false);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = (updated: TestDrive) => {
+    setTestDrives(prev => prev.map(td => 
+      td.testdriveId === updated.testdriveId ? updated : td
+    ));
+    loadTestDrives(); // Reload to get fresh data
   };
 
   const filteredTestDrives = filterStatus === 'ALL' 
@@ -134,49 +155,6 @@ const TestDriveManagementPage: React.FC = () => {
             <div className={styles.headerText}>
               <h1>Quản lý lịch hẹn lái thử</h1>
               <p>Theo dõi và quản lý toàn bộ yêu cầu đăng ký lái thử xe điện</p>
-            </div>
-          </div>
-          <div className={styles.headerStats}>
-            <div className={styles.quickStat}>
-              <span className={styles.statLabel}>Tổng số</span>
-              <span className={styles.statValue}>{testDrives.length}</span>
-            </div>
-            <div className={styles.quickStat}>
-              <span className={styles.statLabel}>Chờ xử lý</span>
-              <span className={`${styles.statValue} ${styles.pending}`}>
-                {testDrives.filter(td => td.status === 'PENDING').length}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.statsCards}>
-          <div className={styles.statCard}>
-            <i className="fas fa-list"></i>
-            <div>
-              <h3>{testDrives.length}</h3>
-              <p>Tổng số</p>
-            </div>
-          </div>
-          <div className={`${styles.statCard} ${styles.pending}`}>
-            <i className="fas fa-clock"></i>
-            <div>
-              <h3>{testDrives.filter(td => td.status === 'PENDING').length}</h3>
-              <p>Chờ xác nhận</p>
-            </div>
-          </div>
-          <div className={`${styles.statCard} ${styles.confirmed}`}>
-            <i className="fas fa-check-circle"></i>
-            <div>
-              <h3>{testDrives.filter(td => td.status === 'CONFIRMED').length}</h3>
-              <p>Đã xác nhận</p>
-            </div>
-          </div>
-          <div className={`${styles.statCard} ${styles.completed}`}>
-            <i className="fas fa-flag-checkered"></i>
-            <div>
-              <h3>{testDrives.filter(td => td.status === 'COMPLETED').length}</h3>
-              <p>Hoàn thành</p>
             </div>
           </div>
         </div>
@@ -210,7 +188,7 @@ const TestDriveManagementPage: React.FC = () => {
           </div>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className={styles.loading}>
             <i className="fas fa-spinner fa-spin"></i>
             <p>Đang tải...</p>
@@ -269,42 +247,27 @@ const TestDriveManagementPage: React.FC = () => {
                       </td>
                       <td>
                         <div className={styles.actions}>
-                          {testDrive.status === 'PENDING' && (
-                            <button 
-                              className={`${styles.actionButton} ${styles.confirm}`}
-                              title="Xác nhận"
-                              onClick={() => handleConfirmTestDrive(testDrive.testdriveId)}
-                            >
-                              <i className="fas fa-check"></i>
-                            </button>
-                          )}
-                          {testDrive.status === 'CONFIRMED' && (
-                            <button 
-                              className={`${styles.actionButton} ${styles.complete}`}
-                              title="Hoàn thành"
-                              onClick={() => handleCompleteTestDrive(testDrive.testdriveId)}
-                            >
-                              <i className="fas fa-flag-checkered"></i>
-                            </button>
-                          )}
-                          {testDrive.status !== 'CANCELLED' && testDrive.status !== 'COMPLETED' && (
-                            <button 
-                              className={`${styles.actionButton} ${styles.cancel}`}
-                              title="Hủy"
-                              onClick={() => handleCancelTestDrive(testDrive.testdriveId)}
-                            >
-                              <i className="fas fa-times"></i>
-                            </button>
-                          )}
-                          {(testDrive.status === 'CANCELLED' || testDrive.status === 'COMPLETED') && (
-                            <button 
-                              className={`${styles.actionButton} ${styles.delete}`}
-                              title="Xóa"
-                              onClick={() => handleDeleteTestDrive(testDrive.testdriveId)}
-                            >
-                              <i className="fas fa-trash"></i>
-                            </button>
-                          )}
+                          <button 
+                            className={`${styles.actionButton} ${styles.view}`}
+                            title="Xem chi tiết"
+                            onClick={() => handleViewDetail(testDrive)}
+                          >
+                            <i className="fas fa-eye"></i>
+                          </button>
+                          <button 
+                            className={`${styles.actionButton} ${styles.edit}`}
+                            title="Chỉnh sửa"
+                            onClick={() => handleEdit(testDrive)}
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          <button 
+                            className={`${styles.actionButton} ${styles.delete}`}
+                            title="Xóa"
+                            onClick={() => handleDeleteTestDrive(testDrive.testdriveId)}
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -313,6 +276,23 @@ const TestDriveManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Modals */}
+        {showDetailModal && selectedTestDrive && (
+          <TestDriveDetailModal
+            testDrive={selectedTestDrive}
+            onClose={() => setShowDetailModal(false)}
+            onEdit={handleEditFromDetail}
+          />
+        )}
+
+        {showEditModal && selectedTestDrive && (
+          <TestDriveEditModal
+            testDrive={selectedTestDrive}
+            onClose={() => setShowEditModal(false)}
+            onSuccess={handleEditSuccess}
+          />
         )}
       </div>
     </div>

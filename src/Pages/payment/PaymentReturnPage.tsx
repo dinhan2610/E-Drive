@@ -12,6 +12,7 @@ const PaymentReturnPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<VnPayReturnPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
     const processReturn = async () => {
@@ -27,6 +28,24 @@ const PaymentReturnPage: React.FC = () => {
 
     processReturn();
   }, [searchParams]);
+
+  // Auto redirect to dealer-order page after 5 seconds
+  useEffect(() => {
+    if (!loading && (result || error)) {
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate('/dealer-order', { state: { activeTab: 'list' } });
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [loading, result, error, navigate]);
 
   const formatVND = (amount: string | undefined) => {
     if (!amount) return '0 ₫';
@@ -68,8 +87,11 @@ const PaymentReturnPage: React.FC = () => {
             </div>
             <h2>Giao dịch thất bại</h2>
             <p className={styles.errorMessage}>{error}</p>
+            <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+              Tự động chuyển về đơn hàng sau {countdown} giây...
+            </p>
             <div className={styles.resultActions}>
-              <button onClick={() => navigate('/orders')} className={styles.btnSecondary}>
+              <button onClick={() => navigate('/dealer-order', { state: { activeTab: 'list' } })} className={styles.btnSecondary}>
                 Về danh sách đơn hàng
               </button>
               <button onClick={() => navigate('/')} className={styles.btnPrimary}>
@@ -82,8 +104,13 @@ const PaymentReturnPage: React.FC = () => {
     );
   }
 
-  const isSuccess = result?.vnp_ResponseCode === '00' && result?.vnp_TransactionStatus === '00';
+  // VNPay success: vnp_ResponseCode === '00'
+  // vnp_TransactionStatus may not always be present, so check it optionally
+  const isSuccess = result?.vnp_ResponseCode === '00';
   const orderId = getOrderIdFromInfo(result?.vnp_OrderInfo);
+  
+  console.log('🔍 Payment result:', result);
+  console.log('✅ isSuccess:', isSuccess);
 
   return (
     <div className={styles.wrap}>
@@ -96,6 +123,9 @@ const PaymentReturnPage: React.FC = () => {
               </div>
               <h2>Thanh toán thành công!</h2>
               <p>Giao dịch của bạn đã được xử lý thành công</p>
+              <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                Tự động chuyển về đơn hàng sau {countdown} giây...
+              </p>
 
               <div className={styles.transactionDetails}>
                 <div className={styles.detailRow}>
@@ -119,14 +149,12 @@ const PaymentReturnPage: React.FC = () => {
               </div>
 
               <div className={styles.resultActions}>
-                {orderId && (
-                  <button 
-                    onClick={() => navigate(`/orders/${orderId}`)} 
-                    className={styles.btnSecondary}
-                  >
-                    Xem đơn hàng
-                  </button>
-                )}
+                <button 
+                  onClick={() => navigate('/dealer-order', { state: { activeTab: 'list' } })} 
+                  className={styles.btnSecondary}
+                >
+                  Xem đơn hàng của tôi
+                </button>
                 <button onClick={() => navigate('/')} className={styles.btnPrimary}>
                   Về trang chủ
                 </button>
@@ -139,6 +167,9 @@ const PaymentReturnPage: React.FC = () => {
               </div>
               <h2>Thanh toán thất bại</h2>
               <p>Giao dịch của bạn không thể hoàn tất</p>
+              <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                Tự động chuyển về đơn hàng sau {countdown} giây...
+              </p>
 
               <div className={styles.transactionDetails}>
                 <div className={styles.detailRow}>
@@ -154,16 +185,14 @@ const PaymentReturnPage: React.FC = () => {
               </div>
 
               <div className={styles.resultActions}>
-                {orderId && (
-                  <button 
-                    onClick={() => navigate(`/orders/${orderId}/payment`)} 
-                    className={styles.btnSecondary}
-                  >
-                    Thử lại
-                  </button>
-                )}
-                <button onClick={() => navigate('/orders')} className={styles.btnPrimary}>
-                  Về danh sách đơn hàng
+                <button 
+                  onClick={() => navigate('/dealer-order', { state: { activeTab: 'list' } })} 
+                  className={styles.btnSecondary}
+                >
+                  Về đơn hàng của tôi
+                </button>
+                <button onClick={() => navigate('/')} className={styles.btnPrimary}>
+                  Về trang chủ
                 </button>
               </div>
             </>

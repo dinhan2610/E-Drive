@@ -55,6 +55,7 @@ function App() {
         <Route path="/customers" element={<CustomersPage />} />
         <Route path="/orders/:orderId/payment" element={<PaymentPage />} />
         <Route path="/payment/vnpay-return" element={<PaymentReturnPage />} />
+        <Route path="/payments/vnpay-return" element={<PaymentReturnPage />} />
       </Routes>
       {!isAdminPage && <ChatBox />}
     </>

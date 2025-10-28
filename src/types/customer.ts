@@ -2,7 +2,7 @@ export interface Customer {
   customerId: number;
   fullName: string;
   dob: string;
-  gender: string;
+  gender: 'Nam' | 'Nữ' | 'Khác'; // Backend yêu cầu giá trị tiếng Việt
   email: string;
   phone: string;
   address: string;
@@ -23,11 +23,9 @@ export interface ListCustomersParams {
 }
 
 export interface ListCustomersResponse {
-  items: Customer[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  statusCode: number;
+  message: string;
+  data: Customer[];
 }
 
 

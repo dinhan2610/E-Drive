@@ -25,6 +25,7 @@ export interface TestDriveRequest {
   scheduleDatetime: string; // ISO 8601 format: "2025-10-24T18:29:34.064Z"
   status?: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
   cancelReason?: string;
+  note?: string; // Additional notes, can include customer info for walk-in bookings
 }
 
 export class TestDriveApiError extends Error {
@@ -45,11 +46,18 @@ export class TestDriveApiError extends Error {
  * Get token from localStorage and create headers
  */
 const getAuthHeaders = (): HeadersInit => {
-  // No authentication required - backend has disabled auth
-  return {
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  
+  const headers: HeadersInit = {
     'accept': '*/*',
     'Content-Type': 'application/json'
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
 };
 
 /**
@@ -104,30 +112,57 @@ export const getTestDriveBookings = async (): Promise<TestDrive[]> => {
       headers: getAuthHeaders(),
     });
 
-    const data = await handleResponse<any>(response);
+    const result = await handleResponse<any>(response);
     
-    // Backend may wrap data in different formats
-    // Handle: direct array, {data: array}, {content: array}, etc.
-    console.log('API Response:', data);
+    console.log('API Response:', result);
     
-    if (Array.isArray(data)) {
-      return data;
+    // Xử lý cả 2 format: array trực tiếp hoặc {statusCode, message, data}
+    if (Array.isArray(result)) {
+      return result;
     }
     
-    if (data && Array.isArray(data.data)) {
-      return data.data;
+    if (result && Array.isArray(result.data)) {
+      return result.data;
     }
     
-    if (data && Array.isArray(data.content)) {
-      return data.content;
-    }
-    
-    console.error('Unexpected response format:', data);
+    console.error('Unexpected response format:', result);
     return [];
     
   } catch (error) {
     if (error instanceof TestDriveApiError) throw error;
     throw new TestDriveApiError('Khong the tai danh sach lai thu', 'NETWORK_ERROR', error);
+  }
+};
+
+/**
+ * GET /api/testdrives/dealer/{dealerId} - Get test drive bookings by dealer (Authentication required)
+ */
+export const getTestDrivesByDealer = async (dealerId: number): Promise<TestDrive[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${dealerId}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    const result = await handleResponse<any>(response);
+    
+    console.log('API Response for dealer:', result);
+    
+    // Xử lý cả 2 format: array trực tiếp hoặc {statusCode, message, data}
+    if (Array.isArray(result)) {
+      return result;
+    }
+    
+    if (result && Array.isArray(result.data)) {
+      return result.data;
+    }
+    
+    console.error('Unexpected response format:', result);
+    return [];
+    
+  } catch (error) {
+    if (error instanceof TestDriveApiError) throw error;
+    throw new TestDriveApiError('Khong the tai danh sach lai thu theo dealer', 'NETWORK_ERROR', error);
   }
 };
 
@@ -170,32 +205,55 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
 };
 
 /**
- * PUT /api/testdrives/{id} - Update test drive booking (Authentication required)
+ * PUT /api/testdrives/dealer/{dealerId}/{id} - Update test drive booking (Authentication required)
  */
 export const updateTestDrive = async (
   id: number,
   data: TestDriveRequest
 ): Promise<TestDrive> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/testdrives/${id}`, {
+    // Thêm dealerId vào URL
+    const dealerId = data.dealerId;
+    console.log(`🔄 Updating test drive ${id} for dealer ${dealerId}`);
+    console.log('Request data:', data);
+    
+    const response = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${dealerId}/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
+    console.log('Update response status:', response.status);
     return handleResponse<TestDrive>(response);
   } catch (error) {
+    console.error('❌ Update failed:', error);
     if (error instanceof TestDriveApiError) throw error;
     throw new TestDriveApiError('Khong the cap nhat lich lai thu', 'NETWORK_ERROR', error);
   }
 };
 
 /**
- * DELETE /api/testdrives/{id} - Delete test drive booking (Authentication required)
+ * DELETE /api/testdrives/dealer/{dealerId}/{id} - Delete test drive booking (Authentication required)
  */
-export const deleteTestDrive = async (id: number): Promise<void> => {
+export const deleteTestDrive = async (id: number, dealerId?: number): Promise<void> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/testdrives/${id}`, {
+    // Lấy dealerId từ localStorage nếu không được truyền vào
+    let dId = dealerId;
+    if (!dId) {
+      const userData = localStorage.getItem('e-drive-user');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          dId = user.dealerId || 1;
+        } catch {
+          dId = 1;
+        }
+      } else {
+        dId = 1;
+      }
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${dId}/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });

@@ -50,11 +50,12 @@ const CustomersPage: React.FC = () => {
 
       const response = await listCustomers(params);
       
-      setCustomers(response.items);
-      setTotal(response.total);
-      setTotalPages(response.totalPages);
+      setCustomers(response.data || []);
+      setTotal(response.data?.length || 0);
+      setTotalPages(1); // Backend chưa trả về totalPages, tạm set = 1
     } catch (error) {
       console.error('Failed to load customers:', error);
+      console.error('Error details:', error);
     } finally {
       setLoading(false);
     }
@@ -176,7 +177,7 @@ const CustomersPage: React.FC = () => {
                 <div className={styles.statItem}>
                   <i className="fas fa-database" />
                   <div className={styles.statContent}>
-                    <span className={styles.statNumber}>{total.toLocaleString()}</span>
+                    <span className={styles.statNumber}>{(total || 0).toLocaleString()}</span>
                     <span className={styles.statLabel}>Khách hàng</span>
                   </div>
                 </div>
