@@ -1,3 +1,4 @@
+import api from '../lib/apiClient';
 import type {
   Customer,
   CreateCustomerPayload,
@@ -6,163 +7,102 @@ import type {
   ListCustomersResponse
 } from '../types/customer';
 
-// Mock data for demo
-const mockCustomersData: Customer[] = [
-  {
-    customerId: 1,
-    fullName: 'Nguyễn Minh Hòa',
-    dob: '1998-05-12',
-    gender: 'Nam',
-    email: 'hoa.nguyen@example.com',
-    phone: '0909123456',
-    address: '12 Lê Lợi, Q1, TP.HCM',
-    idCardNo: '079123456789'
-  },
-  {
-    customerId: 2,
-    fullName: 'Trần Thị Bình',
-    dob: '1995-08-15',
-    gender: 'Nữ', 
-    email: 'binh.tran@example.com',
-    phone: '0908234567',
-    address: '45 Nguyễn Huệ, Q1, TP.HCM',
-    idCardNo: '079234567890'
-  },
-  {
-    customerId: 3,
-    fullName: 'Lê Văn Cường',
-    dob: '1990-03-21',
-    gender: 'Nam',
-    email: 'cuong.le@example.com', 
-    phone: '0907345678',
-    address: '78 Võ Văn Tần, Q3, TP.HCM',
-    idCardNo: '079345678901'
+/**
+ * Get dealer ID from localStorage
+ */
+function getDealerId(): number {
+  const userData = localStorage.getItem('e-drive-user');
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      if (user.dealerId) {
+        return user.dealerId;
+      }
+    } catch (error) {
+      console.error('Failed to parse user data:', error);
+    }
   }
-];
-
-// Store for managing customers (simulating database)
-let customersStore: Customer[] = [...mockCustomersData];
+  
+  // Fallback to dealerId 1 if not found
+  console.warn('Dealer ID not found in localStorage, using default dealerId=1');
+  return 1;
+}
 
 /**
  * List customers with pagination, search, and filters
  */
 export async function listCustomers(params: ListCustomersParams = {}): Promise<ListCustomersResponse> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  const {
-    page = 1,
-    pageSize = 20,
-    q = '',
-    sort = 'newest'
-  } = params;
-
-  // Filter customers
-  let filtered = [...customersStore];
-
-  // Search by name, phone, or email
-  if (q) {
-    const query = q.toLowerCase();
-    filtered = filtered.filter((c: Customer) =>
-      c.fullName.toLowerCase().includes(query) ||
-      c.phone.includes(query) ||
-      (c.email && c.email.toLowerCase().includes(query))
-    );
+  try {
+    const dealerId = getDealerId();
+    const response = await api.get<ListCustomersResponse>(`/api/dealer/${dealerId}/customers`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch customers:', error);
+    throw error;
   }
-
-  // Sort
-  filtered.sort((a, b) => {
-    switch (sort) {
-      case 'newest':
-        return b.customerId - a.customerId;
-      case 'oldest':
-        return a.customerId - b.customerId;
-      case 'name_asc':
-        return a.fullName.localeCompare(b.fullName);
-      case 'name_desc':
-        return b.fullName.localeCompare(a.fullName);
-      default:
-        return 0;
-    }
-  });
-
-  // Paginate
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / pageSize);
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
-  const items = filtered.slice(start, end);
-
-  return {
-    items,
-    total,
-    page,
-    pageSize,
-    totalPages
-  };
 }
 
 /**
  * Get customer by ID
  */
 export async function getCustomer(id: number): Promise<Customer> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-
-  const customer = customersStore.find((c: Customer) => c.customerId === id);
-  if (!customer) {
-    throw new Error('Customer not found');
+  try {
+    const dealerId = getDealerId();
+    const response = await api.get<Customer>(`/api/dealer/${dealerId}/customers/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch customer ${id}:`, error);
+    throw error;
   }
-
-  return customer;
 }
 
 /**
  * Create new customer
  */
 export async function createCustomer(payload: CreateCustomerPayload): Promise<Customer> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  const newCustomer: Customer = {
-    customerId: customersStore.length + 1,
-    ...payload
-  };
-
-  customersStore.push(newCustomer);
-  return newCustomer;
+  try {
+    const dealerId = getDealerId();
+    const response = await api.post<any>(`/api/dealer/${dealerId}/customers`, payload);
+    
+    console.log('Create customer response:', response.data);
+    
+    // Backend có thể trả về {statusCode, message, data} hoặc trực tiếp Customer object
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('Failed to create customer:', error.response?.data?.message || error.message);
+    throw error;
+  }
 }
 
 /**
  * Update customer
  */
 export async function updateCustomer(id: number, payload: UpdateCustomerPayload): Promise<Customer> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  const index = customersStore.findIndex((c: Customer) => c.customerId === id);
-  if (index === -1) {
-    throw new Error('Customer not found');
+  try {
+    const dealerId = getDealerId();
+    const response = await api.put<Customer>(`/api/dealer/${dealerId}/customers/${id}`, payload);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to update customer ${id}:`, error);
+    throw error;
   }
-
-  const updatedCustomer: Customer = {
-    ...customersStore[index],
-    ...payload
-  };
-
-  customersStore[index] = updatedCustomer;
-  return updatedCustomer;
 }
 
 /**
  * Delete customer
  */
 export async function deleteCustomer(id: number): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  const index = customersStore.findIndex((c: Customer) => c.customerId === id);
-  if (index === -1) {
-    throw new Error('Customer not found');
+  try {
+    const dealerId = getDealerId();
+    await api.delete(`/api/dealer/${dealerId}/customers/${id}`);
+  } catch (error) {
+    console.error(`Failed to delete customer ${id}:`, error);
+    throw error;
   }
-
-  customersStore.splice(index, 1);
 }
 
 /**

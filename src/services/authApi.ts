@@ -1,12 +1,15 @@
 interface RegisterRequest {
-  fullName: string;
-  email: string;
-  phone: string;
-  dealerName: string;
-  address: string;
   username: string;
   password: string;
   confirmPassword: string;
+  email: string;
+  phone: string;
+  fullName: string;
+  dealerName: string;
+  houseNumberAndStreet: string;
+  wardOrCommune: string;
+  district: string;
+  provinceOrCity: string;
 }
 
 interface LoginRequest {
@@ -172,7 +175,6 @@ export const authApi = {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*',
         },
         body: JSON.stringify(credentials),
       });

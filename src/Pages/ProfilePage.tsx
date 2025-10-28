@@ -51,35 +51,35 @@ const ProfilePage: React.FC = () => {
       try {
         const apiProfile = await getProfile();
         
-        // Map API data to UI format (keep UI compatible)
-        const mockUserProfile: UserProfile = {
-          id: String(apiProfile.id),
+        // Map API data to UI format
+        const uiProfile: UserProfile = {
+          id: String(apiProfile.profileId),
           fullName: apiProfile.fullName,
           email: apiProfile.email,
-          phone: apiProfile.phone,
-          address: '', // API doesn't have this
-          company: '', // API doesn't have this
-          dealerName: apiProfile.dealerName || 'E-Drive',
+          phone: apiProfile.phoneNumber,
+          address: apiProfile.fullAddress || 'Chưa cập nhật',
+          company: apiProfile.agencyName || 'E-Drive Dealer',
+          dealerName: apiProfile.agencyName || 'E-Drive',
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apiProfile.fullName)}&background=ff4d30&color=fff&size=200`,
           joinDate: new Date().toLocaleDateString('vi-VN'),
           dealerStatus: 'active',
           totalSales: 42,
           commission: 125000000,
           username: apiProfile.username,
-          role: apiProfile.role
+          role: 'dealer'
         };
         
-        setUser(mockUserProfile);
+        setUser(uiProfile);
         setFormData({
-          fullName: mockUserProfile.fullName,
-          email: mockUserProfile.email,
-          phone: mockUserProfile.phone,
-          address: mockUserProfile.address,
-          company: mockUserProfile.company,
-          dealerName: mockUserProfile.dealerName,
+          fullName: apiProfile.fullName,
+          email: apiProfile.email,
+          phone: apiProfile.phoneNumber,
+          address: apiProfile.fullAddress || '',
+          company: apiProfile.agencyName || '',
+          dealerName: apiProfile.agencyName || '',
           dealerCode: apiProfile.dealerId ? `DL${String(apiProfile.dealerId).padStart(6, '0')}` : ''
         });
-        setAvatarPreview(mockUserProfile.avatar);
+        setAvatarPreview(uiProfile.avatar);
       } catch (error) {
         console.error('Failed to load profile:', error);
         // Fallback to localStorage if API fails
@@ -150,11 +150,19 @@ const ProfilePage: React.FC = () => {
     setIsSaving(true);
     
     try {
-      // Call real API
+      // Call real API with all required fields
       const updatedProfile = await updateProfile({
         fullName: formData.fullName,
         email: formData.email,
-        phone: formData.phone
+        phone: formData.phone,
+        agencyName: formData.company || 'E-Drive Dealer',
+        contactPerson: formData.fullName,
+        agencyPhone: formData.phone,
+        streetAddress: formData.address || '',
+        ward: '',
+        district: '',
+        city: '',
+        fullAddress: formData.address || ''
       });
       
       // Update UI with API response
@@ -162,7 +170,9 @@ const ProfilePage: React.FC = () => {
         ...user!,
         fullName: updatedProfile.fullName,
         email: updatedProfile.email,
-        phone: updatedProfile.phone
+        phone: updatedProfile.phoneNumber,
+        address: updatedProfile.fullAddress,
+        company: updatedProfile.agencyName
       };
       
       setUser(updatedUser);

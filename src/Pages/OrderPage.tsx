@@ -111,17 +111,21 @@ const OrderPage: React.FC = () => {
       deliveryDate.setDate(deliveryDate.getDate() + 7);
       const desiredDeliveryDate = deliveryDate.toISOString().split('T')[0];
 
-      // Create order via API (backend only accepts CASH for now)
+      // Create order via API with new format
       const order = await createOrder({
-        vehicleId: String(product.id),
-        quantity: '1',
+        orderItems: [
+          {
+            vehicleId: typeof product.id === 'string' ? parseInt(product.id) : product.id,
+            quantity: 1
+          }
+        ],
         desiredDeliveryDate,
         deliveryNote: formData.notes || 'Không có ghi chú',
-        deliveryAddress: fullAddress,
-        paymentMethod: 'CASH'
+        deliveryAddress: fullAddress
       });
 
       console.log('Order created successfully:', order);
+      console.log('Order ID:', order.orderId);
       setShowSuccess(true);
       
     } catch (error) {

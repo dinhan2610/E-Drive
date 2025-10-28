@@ -2,13 +2,19 @@
 
 import axios from "axios";
 
-let accessToken: string | null = null;
-
-export const setAccessToken = (token: string | null) => {
-  accessToken = token;
+// Get token from localStorage dynamically
+export const getAccessToken = () => {
+  return localStorage.getItem('accessToken') || localStorage.getItem('token');
 };
 
-export const getAccessToken = () => accessToken;
+export const setAccessToken = (token: string | null) => {
+  if (token) {
+    localStorage.setItem('accessToken', token);
+  } else {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
+  }
+};
 
 const api = axios.create({
   baseURL: 'http://localhost:8080',
@@ -18,11 +24,12 @@ const api = axios.create({
   },
 });
 
-// Request interceptor - attach JWT token
+// Request interceptor - attach JWT token from localStorage
 api.interceptors.request.use(
   (config) => {
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    const token = getAccessToken();
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -36,19 +43,30 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      const { status } = error.response;
+      const { status, config } = error.response;
       
       // Handle 401 - unauthorized
       if (status === 401) {
-        // Clear token and redirect to login
+        console.error('❌ 401 Unauthorized on:', config?.url);
+        
+        // Clear tokens
         setAccessToken(null);
         localStorage.removeItem('accessToken');
-        window.location.href = '/login';
+        localStorage.removeItem('refreshToken');
+        
+        // Only redirect if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          console.log('🔄 Redirecting to login...');
+          // Use setTimeout to avoid redirect during render
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
+        }
       }
       
       // Handle 403 - forbidden
       if (status === 403) {
-        console.error('Access forbidden');
+        console.error('❌ 403 Access forbidden:', config?.url);
       }
     }
     

@@ -64,7 +64,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
     );
   }
 
-  if (customers.length === 0) {
+  if (!customers || customers.length === 0) {
     return (
       <div className={styles.tableContainer}>
         <div className={styles.emptyState}>
