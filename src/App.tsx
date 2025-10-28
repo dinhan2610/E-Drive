@@ -10,6 +10,7 @@ import AdminPage from "./Pages/AdminPage";
 import CustomersPage from "./Pages/CustomersPage";
 import TestDrivePage from "./Pages/TestDrivePage";
 import TestDriveManagementPage from "./Pages/TestDriveManagementPage";
+import PromotionsPage from "./Pages/PromotionsPage";
 import PaymentPage from "./Pages/payment/PaymentPage";
 import PaymentReturnPage from "./Pages/payment/PaymentReturnPage";
 import Navbar from "../src/components/Navbar";
@@ -48,6 +49,7 @@ function App() {
         <Route path="/dealer-order" element={<DealerOrderPage />} />
         <Route path="/test-drive" element={<TestDrivePage />} />
         <Route path="/drive" element={<TestDriveManagementPage />} />
+        <Route path="/promotions" element={<PromotionsPage />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/compare-slots" element={<Compare />} />
         <Route path="/profile" element={<ProfilePage />} />
