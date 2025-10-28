@@ -17,7 +17,7 @@ export interface CreateOrderRequest {
 }
 
 export interface Order {
-  orderId: number | string;  // Can be number or UUID string
+  orderId: string;  // Can be number or UUID string
   subtotal: number;
   dealerDiscount: number;
   vatAmount: number;

@@ -1,7 +1,7 @@
 // Payment types for E-Drive
 
 export interface CashRequest {
-  orderId: number;
+  orderId: string;
   amount: number;     // số tiền thu ngay
   note?: string;
 }
