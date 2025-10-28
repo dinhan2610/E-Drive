@@ -5,6 +5,7 @@ import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle } from '../services/vehicleApi';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
 import { getOrders, getOrderById, cancelOrder, type Order } from '../services/orderApi';
+import { confirmDelivery } from '../services/deliveryApi';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
 import modalStyles from '../styles/AdminStyles/OrderDetailModal.module.scss';
@@ -551,6 +552,56 @@ const AdminPage: React.FC = () => {
           setNotification({
             isVisible: true,
             message: `❌ Không thể hủy đơn hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  // Handle confirm delivery
+  const handleConfirmDelivery = async (orderId: number | string, orderInfo: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận giao hàng',
+      message: `Xác nhận đơn hàng "${orderInfo}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
+      type: 'success',
+      onConfirm: async () => {
+        try {
+          console.log('🚚 Confirming delivery for order:', orderId);
+
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang xác nhận giao hàng...',
+            type: 'info'
+          });
+
+          await confirmDelivery(orderId);
+
+          // Update booking status in the list
+          setBookings(prev => prev.map(b => 
+            b.id === orderId 
+              ? { ...b, status: 'delivered' as const, orderStatus: 'DELIVERED' }
+              : b
+          ));
+
+          // Show success notification
+          setNotification({
+            isVisible: true,
+            message: '✅ Đã xác nhận giao hàng thành công',
+            type: 'success'
+          });
+
+          console.log('✅ Delivery confirmed successfully');
+        } catch (error) {
+          console.error('❌ Error confirming delivery:', error);
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể xác nhận giao hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
             type: 'error'
           });
         } finally {
@@ -1530,7 +1581,14 @@ const AdminPage: React.FC = () => {
                           >
                             <i className="fas fa-times"></i>
                           </button>
-                          <button className={styles.approveButton} title="Duyệt đơn hàng">
+                          <button 
+                            className={styles.approveButton} 
+                            title="Xác nhận giao hàng"
+                            onClick={() => handleConfirmDelivery(
+                              booking.id, 
+                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
+                            )}
+                          >
                             <i className="fas fa-check"></i>
                           </button>
                         </div>

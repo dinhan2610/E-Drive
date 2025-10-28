@@ -5,12 +5,16 @@ import api from "../lib/apiClient";
 // ===== TYPES =====
 
 export interface CreateOrderRequest {
-  vehicleId: string;
-  quantity: string;
+  vehicleId?: string; // Optional for backward compatibility
+  quantity?: string; // Optional for backward compatibility
+  orderItems?: Array<{ // New: support multiple items
+    vehicleId: number;
+    quantity: number;
+  }>;
   desiredDeliveryDate: string; // Format: YYYY-MM-DD
   deliveryNote: string;
   deliveryAddress: string;
-  paymentMethod: 'CASH'; // Backend currently only accepts CASH (returns as FULL)
+  paymentMethod?: 'CASH'; // Backend currently only accepts CASH (returns as FULL)
 }
 
 export interface OrderItem {
@@ -129,6 +133,70 @@ export const getOrders = async (): Promise<Order[]> => {
     
   } catch (error: any) {
     console.error('Error fetching orders:', error);
+    const message = error.response?.data?.message || 'Không thể tải danh sách đơn hàng';
+    throw new OrderApiError(message, `HTTP_${error.response?.status}`, error);
+  }
+};
+
+/**
+ * GET /api/orders/dealer/{dealerId} - Get orders by dealer ID
+ */
+export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
+  try {
+    const response = await api.get<any>(`/api/orders/dealer/${dealerId}`);
+    console.log('📦 Get orders by dealer response:', response.data);
+    
+    const data = response.data;
+    
+    // Extract orders array from different response formats
+    let orders: any[] = [];
+    
+    if (Array.isArray(data)) {
+      orders = data;
+    } else if (data && Array.isArray(data.data)) {
+      orders = data.data;
+    } else if (data && Array.isArray(data.content)) {
+      orders = data.content;
+    } else {
+      console.error('Unexpected response format:', data);
+      return [];
+    }
+    
+    console.log('✅ Orders array for dealer:', orders);
+    
+    // Map backend field names to frontend Order interface
+    const mappedOrders: Order[] = orders.map((order: any) => ({
+      orderId: order.orderId || order.id || order.orderID,
+      dealerId: order.dealerId,
+      dealerName: order.dealerName,
+      orderDate: order.orderDate,
+      desiredDeliveryDate: order.desiredDeliveryDate || '',
+      actualDeliveryDate: order.actualDeliveryDate,
+      subtotal: order.subtotal || 0,
+      dealerDiscount: order.totalDiscount || order.dealerDiscount || 0,
+      vatAmount: order.vatAmount || 0,
+      grandTotal: order.totalPrice || order.grandTotal || 0,
+      deliveryAddress: order.deliveryAddress || '',
+      deliveryNote: order.deliveryNote || '',
+      orderStatus: order.orderStatus || 'PENDING',
+      paymentStatus: order.paymentStatus || 'PENDING',
+      paymentMethod: order.paymentMethod || 'CASH',
+      orderItems: order.orderItems ? order.orderItems.map((item: any) => ({
+        vehicleId: item.vehicleId,
+        vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        itemSubtotal: item.itemSubtotal || 0,
+        itemDiscount: item.itemDiscount || 0,
+        itemTotal: item.itemTotal || 0
+      })) : []
+    }));
+    
+    console.log('✅ Mapped orders for dealer:', mappedOrders);
+    return mappedOrders;
+    
+  } catch (error: any) {
+    console.error('Error fetching orders by dealer:', error);
     const message = error.response?.data?.message || 'Không thể tải danh sách đơn hàng';
     throw new OrderApiError(message, `HTTP_${error.response?.status}`, error);
   }
