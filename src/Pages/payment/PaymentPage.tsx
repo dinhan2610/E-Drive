@@ -145,7 +145,6 @@ const PaymentPage: React.FC = () => {
   if (!order) return null;
 
   const isPaidFull = order.paymentStatus === 'PAID';
-  const remaining = order.grandTotal - (order.grandTotal * 0); // Calculate remaining from order
 
   return (
     <div className={styles.wrap}>

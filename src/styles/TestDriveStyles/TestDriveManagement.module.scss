@@ -510,6 +510,66 @@
   }
 }
 
+// Dropdown cho trạng thái
+.statusDropdown {
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 2px solid;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+  }
+  
+  &.pending {
+    color: #f57c00;
+    border-color: #ffc107;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), white);
+  }
+  
+  &.confirmed {
+    color: #1e7e34;
+    border-color: #28a745;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), white);
+  }
+  
+  &.completed {
+    color: #117a8b;
+    border-color: #17a2b8;
+    background: linear-gradient(135deg, rgba(23, 162, 184, 0.1), white);
+  }
+  
+  &.cancelled {
+    color: #bd2130;
+    border-color: #dc3545;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), white);
+  }
+  
+  &.no_show {
+    color: #495057;
+    border-color: #6c757d;
+    background: linear-gradient(135deg, rgba(108, 117, 125, 0.1), white);
+  }
+  
+  option {
+    background: white;
+    color: #212529;
+    padding: 1rem;
+  }
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -604,6 +664,54 @@
       color: white;
       transform: translateY(-3px) scale(1.1);
       box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.05);
+    }
+  }
+  
+  &.delete {
+    background: rgba(220, 53, 69, 0.12);
+    color: #dc3545;
+    
+    &:hover {
+      background: #dc3545;
+      color: white;
+      transform: translateY(-3px) scale(1.1);
+      box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.05);
+    }
+  }
+  
+  &.view {
+    background: rgba(255, 77, 48, 0.12);
+    color: #ff4d30;
+    
+    &:hover {
+      background: #ff4d30;
+      color: white;
+      transform: translateY(-3px) scale(1.1);
+      box-shadow: 0 6px 20px rgba(255, 77, 48, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.05);
+    }
+  }
+  
+  &.edit {
+    background: rgba(255, 193, 7, 0.12);
+    color: #ffc107;
+    
+    &:hover {
+      background: #ffc107;
+      color: #212529;
+      transform: translateY(-3px) scale(1.1);
+      box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
     }
     
     &:active {
