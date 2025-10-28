@@ -205,32 +205,55 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
 };
 
 /**
- * PUT /api/testdrives/{id} - Update test drive booking (Authentication required)
+ * PUT /api/testdrives/dealer/{dealerId}/{id} - Update test drive booking (Authentication required)
  */
 export const updateTestDrive = async (
   id: number,
   data: TestDriveRequest
 ): Promise<TestDrive> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/testdrives/${id}`, {
+    // Thêm dealerId vào URL
+    const dealerId = data.dealerId;
+    console.log(`🔄 Updating test drive ${id} for dealer ${dealerId}`);
+    console.log('Request data:', data);
+    
+    const response = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${dealerId}/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
+    console.log('Update response status:', response.status);
     return handleResponse<TestDrive>(response);
   } catch (error) {
+    console.error('❌ Update failed:', error);
     if (error instanceof TestDriveApiError) throw error;
     throw new TestDriveApiError('Khong the cap nhat lich lai thu', 'NETWORK_ERROR', error);
   }
 };
 
 /**
- * DELETE /api/testdrives/{id} - Delete test drive booking (Authentication required)
+ * DELETE /api/testdrives/dealer/{dealerId}/{id} - Delete test drive booking (Authentication required)
  */
-export const deleteTestDrive = async (id: number): Promise<void> => {
+export const deleteTestDrive = async (id: number, dealerId?: number): Promise<void> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/testdrives/${id}`, {
+    // Lấy dealerId từ localStorage nếu không được truyền vào
+    let dId = dealerId;
+    if (!dId) {
+      const userData = localStorage.getItem('e-drive-user');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          dId = user.dealerId || 1;
+        } catch {
+          dId = 1;
+        }
+      } else {
+        dId = 1;
+      }
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${dId}/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
