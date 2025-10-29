@@ -36,19 +36,10 @@ const getStatusLabel = (status: string) => {
 const TestDriveManagementPage: React.FC = () => {
   const [testDrives, setTestDrives] = useState<TestDrive[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedTestDrive, setSelectedTestDrive] = useState<TestDrive | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [testDriveToEdit, setTestDriveToEdit] = useState<TestDrive | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('vi-VN', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
-    });
-  };
 
   useEffect(() => {
     // Helper function to set token from console
@@ -92,29 +83,33 @@ const TestDriveManagementPage: React.FC = () => {
       console.log('Loading test drives for dealer:', dealerId);
       const data = await getTestDrivesByDealer(dealerId);
       setTestDrives(data);
-      setError(null);
     } catch (error: any) {
       console.error('Error loading test drives:', error);
       
       if (error instanceof TestDriveApiError) {
-        setError(error.message);
+        alert(`❌ ${error.message}`);
       } else {
-        setError('Không thể tải danh sách lái thử');
+        alert('❌ Không thể tải danh sách lái thử');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeleteTestDrive = async (id: number) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa lịch lái thử này không?')) return;
+  const handleDeleteTestDrive = async (testDrive: TestDrive) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa lịch lái thử #${testDrive.testdriveId} của khách hàng ${testDrive.customerName} không?`)) return;
     
     try {
-      await deleteTestDrive(id);
-      setTestDrives(prev => prev.filter(td => td.testdriveId !== id));
-      alert('Đã xóa lịch lái thử thành công!');
+      // Pass dealerId for fallback endpoint support
+      await deleteTestDrive(testDrive.testdriveId, testDrive.dealerId);
+      
+      // Update local state
+      setTestDrives(prev => prev.filter(td => td.testdriveId !== testDrive.testdriveId));
+      
+      alert('✅ Đã xóa lịch lái thử thành công!');
     } catch (error: any) {
-      alert(error.message || 'Không thể xóa lịch lái thử');
+      console.error('Delete error:', error);
+      alert(`❌ ${error.message || 'Không thể xóa lịch lái thử'}`);
     }
   };
 
@@ -264,7 +259,7 @@ const TestDriveManagementPage: React.FC = () => {
                           <button 
                             className={`${styles.actionButton} ${styles.delete}`}
                             title="Xóa"
-                            onClick={() => handleDeleteTestDrive(testDrive.testdriveId)}
+                            onClick={() => handleDeleteTestDrive(testDrive)}
                           >
                             <i className="fas fa-trash"></i>
                           </button>

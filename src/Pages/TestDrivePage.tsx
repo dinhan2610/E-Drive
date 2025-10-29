@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { SuccessModal } from "../components/SuccessModal";
 import { fetchVehiclesFromApi } from "../services/vehicleApi";
 import { createTestDrive, TestDriveApiError } from "../services/testDriveApi";
-import { fetchDealers, type Dealer } from "../services/dealerApi";
+import { createCustomer } from "../services/customersApi";
+import { getProfile } from "../services/profileApi";
 import type { VehicleApiResponse } from "../types/product";
 import Footer from "../components/Footer";
 import styles from "../styles/TestDriveStyles/TestDrivePage.module.scss";
@@ -15,7 +16,6 @@ interface BookingFormData {
   citizenId: string;
   model: string;
   variant: string;
-  dealer: string;
   date: string;
   time: string;
   note: string;
@@ -29,7 +29,6 @@ interface ValidationErrors {
   citizenId?: string;
   model?: string;
   variant?: string;
-  dealer?: string;
   date?: string;
   time?: string;
   confirmInfo?: string;
@@ -47,13 +46,29 @@ const TestDrivePage: React.FC = () => {
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
   
-  // Dealers data from API
-  const [dealers, setDealers] = useState<Dealer[]>([]);
-  const [loadingDealers, setLoadingDealers] = useState(false);
-  const [dealerError, setDealerError] = useState<string | null>(null);
+  // Current logged-in dealer ID and name
+  const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
+  const [currentDealerName, setCurrentDealerName] = useState<string>('');
   
   // Fetch vehicles and dealers on mount
   useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          const profile = await getProfile();
+          if (profile.dealerId) {
+            setCurrentDealerId(profile.dealerId);
+            setCurrentDealerName(profile.agencyName || 'Đại lý');
+            console.log('✅ Dealer logged in - ID:', profile.dealerId);
+            console.log('✅ Dealer name:', profile.agencyName);
+          }
+        }
+      } catch (error) {
+        console.log('❌ Not logged in or not a dealer');
+      }
+    };
+    
     const loadVehicles = async () => {
       setLoadingVehicles(true);
       setVehicleError(null);
@@ -68,22 +83,8 @@ const TestDrivePage: React.FC = () => {
       }
     };
     
-    const loadDealers = async () => {
-      setLoadingDealers(true);
-      setDealerError(null);
-      try {
-        const result = await fetchDealers();
-        setDealers(result);
-      } catch (error) {
-        console.error('Error loading dealers:', error);
-        setDealerError('Không thể tải danh sách đại lý. Vui lòng thử lại.');
-      } finally {
-        setLoadingDealers(false);
-      }
-    };
-    
+    loadProfile();
     loadVehicles();
-    loadDealers();
   }, []);
   
   const [selectedHour, setSelectedHour] = useState<number>(9);
@@ -96,7 +97,6 @@ const TestDrivePage: React.FC = () => {
     citizenId: "",
     model: "",
     variant: "",
-    dealer: "",
     date: "",
     time: "",
     note: "",
@@ -167,7 +167,6 @@ const TestDrivePage: React.FC = () => {
     },
     model: (value: string): string => !value ? "Vui lòng chọn mẫu xe" : "",
     variant: (value: string): string => !value ? "Vui lòng chọn màu sắc" : "",
-    dealer: (value: string): string => !value ? "Vui lòng chọn đại lý" : "",
     date: (value: string): string => {
       if (!value) return "Ngày hẹn là bắt buộc";
       const selectedDate = new Date(value);
@@ -251,6 +250,12 @@ const TestDrivePage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if dealer is logged in
+    if (!currentDealerId) {
+      setSubmitError('⚠️ Vui lòng đăng nhập với tài khoản đại lý để đăng ký lái thử!');
+      return;
+    }
+    
     if (!validate()) {
       console.log('Validation failed:', errors);
       return;
@@ -260,31 +265,50 @@ const TestDrivePage: React.FC = () => {
     setSubmitError(null);
 
     try {
-      // Create test drive booking directly without creating customer
-      // Customer info will be stored in the test drive management system
+      // Bước 1: Tạo customer trước (backend validate customerId)
+      console.log('📝 Step 1: Creating customer for validation...');
+      const customerPayload = {
+        fullName: formData.name,
+        dob: '2000-01-01',
+        gender: 'Khác' as const,
+        email: formData.email || `testdrive${Date.now()}@edrive.temp`,
+        phone: formData.phone,
+        address: 'Đăng ký lái thử - Xem chi tiết trong Test Drive Management',
+        idCardNo: formData.citizenId
+      };
+      
+      const createdCustomer = await createCustomer(customerPayload);
+      console.log('✅ Customer created with ID:', createdCustomer.customerId);
+      
+      // Bước 2: Tạo test drive với thông tin đầy đủ trong note
+      console.log('📝 Step 2: Creating test drive...');
       const scheduleDatetime = `${formData.date}T${formData.time}:00`;
       
-      // Create comprehensive note with customer information
+      // Lưu ĐẦY ĐỦ thông tin khách hàng vào note (đây là nguồn thông tin chính)
       const customerNote = `
 === THÔNG TIN KHÁCH HÀNG ===
+Mã KH: ${createdCustomer.customerId}
 Họ tên: ${formData.name}
 Số điện thoại: ${formData.phone}
 Email: ${formData.email || 'Không cung cấp'}
 CCCD: ${formData.citizenId}
-${formData.note ? `\nGhi chú: ${formData.note}` : ''}
+${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
       `.trim();
       
       const testDrivePayload = {
-        customerId: 0, // 0 indicates guest/walk-in customer without account
-        dealerId: parseInt(formData.dealer),
+        customerId: createdCustomer.customerId, // Customer ID thật từ DB
+        dealerId: currentDealerId,
         vehicleId: parseInt(formData.model),
         scheduleDatetime,
         status: 'PENDING' as const,
         note: customerNote
       };
       
-      console.log('Creating test drive with payload:', testDrivePayload);
-      await createTestDrive(testDrivePayload);
+      console.log('🏢 Using dealer ID from profile:', currentDealerId);
+      console.log('📤 Test drive payload:', testDrivePayload);
+      const createdTestDrive = await createTestDrive(testDrivePayload);
+      console.log('✅ Test drive created successfully!');
+      console.log('✅ Test drive response:', createdTestDrive);
 
       setIsSuccessModalOpen(true);
       
@@ -296,7 +320,6 @@ ${formData.note ? `\nGhi chú: ${formData.note}` : ''}
         citizenId: "",
         model: "",
         variant: "",
-        dealer: "",
         date: "",
         time: "",
         note: "",
@@ -305,11 +328,12 @@ ${formData.note ? `\nGhi chú: ${formData.note}` : ''}
       setErrors({});
       
     } catch (error) {
-      console.error('Error booking test drive:', error);
+      console.error('❌ Error during test drive booking:', error);
+      
       if (error instanceof TestDriveApiError) {
-        setSubmitError(error.message);
+        setSubmitError(`Lỗi đăng ký lái thử: ${error.message}`);
       } else {
-        setSubmitError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+        setSubmitError('Đã xảy ra lỗi. Vui lòng kiểm tra thông tin và thử lại.');
       }
     } finally {
       setIsSubmitting(false);
@@ -381,6 +405,22 @@ ${formData.note ? `\nGhi chú: ${formData.note}` : ''}
             <div className={styles.formHeader}>
               <h2>Thông tin đặt lịch</h2>
               <p>Vui lòng điền đầy đủ thông tin để chúng tôi phục vụ bạn tốt nhất</p>
+              {!currentDealerId && (
+                <div style={{
+                  background: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  marginTop: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#856404'
+                }}>
+                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '20px' }}></i>
+                  <span>⚠️ Bạn cần đăng nhập với tài khoản đại lý để có thể đăng ký lái thử!</span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className={styles.form}>
@@ -561,27 +601,27 @@ ${formData.note ? `\nGhi chú: ${formData.note}` : ''}
                   <label htmlFor="dealer">
                     Đại lý <span className={styles.required}>*</span>
                   </label>
-                  <select
-                    id="dealer"
-                    name="dealer"
-                    value={formData.dealer}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={errors.dealer ? styles.error : ''}
-                    disabled={loadingDealers}
-                  >
-                    <option value="">
-                      {loadingDealers ? 'Đang tải...' : 'Chọn đại lý'}
-                    </option>
-                    {dealers.map((dealer) => (
-                      <option key={dealer.dealerId} value={dealer.dealerId}>
-                        {dealer.dealerName} - {dealer.provinceOrCity}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.dealer && <span className={styles.errorText}>{errors.dealer}</span>}
-                  {dealerError && (
-                    <span className={styles.errorText}>{dealerError}</span>
+                  <div className={styles.inputWrapper}>
+                    <i className={`fas fa-store ${styles.inputIcon}`}></i>
+                    <input
+                      type="text"
+                      id="dealer"
+                      name="dealer"
+                      value={currentDealerName || 'Chưa đăng nhập'}
+                      readOnly
+                      className={!currentDealerId ? styles.error : ''}
+                      placeholder="Vui lòng đăng nhập"
+                      style={{ 
+                        paddingLeft: '2.75rem',
+                        backgroundColor: '#f5f5f5',
+                        cursor: 'not-allowed'
+                      }}
+                    />
+                  </div>
+                  {!currentDealerId && (
+                    <span className={styles.errorText}>
+                      Vui lòng đăng nhập với tài khoản đại lý
+                    </span>
                   )}
                 </div>
 

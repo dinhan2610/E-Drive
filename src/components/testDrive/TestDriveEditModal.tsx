@@ -68,7 +68,9 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
         throw new Error('Vui lòng nhập lý do hủy');
       }
       
-      // Call API
+      // Call API with proper payload
+      console.log('📝 Updating test drive #' + testDrive.testdriveId);
+      
       const updated = await updateTestDrive(testDrive.testdriveId, {
         customerId: testDrive.customerId,
         dealerId: testDrive.dealerId,
@@ -78,9 +80,17 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
         cancelReason: formData.cancelReason || undefined
       });
 
+      console.log('✅ Update successful:', updated);
+      
+      // Notify parent component with updated data
       onSuccess(updated);
       onClose();
+      
+      // Show success message
+      alert('✅ Cập nhật lịch lái thử thành công!');
+      
     } catch (err: any) {
+      console.error('❌ Update error:', err);
       setError(err.message || 'Không thể cập nhật lịch lái thử');
     } finally {
       setLoading(false);
