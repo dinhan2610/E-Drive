@@ -1,0 +1,124 @@
+.termSelector {
+  margin-bottom: 20px;
+
+  .label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #010103;
+    margin-bottom: 8px;
+
+    i {
+      color: #ff4d30;
+      font-size: 16px;
+    }
+  }
+
+  .terms {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 10px;
+
+    .termButton {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 10px;
+      border: 1px solid #e0e0e0;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+
+      &:hover {
+        border-color: #ff4d30;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(255, 77, 48, 0.15);
+      }
+
+      &.active {
+        border-color: #ff4d30;
+        background: linear-gradient(135deg, #ff4d30 0%, #ff6347 100%);
+        box-shadow: 0 2px 10px rgba(255, 77, 48, 0.25);
+
+        .termNumber,
+        .termLabel {
+          color: white;
+        }
+
+        &::after {
+          content: '\f00c';
+          font-family: 'Font Awesome 5 Free';
+          font-weight: 900;
+          position: absolute;
+          top: 4px;
+          right: 6px;
+          color: white;
+          font-size: 9px;
+        }
+      }
+
+      .termNumber {
+        font-size: 20px;
+        font-weight: 700;
+        color: #010103;
+        line-height: 1;
+        margin-bottom: 4px;
+        transition: color 0.2s ease;
+      }
+
+      .termLabel {
+        font-size: 11px;
+        color: #706f7b;
+        transition: color 0.2s ease;
+      }
+    }
+  }
+
+  .note {
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff5f3;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #706f7b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+      color: #ff4d30;
+      font-size: 13px;
+    }
+
+    strong {
+      color: #ff4d30;
+      font-weight: 700;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .termSelector {
+    .terms {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+
+      .termButton {
+        padding: 12px 8px;
+
+        .termNumber {
+          font-size: 18px;
+        }
+
+        .termLabel {
+          font-size: 10px;
+        }
+      }
+    }
+  }
+}

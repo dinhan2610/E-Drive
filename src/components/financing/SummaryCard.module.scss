@@ -1,0 +1,178 @@
+.summaryCard {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+
+  .header {
+    background: linear-gradient(135deg, #ff4d30 0%, #ff6347 100%);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .title {
+      margin: 0;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      i {
+        font-size: 15px;
+      }
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+
+      i {
+        font-size: 10px;
+      }
+    }
+  }
+
+  .carInfo {
+    padding: 14px 20px;
+    background: #fff5f3;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #010103;
+    font-weight: 600;
+    font-size: 14px;
+
+    i {
+      color: #ff4d30;
+      font-size: 15px;
+    }
+  }
+
+  .details {
+    padding: 18px 20px;
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+
+      .rowLabel {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #706f7b;
+        font-size: 13px;
+
+        i {
+          color: #ff4d30;
+          width: 16px;
+          text-align: center;
+          font-size: 13px;
+        }
+      }
+
+      .rowValue {
+        font-weight: 700;
+        color: #010103;
+        font-size: 14px;
+      }
+    }
+
+    .divider {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 10px 0;
+    }
+
+    .highlight {
+      margin: 16px 0;
+      padding: 18px;
+      background: linear-gradient(135deg, #fff5f3 0%, #ffe8e3 100%);
+      border-radius: 10px;
+      border: 2px solid #ff4d30;
+      text-align: center;
+
+      .highlightLabel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: #706f7b;
+        font-size: 12px;
+        margin-bottom: 8px;
+
+        i {
+          color: #ff4d30;
+          font-size: 12px;
+        }
+      }
+
+      .highlightValue {
+        font-size: 28px;
+        font-weight: 900;
+        color: #ff4d30;
+        line-height: 1.1;
+      }
+    }
+
+    .savings {
+      margin-top: 14px;
+      padding: 10px;
+      background: #f0f9ff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #706f7b;
+
+      i {
+        color: #4caf50;
+        font-size: 13px;
+      }
+
+      span {
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .summaryCard {
+    .header {
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 16px 18px;
+    }
+
+    .details {
+      padding: 16px 18px;
+
+      .highlight {
+        padding: 16px;
+
+        .highlightValue {
+          font-size: 24px;
+        }
+      }
+    }
+  }
+}
