@@ -1,0 +1,176 @@
+.downPaymentInput {
+  margin-bottom: 20px;
+
+  .label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #010103;
+    margin-bottom: 8px;
+
+    i {
+      color: #ff4d30;
+      font-size: 16px;
+    }
+  }
+
+  .inputWrapper {
+    position: relative;
+
+    .input {
+      width: 100%;
+      padding: 12px 40px 12px 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #010103;
+      transition: all 0.2s ease;
+
+      &:focus {
+        outline: none;
+        border-color: #ff4d30;
+        box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+      }
+
+      &::placeholder {
+        color: #9e9e9e;
+        font-weight: 400;
+      }
+    }
+
+    .suffix {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: 700;
+      color: #ff4d30;
+      font-size: 16px;
+      pointer-events: none;
+    }
+  }
+
+  .rangeSlider {
+    margin-top: 12px;
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to right, #ff4d30 0%, #ff4d30 var(--value), #e0e0e0 var(--value), #e0e0e0 100%);
+      outline: none;
+      -webkit-appearance: none;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #ff4d30;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(255, 77, 48, 0.3);
+        transition: all 0.2s ease;
+
+        &:hover {
+          transform: scale(1.2);
+          box-shadow: 0 3px 8px rgba(255, 77, 48, 0.4);
+        }
+      }
+
+      &::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #ff4d30;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 6px rgba(255, 77, 48, 0.3);
+        transition: all 0.2s ease;
+
+        &:hover {
+          transform: scale(1.2);
+          box-shadow: 0 3px 8px rgba(255, 77, 48, 0.4);
+        }
+      }
+    }
+
+    .rangeLabels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #706f7b;
+    }
+  }
+
+  .suggestions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+
+    .suggestLabel {
+      font-size: 13px;
+      color: #706f7b;
+      font-weight: 500;
+    }
+
+    .suggestButton {
+      padding: 6px 12px;
+      border: 1px solid #e0e0e0;
+      background: white;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 12px;
+      font-weight: 500;
+      color: #706f7b;
+
+      &:hover {
+        border-color: #ff4d30;
+        background: #fff5f3;
+        color: #ff4d30;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+  }
+
+  .hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #706f7b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+      color: #ff4d30;
+      font-size: 13px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .downPaymentInput {
+    .inputWrapper {
+      .input {
+        padding: 11px 36px 11px 12px;
+        font-size: 13px;
+      }
+
+      .suffix {
+        font-size: 15px;
+        right: 12px;
+      }
+    }
+  }
+}

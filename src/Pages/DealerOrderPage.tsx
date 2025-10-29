@@ -109,21 +109,21 @@ const DealerOrderPage: React.FC = () => {
         const profile = await getProfile();
         
         // Store dealerId for debugging
-        setCurrentDealerId(profile.dealer?.dealerId || null);
-        console.log('✅ Current dealer ID:', profile.dealer?.dealerId);
+        setCurrentDealerId(profile.dealerId || null);
+        console.log('✅ Current dealer ID:', profile.dealerId);
         
         // Auto-fill dealer information from profile API
         setFormData(prev => ({
           ...prev,
-          dealerName: profile.dealer?.dealerName || profile.fullName || '',
-          dealerCode: profile.dealer?.dealerId ? `DL${String(profile.dealer.dealerId).padStart(6, '0')}` : '',
-          contactPerson: profile.dealer?.contactPerson || profile.fullName || '',
+          dealerName: profile.agencyName || profile.fullName || '',
+          dealerCode: profile.dealerId ? `DL${String(profile.dealerId).padStart(6, '0')}` : '',
+          contactPerson: profile.contactPerson || profile.fullName || '',
           email: profile.email || '',
-          phone: profile.dealer?.phone || profile.phone || '',
-          address: profile.dealer?.houseNumberAndStreet || '',
-          ward: profile.dealer?.wardOrCommune || '',
-          district: profile.dealer?.district || '',
-          city: profile.dealer?.provinceOrCity || '',
+          phone: profile.agencyPhone || profile.phoneNumber || '',
+          address: profile.streetAddress || '',
+          ward: profile.ward || '',
+          district: profile.district || '',
+          city: profile.city || '',
         }));
 
         console.log('✅ Dealer profile loaded:', profile);

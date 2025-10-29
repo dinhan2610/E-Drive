@@ -91,7 +91,7 @@ const PaymentPage: React.FC = () => {
 
     try {
       const payload: CashRequest = {
-        orderId: order.orderId,
+        orderId: typeof order.orderId === 'string' ? parseInt(order.orderId, 10) : order.orderId,
         amount: amount,
         note: cashNote || undefined,
       };

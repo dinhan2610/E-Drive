@@ -81,12 +81,12 @@ export const getOrders = async (): Promise<Order[]> => {
   try {
     const response = await api.get<any>('/api/orders');
     console.log('📦 Get orders response:', response.data);
-    
+
     const data = response.data;
-    
+
     // Extract orders array from different response formats
     let orders: any[] = [];
-    
+
     if (Array.isArray(data)) {
       orders = data;
     } else if (data && Array.isArray(data.data)) {
@@ -97,9 +97,9 @@ export const getOrders = async (): Promise<Order[]> => {
       console.error('Unexpected response format:', data);
       return [];
     }
-    
+
     console.log('✅ Orders array:', orders);
-    
+
     // Map backend field names to frontend Order interface
     const mappedOrders: Order[] = orders.map((order: any) => ({
       orderId: order.orderId || order.id || order.orderID,
@@ -127,10 +127,10 @@ export const getOrders = async (): Promise<Order[]> => {
         itemTotal: item.itemTotal || 0
       })) : []
     }));
-    
+
     console.log('✅ Mapped orders:', mappedOrders);
     return mappedOrders;
-    
+
   } catch (error: any) {
     console.error('Error fetching orders:', error);
     const message = error.response?.data?.message || 'Không thể tải danh sách đơn hàng';
@@ -145,12 +145,12 @@ export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
   try {
     const response = await api.get<any>(`/api/orders/dealer/${dealerId}`);
     console.log('📦 Get orders by dealer response:', response.data);
-    
+
     const data = response.data;
-    
+
     // Extract orders array from different response formats
     let orders: any[] = [];
-    
+
     if (Array.isArray(data)) {
       orders = data;
     } else if (data && Array.isArray(data.data)) {
@@ -161,9 +161,9 @@ export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
       console.error('Unexpected response format:', data);
       return [];
     }
-    
+
     console.log('✅ Orders array for dealer:', orders);
-    
+
     // Map backend field names to frontend Order interface
     const mappedOrders: Order[] = orders.map((order: any) => ({
       orderId: order.orderId || order.id || order.orderID,
@@ -191,10 +191,10 @@ export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
         itemTotal: item.itemTotal || 0
       })) : []
     }));
-    
+
     console.log('✅ Mapped orders for dealer:', mappedOrders);
     return mappedOrders;
-    
+
   } catch (error: any) {
     console.error('Error fetching orders by dealer:', error);
     const message = error.response?.data?.message || 'Không thể tải danh sách đơn hàng';
@@ -209,17 +209,17 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
   try {
     const response = await api.get<any>(`/api/orders/${id}`);
     console.log('📦 Get order by ID response:', response.data);
-    
+
     const data = response.data;
-    
+
     // Extract order data if wrapped in { data: {...} }
     let orderData = data;
     if (data.data && data.statusCode) {
       orderData = data.data;
     }
-    
+
     console.log('✅ Order data:', orderData);
-    
+
     // Map backend field names to frontend Order interface
     const mappedOrder: Order = {
       orderId: orderData.orderId || orderData.id || orderData.orderID,
@@ -247,7 +247,7 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
         itemTotal: item.itemTotal || 0
       })) : []
     };
-    
+
     return mappedOrder;
   } catch (error: any) {
     console.error('Error fetching order:', error);

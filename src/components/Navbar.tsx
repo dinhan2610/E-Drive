@@ -98,6 +98,7 @@ const Navbar: React.FC = () => {
   const navLinks: NavLink[] = [
     { to: "/", label: "Trang chủ", className: "home-link" },
     { to: "/products", label: "Mẫu xe", className: "products-link" },
+    
     { 
       to: "/customers", 
       label: "Quản lý", 
