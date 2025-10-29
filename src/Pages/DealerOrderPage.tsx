@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { getProfile } from '../services/profileApi';
-import { createOrder, getOrders, type CreateOrderRequest, type Order } from '../services/orderApi';
+import { createOrder, getOrdersByDealer, type CreateOrderRequest, type Order } from '../services/orderApi';
 import { confirmDelivery, DeliveryApiError } from '../services/deliveryApi';
 import { startVnPay } from '../services/paymentApi';
 import Footer from '../components/Footer';
@@ -109,21 +109,21 @@ const DealerOrderPage: React.FC = () => {
         const profile = await getProfile();
         
         // Store dealerId for debugging
-        setCurrentDealerId(profile.dealerId);
-        console.log('✅ Current dealer ID:', profile.dealerId);
+        setCurrentDealerId(profile.dealer?.dealerId || null);
+        console.log('✅ Current dealer ID:', profile.dealer?.dealerId);
         
         // Auto-fill dealer information from profile API
         setFormData(prev => ({
           ...prev,
-          dealerName: profile.agencyName || profile.fullName || '',
-          dealerCode: profile.dealerId ? `DL${String(profile.dealerId).padStart(6, '0')}` : '',
-          contactPerson: profile.contactPerson || profile.fullName || '',
+          dealerName: profile.dealer?.dealerName || profile.fullName || '',
+          dealerCode: profile.dealer?.dealerId ? `DL${String(profile.dealer.dealerId).padStart(6, '0')}` : '',
+          contactPerson: profile.dealer?.contactPerson || profile.fullName || '',
           email: profile.email || '',
-          phone: profile.agencyPhone || profile.phoneNumber || '',
-          address: profile.streetAddress || '',
-          ward: profile.ward || '',
-          district: profile.district || '',
-          city: profile.city || '',
+          phone: profile.dealer?.phone || profile.phone || '',
+          address: profile.dealer?.houseNumberAndStreet || '',
+          ward: profile.dealer?.wardOrCommune || '',
+          district: profile.dealer?.district || '',
+          city: profile.dealer?.provinceOrCity || '',
         }));
 
         console.log('✅ Dealer profile loaded:', profile);
@@ -158,16 +158,21 @@ const DealerOrderPage: React.FC = () => {
 
   // Load orders when switching to list tab
   useEffect(() => {
-    if (activeTab === 'list') {
+    if (activeTab === 'list' && currentDealerId) {
       loadOrders();
     }
-  }, [activeTab]);
+  }, [activeTab, currentDealerId]);
 
   const loadOrders = async () => {
+    if (!currentDealerId) {
+      console.warn('⚠️ No dealer ID available, cannot load orders');
+      return;
+    }
+    
     setIsLoadingOrders(true);
     try {
-      console.log('🔄 Loading orders...');
-      const fetchedOrders = await getOrders();
+      console.log('🔄 Loading orders for dealer:', currentDealerId);
+      const fetchedOrders = await getOrdersByDealer(currentDealerId);
       setOrders(fetchedOrders);
       console.log('✅ Orders loaded:', fetchedOrders);
     } catch (error: any) {

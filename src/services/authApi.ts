@@ -1,15 +1,15 @@
 interface RegisterRequest {
-  username: string;
-  password: string;
-  confirmPassword: string;
+  fullName: string;
   email: string;
   phone: string;
-  fullName: string;
   dealerName: string;
   houseNumberAndStreet: string;
   wardOrCommune: string;
   district: string;
   provinceOrCity: string;
+  username: string;
+  password: string;
+  confirmPassword: string;
 }
 
 interface LoginRequest {
@@ -17,91 +17,29 @@ interface LoginRequest {
   password: string;
 }
 
+// API Response format từ backend
+interface ApiResponse<T = any> {
+  statusCode: number;
+  message: string;
+  data?: T;
+}
+
+interface LoginResponseData {
+  token: string;
+  refreshToken: string;
+}
+
 interface AuthResponse {
   success: boolean;
   message?: string;
   data?: {
     user?: any;
-    accessToken?: string;
-    refreshToken?: string;
-  };
-}
-
-interface RefreshTokenResponse {
-  success: boolean;
-  message?: string;
-  data?: {
-    accessToken?: string;
+    token?: string;
     refreshToken?: string;
   };
 }
 
 const API_BASE_URL = 'http://localhost:8080/api/auth';
-
-// Demo credentials info
-console.info('🔐 E-Drive Demo Credentials:');
-console.info('Admin: username=admin, password=admin123');
-console.info('Dealer: username=dealer, password=dealer123');
-console.info('Note: If server is not available, mock authentication will be used automatically');
-
-// Mock login function for demo purposes
-const mockLogin = (credentials: LoginRequest): Promise<AuthResponse> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Simple demo credentials
-      const validCredentials = [
-        { username: 'admin', password: 'admin123', role: 'admin' as const },
-        { username: 'dealer', password: 'dealer123', role: 'dealer' as const },
-        { username: 'demo', password: 'demo123', role: 'dealer' as const }
-      ];
-      
-      const user = validCredentials.find(
-        cred => cred.username === credentials.username && cred.password === credentials.password
-      );
-      
-      if (!user) {
-        resolve({
-          success: false,
-          message: 'Tên đăng nhập hoặc mật khẩu không đúng. Thử: admin/admin123 hoặc dealer/dealer123'
-        });
-        return;
-      }
-      
-      const mockUser = {
-        id: user.username === 'admin' ? '1' : '2',
-        fullName: user.username === 'admin' ? 'Nguyễn Văn Admin' : 'Trần Thị Dealer',
-        username: user.username,
-        email: user.username === 'admin' ? 'admin@edrive.com' : 'dealer@edrive-dealer.com',
-        phone: user.username === 'admin' ? '0901234567' : '0987654321',
-        role: user.role,
-        avatar: '',
-        company: user.role === 'admin' ? 'E-Drive Corporation' : undefined,
-        dealerName: user.role === 'dealer' ? 'Đại lý E-Drive Sài Gòn' : undefined,
-        address: user.username === 'admin' ? '123 Đường ABC, Quận 1, TP.HCM' : '456 Đường XYZ, Quận 3, TP.HCM',
-        status: 'active' as const,
-        createdAt: '2024-01-01',
-        lastLogin: new Date().toISOString()
-      };
-      
-      const tokens = {
-        accessToken: 'mock-access-token-' + Date.now(),
-        refreshToken: 'mock-refresh-token-' + Date.now()
-      };
-      
-      // Store tokens
-      tokenManager.setTokens(tokens.accessToken, tokens.refreshToken);
-      
-      resolve({
-        success: true,
-        data: {
-          user: mockUser,
-          ...tokens
-        },
-        message: 'Đăng nhập thành công (Demo Mode)'
-      });
-    }, 800); // Simulate network delay
-  });
-};
 
 // Token management
 const TOKEN_KEY = 'accessToken';
@@ -170,95 +108,67 @@ export const authApi = {
   // Login API
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
+      console.log('🔐 Đang gửi yêu cầu đăng nhập...', { username: credentials.username });
+      
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Accept': '*/*'
         },
         body: JSON.stringify(credentials),
       });
 
-      // Handle different response types
-      let data: any = {};
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        const text = await response.text();
-        if (text.trim()) {
-          try {
-            data = JSON.parse(text);
-          } catch (jsonError) {
-            console.warn('Failed to parse JSON:', text);
-            data = { message: 'Invalid server response' };
-          }
-        }
-      } else {
-        const text = await response.text();
-        data = { message: text || 'Server error' };
+      console.log('📡 Response status:', response.status);
+
+      // Parse JSON response
+      const apiResponse: ApiResponse<LoginResponseData> = await response.json();
+      console.log('📦 API Response:', apiResponse);
+
+      // Kiểm tra response status
+      if (response.status !== 200 || apiResponse.statusCode !== 200) {
+        throw new Error(apiResponse.message || 'Đăng nhập thất bại');
       }
 
-      // Handle specific HTTP status codes
-      if (response.status === 403) {
-        throw new Error('Truy cập bị từ chối. Kiểm tra lại thông tin đăng nhập hoặc liên hệ quản trị viên.');
-      }
-      
-      if (response.status === 404) {
-        throw new Error('Không tìm thấy API endpoint. Server có thể chưa khởi động.');
-      }
-      
-      if (response.status >= 500) {
-        throw new Error('Lỗi server nội bộ. Vui lòng thử lại sau.');
-      }
-      
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+      // Lấy token từ response
+      const { token, refreshToken } = apiResponse.data || {};
+
+      if (!token) {
+        throw new Error('Không nhận được token từ server');
       }
 
-      // Debug: Log the actual response to see token structure
-      console.log('✅ Login successful! Server response:', data);
-      
-      // Backend wraps data in a nested structure: { statusCode, message, data: { token, user } }
-      const responseData = data.data || data;
-      
-      // Handle different token field names from backend
-      // Common patterns: accessToken, access_token, token, jwt
-      const accessToken = responseData.accessToken || responseData.access_token || responseData.token || responseData.jwt;
-      const refreshToken = responseData.refreshToken || responseData.refresh_token;
-      const user = responseData.user || responseData;
-      
-      // Store tokens if provided
-      if (accessToken) {
-        console.log('🔑 Storing access token:', accessToken.substring(0, 20) + '...');
-        tokenManager.setAccessToken(accessToken);
-        if (refreshToken) {
-          console.log('🔄 Storing refresh token');
-          tokenManager.setRefreshToken(refreshToken);
-        }
-      } else {
-        console.warn('⚠️ No access token found in response!');
-        console.warn('Root fields:', Object.keys(data));
-        console.warn('Data fields:', Object.keys(responseData));
+      // Lưu tokens vào localStorage
+      console.log('💾 Lưu tokens...');
+      tokenManager.setTokens(token, refreshToken || '');
+
+      // Decode JWT để lấy thông tin user (nếu cần)
+      // Token format: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PAYLOAD.SIGNATURE
+      let user: any = { username: credentials.username };
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        user = {
+          ...payload,
+          username: credentials.username,
+          fullName: payload.fullName || payload.name || credentials.username
+        };
+        console.log('👤 User info từ token:', user);
+      } catch (e) {
+        console.warn('Không thể decode token, sử dụng thông tin mặc định');
       }
+
+      console.log('✅ Đăng nhập thành công!');
 
       return {
         success: true,
+        message: apiResponse.message || 'Đăng nhập thành công',
         data: {
           user,
-          accessToken,
-          refreshToken
-        },
-        message: data.message || 'Đăng nhập thành công'
+          token,
+          refreshToken: refreshToken || ''
+        }
       };
     } catch (error) {
-      console.error('Login error:', error);
-      
-      // Only use mock if server is completely unavailable (network error)
-      // DO NOT fallback for 403 or other HTTP errors - those indicate real auth issues
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.warn('⚠️ Server not available, using mock authentication for demo');
-        return mockLogin(credentials);
-      }
+      console.error('❌ Login error:', error);
       
       return {
         success: false,
@@ -268,7 +178,7 @@ export const authApi = {
   },
 
   // Refresh Token API
-  async refreshToken(): Promise<RefreshTokenResponse> {
+  async refreshToken(): Promise<AuthResponse> {
     try {
       const refreshToken = tokenManager.getRefreshToken();
       
@@ -284,23 +194,26 @@ export const authApi = {
         body: JSON.stringify({ refreshToken }),
       });
 
-      const data = await response.json();
+      const apiResponse: ApiResponse<LoginResponseData> = await response.json();
 
-      if (!response.ok) {
-        // If refresh fails, clear all tokens
+      if (!response.ok || apiResponse.statusCode !== 200) {
         tokenManager.clearTokens();
-        throw new Error(data.message || 'Làm mới token thất bại');
+        throw new Error(apiResponse.message || 'Làm mới token thất bại');
       }
 
-      // Update tokens
-      if (data.accessToken && data.refreshToken) {
-        tokenManager.setTokens(data.accessToken, data.refreshToken);
+      const { token, refreshToken: newRefreshToken } = apiResponse.data || {};
+
+      if (token && newRefreshToken) {
+        tokenManager.setTokens(token, newRefreshToken);
       }
 
       return {
         success: true,
-        data: data,
-        message: 'Làm mới token thành công'
+        data: {
+          token,
+          refreshToken: newRefreshToken
+        },
+        message: apiResponse.message || 'Làm mới token thành công'
       };
     } catch (error) {
       console.error('Refresh token error:', error);
@@ -314,6 +227,8 @@ export const authApi = {
   // Logout
   async logout(): Promise<void> {
     tokenManager.clearTokens();
+    localStorage.removeItem('e-drive-user');
+    localStorage.removeItem('isLoggedIn');
   },
 
   // Check if user is authenticated
@@ -321,13 +236,13 @@ export const authApi = {
     return !!tokenManager.getAccessToken();
   },
 
-  // Get current user info from token (basic implementation)
+  // Get current user info from token
   getCurrentUser(): any {
     const token = tokenManager.getAccessToken();
     if (!token) return null;
     
     try {
-      // Simple JWT decode (in production, use a proper JWT library)
+      // Decode JWT payload
       const payload = JSON.parse(atob(token.split('.')[1]));
       return payload;
     } catch (error) {

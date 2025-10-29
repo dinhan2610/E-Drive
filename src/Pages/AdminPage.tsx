@@ -3,10 +3,15 @@ import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle } from '../services/vehicleApi';
-import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, type Dealer } from '../services/dealerApi';
+import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
+import { getOrders, getOrderById, cancelOrder, type Order } from '../services/orderApi';
+import { confirmDelivery } from '../services/deliveryApi';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
+import modalStyles from '../styles/AdminStyles/OrderDetailModal.module.scss';
 import AdminLayout from '../components/AdminLayout';
+import ConfirmDialog from '../components/ConfirmDialog';
+import SuccessNotification from '../components/SuccessNotification';
 
 // Add animation styles
 const animationStyles = `
@@ -144,16 +149,23 @@ interface AdminStats {
 }
 
 interface Booking {
-  id: number;
+  id: number | string;
   userId: number;
   userName: string;
+  dealerName: string;
   carId: number;
   carName: string;
   startDate: string;
   endDate: string;
-  status: 'pending' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   totalAmount: number;
   paymentStatus: 'pending' | 'paid' | 'refunded';
+  deliveryAddress: string;
+  orderItems: Array<{
+    vehicleName: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
 }
 
 interface CarWithStatus extends CarType {
@@ -261,11 +273,35 @@ const AdminPage: React.FC = () => {
   const [isUpdatingVehicle, setIsUpdatingVehicle] = useState<boolean>(false);
   const [newCarErrors, setNewCarErrors] = useState<Record<string, string>>({});
   const [editCarErrors, setEditCarErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [notification, setNotification] = useState<{
+    isVisible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    isVisible: false,
+    message: '',
+    type: 'success'
+  });
   const [dealers, setDealers] = useState<Dealer[]>([]);
+  const [unverifiedAccounts, setUnverifiedAccounts] = useState<UnverifiedAccount[]>([]);
+  const [dealerViewMode, setDealerViewMode] = useState<'verified' | 'unverified'>('verified');
   const [showAddDealerModal, setShowAddDealerModal] = useState<boolean>(false);
   const [showViewDealerModal, setShowViewDealerModal] = useState<boolean>(false);
   const [showEditDealerModal, setShowEditDealerModal] = useState<boolean>(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {}
+  });
+  const [verifyingUserId, setVerifyingUserId] = useState<number | null>(null);
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
   const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
   const [isCreatingDealer, setIsCreatingDealer] = useState<boolean>(false);
@@ -304,15 +340,12 @@ const AdminPage: React.FC = () => {
     pendingMaintenance: 0
   });
 
-  // Auto hide success message after 3 seconds
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => {
-        setSuccessMessage('');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
+  // Order detail modal
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetail, setShowOrderDetail] = useState(false);
+  const [loadingOrderDetail, setLoadingOrderDetail] = useState(false);
+
+  // Notification is auto-hidden by SuccessNotification component
 
   useEffect(() => {
     // Fetch vehicles from API for Cars management tab
@@ -365,47 +398,219 @@ const AdminPage: React.FC = () => {
       }
     })();
 
-    // Mock bookings data
-    const mockBookings: Booking[] = [
-      {
-        id: 1,
-        userId: 1,
-        userName: 'Nguyễn Văn A',
-        carId: 1,
-        carName: 'VW Golf 6',
-        startDate: '2024-10-10',
-        endDate: '2024-10-15',
-        status: 'confirmed',
-        totalAmount: 1850000,
-        paymentStatus: 'paid'
-      },
-      {
-        id: 2,
-        userId: 2,
-        userName: 'Trần Thị B',
-        carId: 2,
-        carName: 'Audi A1 S-Line',
-        startDate: '2024-10-12',
-        endDate: '2024-10-14',
-        status: 'pending',
-        totalAmount: 900000,
-        paymentStatus: 'pending'
+    // Fetch unverified accounts from API
+    (async () => {
+      try {
+        const accounts = await fetchUnverifiedAccounts();
+        setUnverifiedAccounts(accounts);
+        console.log('✅ Loaded unverified accounts:', accounts);
+      } catch (error) {
+        console.error('❌ Failed to load unverified accounts:', error);
+        setUnverifiedAccounts([]);
       }
-    ];
-    setBookings(mockBookings);
+    })();
+
+    // Fetch orders from API
+    const fetchOrdersData = async () => {
+      try {
+        console.log('🔄 Fetching orders from API...');
+        const ordersData = await getOrders();
+        console.log('📦 Orders fetched:', ordersData);
+        
+        // Map Order data to Booking interface
+        const mappedBookings: Booking[] = ordersData.map((order: Order) => {
+          // Get first order item for car name
+          const firstItem = order.orderItems && order.orderItems.length > 0 
+            ? order.orderItems[0] 
+            : null;
+          
+          // Map order status to booking status
+          let bookingStatus: Booking['status'] = 'pending';
+          if (order.orderStatus === 'PENDING') bookingStatus = 'pending';
+          else if (order.orderStatus === 'CONFIRMED') bookingStatus = 'confirmed';
+          else if (order.orderStatus === 'PROCESSING') bookingStatus = 'processing';
+          else if (order.orderStatus === 'SHIPPED') bookingStatus = 'shipped';
+          else if (order.orderStatus === 'DELIVERED') bookingStatus = 'delivered';
+          else if (order.orderStatus === 'CANCELLED') bookingStatus = 'cancelled';
+          
+          // Map payment status
+          let paymentSt: Booking['paymentStatus'] = 'pending';
+          if (order.paymentStatus === 'PENDING') paymentSt = 'pending';
+          else if (order.paymentStatus === 'PAID') paymentSt = 'paid';
+          
+          return {
+            id: order.orderId,
+            userId: order.dealerId || 0,
+            userName: order.dealerName || 'N/A',
+            dealerName: order.dealerName || 'N/A',
+            carId: firstItem?.vehicleId || 0,
+            carName: firstItem?.vehicleName || 'N/A',
+            startDate: order.orderDate || order.desiredDeliveryDate || 'N/A',
+            endDate: order.actualDeliveryDate || order.desiredDeliveryDate || 'N/A',
+            status: bookingStatus,
+            totalAmount: order.grandTotal || 0,
+            paymentStatus: paymentSt,
+            deliveryAddress: order.deliveryAddress || '',
+            orderItems: order.orderItems || []
+          };
+        });
+        
+        setBookings(mappedBookings);
+        console.log('✅ Bookings mapped:', mappedBookings);
 
     // Calculate enhanced stats
     setStats({
       totalCars: cars.length || 0,
       totalUsers: dealers.length,
-      totalRevenue: 125000000,
-      monthlyBookings: 45,
-      activeBookings: mockBookings.filter(b => b.status === 'ongoing').length,
-      totalBookings: mockBookings.length,
+          totalRevenue: mappedBookings.reduce((sum, b) => sum + b.totalAmount, 0),
+          monthlyBookings: mappedBookings.filter(b => {
+            const orderDate = new Date(b.startDate);
+            const now = new Date();
+            return orderDate.getMonth() === now.getMonth() && 
+                   orderDate.getFullYear() === now.getFullYear();
+          }).length,
+          activeBookings: mappedBookings.filter(b => 
+            b.status === 'processing' || b.status === 'shipped'
+          ).length,
+          totalBookings: mappedBookings.length,
       avgRating: 4.6,
       pendingMaintenance: 0
     });
+      } catch (error) {
+        console.error('❌ Error fetching orders:', error);
+        
+        // Fallback to empty bookings
+        setBookings([]);
+        setStats({
+          totalCars: cars.length || 0,
+          totalUsers: dealers.length,
+          totalRevenue: 0,
+          monthlyBookings: 0,
+          activeBookings: 0,
+          totalBookings: 0,
+          avgRating: 0,
+          pendingMaintenance: 0
+        });
+      }
+    };
+    
+    fetchOrdersData();
   }, []); // Empty dependency array - only run once on mount
+
+  // Handle view order detail
+  const handleViewOrderDetail = async (orderId: number | string) => {
+    setLoadingOrderDetail(true);
+    setShowOrderDetail(true);
+    
+    try {
+      console.log('🔍 Fetching order detail for ID:', orderId);
+      const orderDetail = await getOrderById(orderId);
+      setSelectedOrder(orderDetail);
+      console.log('✅ Order detail loaded:', orderDetail);
+    } catch (error) {
+      console.error('❌ Error loading order detail:', error);
+      alert('Không thể tải chi tiết đơn hàng. Vui lòng thử lại.');
+      setShowOrderDetail(false);
+    } finally {
+      setLoadingOrderDetail(false);
+    }
+  };
+
+  // Handle cancel order
+  const handleCancelOrder = async (orderId: number | string, orderInfo: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Hủy đơn hàng',
+      message: `Bạn có chắc chắn muốn hủy đơn hàng "${orderInfo}"?\n\nHành động này không thể hoàn tác!`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          console.log('🚫 Cancelling order:', orderId);
+
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang hủy đơn hàng...',
+            type: 'info'
+          });
+
+          await cancelOrder(orderId);
+
+          // Remove from bookings list
+          setBookings(prev => prev.filter(b => b.id !== orderId));
+
+          // Show success notification
+          setNotification({
+            isVisible: true,
+            message: '✅ Đơn hàng đã được hủy thành công',
+            type: 'success'
+          });
+
+          console.log('✅ Order cancelled successfully');
+        } catch (error) {
+          console.error('❌ Error cancelling order:', error);
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể hủy đơn hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  // Handle confirm delivery
+  const handleConfirmDelivery = async (orderId: number | string, orderInfo: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận giao hàng',
+      message: `Xác nhận đơn hàng "${orderInfo}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
+      type: 'success',
+      onConfirm: async () => {
+        try {
+          console.log('🚚 Confirming delivery for order:', orderId);
+
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang xác nhận giao hàng...',
+            type: 'info'
+          });
+
+          await confirmDelivery(orderId);
+
+          // Update booking status in the list
+          setBookings(prev => prev.map(b => 
+            b.id === orderId 
+              ? { ...b, status: 'delivered' as const, orderStatus: 'DELIVERED' }
+              : b
+          ));
+
+          // Show success notification
+          setNotification({
+            isVisible: true,
+            message: '✅ Đã xác nhận giao hàng thành công',
+            type: 'success'
+          });
+
+          console.log('✅ Delivery confirmed successfully');
+        } catch (error) {
+          console.error('❌ Error confirming delivery:', error);
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể xác nhận giao hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
 
   const handleDeleteCar = async (carId: number, carName: string) => {
     // Hiển thị dialog xác nhận trước khi xóa
@@ -534,9 +739,12 @@ const AdminPage: React.FC = () => {
       // Update dealers list
       setDealers(prev => [...prev, createdDealer]);
 
-      // Show success message
-      setSuccessMessage('✅ Đã thêm đại lý thành công!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      // Show success notification
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã thêm đại lý thành công!',
+        type: 'success'
+      });
 
       // Reset form and close modal
       setNewDealer({
@@ -660,9 +868,12 @@ const AdminPage: React.FC = () => {
         d.dealerId === editingDealer.dealerId ? updatedDealer : d
       ));
 
-      // Show success message
-      setSuccessMessage('✅ Đã cập nhật đại lý thành công!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      // Show success notification
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã cập nhật đại lý thành công!',
+        type: 'success'
+      });
 
       // Close modal
       setShowEditDealerModal(false);
@@ -699,29 +910,144 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const handleDeleteDealer = async (dealerId: number, dealerName: string) => {
-    const confirmDelete = window.confirm(
-      `Bạn có chắc chắn muốn xóa đại lý "${dealerName}"?\n\nHành động này không thể hoàn tác!`
-    );
-    
-    if (!confirmDelete) return;
-
+  const handleDeleteDealer = (dealerId: number, dealerName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xóa đại lý',
+      message: `Bạn có chắc chắn muốn xóa đại lý "${dealerName}"?\n\nHành động này không thể hoàn tác!`,
+      type: 'danger',
+      onConfirm: async () => {
     try {
       console.log('🗑️ Deleting dealer with ID:', dealerId);
-      await deleteDealer(dealerId);
-      
+          
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang xóa đại lý...',
+            type: 'info'
+          });
+
+          const result = await deleteDealer(dealerId);
+          
+          if (result.success) {
       // Remove from dealers list
       setDealers(prev => prev.filter(d => d.dealerId !== dealerId));
       
-      // Show success message
-      setSuccessMessage('✅ Đã xóa đại lý thành công!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+            // Show success notification
+            setNotification({
+              isVisible: true,
+              message: `✅ ${result.message}`,
+              type: 'success'
+            });
       
       console.log('✅ Dealer deleted successfully');
+          } else {
+            // Show error notification
+            setNotification({
+              isVisible: true,
+              message: `❌ ${result.message}`,
+              type: 'error'
+            });
+          }
     } catch (error) {
       console.error('❌ Error deleting dealer:', error);
-      alert(`❌ Không thể xóa đại lý "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`);
-    }
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể xóa đại lý "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const handleVerifyAccount = (userId: number, dealerName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác minh tài khoản đại lý',
+      message: `Bạn có chắc chắn muốn xác minh tài khoản đại lý "${dealerName}"?\n\nSau khi xác minh, tài khoản sẽ được kích hoạt và có thể đăng nhập vào hệ thống.`,
+      type: 'success',
+      onConfirm: async () => {
+        try {
+          console.log('✅ Verifying account with user ID:', userId);
+          
+          // Set loading state
+          setVerifyingUserId(userId);
+          
+          // Show loading notification
+          setNotification({
+            isVisible: true,
+            message: '⏳ Đang xử lý xác minh...',
+            type: 'info'
+          });
+          
+          const result = await verifyAccount(userId);
+
+          if (result.success) {
+            console.log('✅ Account verified successfully, reloading data...');
+            
+            // Reload both lists from server to ensure sync
+            try {
+              // Reload unverified accounts (critical)
+              const unverifiedList = await fetchUnverifiedAccounts();
+              setUnverifiedAccounts(unverifiedList);
+              
+              // Reload dealers (optional, may fail with 401 if not admin)
+              try {
+                const dealerList = await fetchDealers();
+                setDealers(dealerList);
+                console.log('✅ Dealers reloaded:', dealerList.length);
+              } catch (dealerError) {
+                console.warn('⚠️ Could not reload dealers list (may not have permission):', dealerError);
+                // This is OK - the important thing is removing from unverified list
+              }
+              
+              console.log('✅ Unverified accounts reloaded:', unverifiedList.length);
+              
+              // Show success notification
+              const message = result.alreadyVerified 
+                ? `ℹ️ Tài khoản "${dealerName}" đã được xác minh trước đó. Danh sách đã được cập nhật.`
+                : `✅ Đã xác minh tài khoản "${dealerName}" thành công! Email xác nhận đã được gửi.`;
+              
+              setNotification({
+                isVisible: true,
+                message,
+                type: result.alreadyVerified ? 'info' : 'success'
+              });
+            } catch (reloadError) {
+              console.error('❌ Error reloading unverified accounts:', reloadError);
+              // Fallback: just remove from local state
+              setUnverifiedAccounts(prev => prev.filter(account => account.userId !== userId));
+              
+              setNotification({
+                isVisible: true,
+                message: `✅ Đã xác minh tài khoản "${dealerName}". Danh sách đã được cập nhật cục bộ.`,
+                type: 'success'
+              });
+            }
+          } else {
+            setNotification({
+              isVisible: true,
+              message: `❌ Xác minh thất bại: ${result.message}`,
+              type: 'error'
+            });
+          }
+        } catch (error) {
+          console.error('❌ Error verifying account:', error);
+          setNotification({
+            isVisible: true,
+            message: `❌ Không thể xác minh tài khoản "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+            type: 'error'
+          });
+        } finally {
+          // Clear loading state
+          setVerifyingUserId(null);
+        }
+      }
+    });
   };
 
   return (
@@ -731,33 +1057,19 @@ const AdminPage: React.FC = () => {
       counters={{
         cars: cars.length,
         dealers: dealers.length,
+        unverifiedDealers: unverifiedAccounts.length,
         bookings: bookings.length,
         testDrives: 0
       }}
     >
-      {/* Success Message Notification */}
-      {successMessage && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          backgroundColor: '#4CAF50',
-          color: 'white',
-          padding: '16px 24px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          fontSize: '16px',
-          fontWeight: '500',
-          animation: 'slideInRight 0.3s ease-out'
-        }}>
-          <i className="fas fa-check-circle" style={{ fontSize: '20px' }}></i>
-          {successMessage}
-        </div>
-      )}
+      {/* Success Notification */}
+      <SuccessNotification
+        isVisible={notification.isVisible}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification(prev => ({ ...prev, isVisible: false }))}
+        duration={5000}
+      />
 
       {/* Dashboard Content */}
       {activeTab === 'dashboard' && (
@@ -766,7 +1078,7 @@ const AdminPage: React.FC = () => {
             <div className={sidebarStyles.statHeader}>
               <div className={sidebarStyles.statInfo}>
                 <div className={sidebarStyles.statLabel}>Tổng số xe</div>
-                <h2 className={sidebarStyles.statValue}>{stats.totalCars}</h2>
+                <h2 className={sidebarStyles.statValue}>{cars.length}</h2>
               </div>
               <div className={`${sidebarStyles.statIcon} ${sidebarStyles.primary}`}>
                 <i className="fas fa-car"></i>
@@ -783,11 +1095,11 @@ const AdminPage: React.FC = () => {
           <div className={sidebarStyles.statCard}>
             <div className={sidebarStyles.statHeader}>
               <div className={sidebarStyles.statInfo}>
-                <div className={sidebarStyles.statLabel}>Người dùng</div>
-                <h2 className={sidebarStyles.statValue}>{stats.totalUsers}</h2>
+                <div className={sidebarStyles.statLabel}>Đại lý</div>
+                <h2 className={sidebarStyles.statValue}>{dealers.length}</h2>
               </div>
               <div className={`${sidebarStyles.statIcon} ${sidebarStyles.success}`}>
-                <i className="fas fa-users"></i>
+                <i className="fas fa-store"></i>
               </div>
             </div>
             <div className={sidebarStyles.statFooter}>
@@ -1031,15 +1343,23 @@ const AdminPage: React.FC = () => {
           <div className={styles.usersManagement}>
             <div className={styles.sectionHeader}>
               <h3>Quản lý đại lý</h3>
+              <div className={styles.filterButtons}>
               <button 
-                className={styles.addButton}
-                onClick={() => setShowAddDealerModal(true)}
-              >
-                <i className="fas fa-plus"></i>
-                Thêm đại lý
+                  className={`${styles.filterButton} ${dealerViewMode === 'verified' ? styles.active : ''}`}
+                  onClick={() => setDealerViewMode('verified')}
+                >
+                  Đã xác minh ({dealers.length})
+                </button>
+                <button 
+                  className={`${styles.filterButton} ${dealerViewMode === 'unverified' ? styles.active : ''}`}
+                  onClick={() => setDealerViewMode('unverified')}
+                >
+                  Chờ xác minh ({unverifiedAccounts.length})
               </button>
+              </div>
             </div>
 
+            {dealerViewMode === 'verified' ? (
             <div className={styles.usersTable}>
               <table>
                 <thead>
@@ -1099,6 +1419,83 @@ const AdminPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className={styles.usersTable}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Tên đại lý</th>
+                      <th colSpan={3}>Địa chỉ đầy đủ</th>
+                      <th>Người liên hệ</th>
+                      <th>SĐT</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unverifiedAccounts.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                          <i className="fas fa-inbox" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
+                          <p>Không có tài khoản nào đang chờ xác minh</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      unverifiedAccounts.map(account => (
+                        <tr key={account.userId}>
+                          <td>#{account.userId}</td>
+                          <td>
+                            <div style={{fontWeight: 'bold'}}>{account.dealerName}</div>
+                            <div style={{fontSize: '11px', color: '#888'}}>@{account.username}</div>
+                          </td>
+                          <td colSpan={3}>
+                            <div style={{fontSize: '13px'}}>{account.dealerAddress}</div>
+                            {account.registrationDate && (
+                              <div style={{fontSize: '11px', color: '#888', marginTop: '4px'}}>
+                                Đăng ký: {new Date(account.registrationDate).toLocaleDateString('vi-VN')}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{fontSize: '13px'}}>{account.fullName}</div>
+                            <div style={{fontSize: '11px', color: '#888'}}>{account.email}</div>
+                          </td>
+                          <td>{account.phone}</td>
+                          <td>
+                            <div className={styles.tableActions}>
+                              <button 
+                                className={styles.viewButton} 
+                                title="Xem chi tiết"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button 
+                                className={styles.approveButton} 
+                                title="Xác minh"
+                                onClick={() => handleVerifyAccount(account.userId, account.dealerName)}
+                                disabled={verifyingUserId === account.userId}
+                              >
+                                {verifyingUserId === account.userId ? (
+                                  <i className="fas fa-spinner fa-spin"></i>
+                                ) : (
+                                  <i className="fas fa-check"></i>
+                                )}
+                              </button>
+                              <button
+                                className={styles.deleteButton}
+                                title="Từ chối"
+                              >
+                                <i className="fas fa-times"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -1114,7 +1511,10 @@ const AdminPage: React.FC = () => {
                   Chờ duyệt ({bookings.filter(b => b.status === 'pending').length})
                 </button>
                 <button className={styles.filterButton}>
-                  Đang thuê ({bookings.filter(b => b.status === 'ongoing').length})
+                  Đang xử lý ({bookings.filter(b => b.status === 'processing' || b.status === 'shipped').length})
+                </button>
+                <button className={styles.filterButton}>
+                  Đã giao ({bookings.filter(b => b.status === 'delivered').length})
                 </button>
               </div>
             </div>
@@ -1123,11 +1523,11 @@ const AdminPage: React.FC = () => {
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Khách hàng</th>
+                    <th>Mã đơn</th>
+                    <th>Đại lý</th>
                     <th>Xe</th>
-                    <th>Ngày thuê</th>
-                    <th>Ngày trả</th>
+                    <th>Ngày đặt</th>
+                    <th>Ngày giao dự kiến</th>
                     <th>Tổng tiền</th>
                     <th>Trạng thái</th>
                     <th>Thanh toán</th>
@@ -1137,8 +1537,10 @@ const AdminPage: React.FC = () => {
                 <tbody>
                   {bookings.map(booking => (
                     <tr key={booking.id}>
-                      <td>#{booking.id}</td>
-                      <td>{booking.userName}</td>
+                      <td title={String(booking.id)}>
+                        #{typeof booking.id === 'string' ? booking.id.substring(0, 8) + '...' : booking.id}
+                      </td>
+                      <td>{booking.dealerName}</td>
                       <td>{booking.carName}</td>
                       <td>{booking.startDate}</td>
                       <td>{booking.endDate}</td>
@@ -1146,9 +1548,10 @@ const AdminPage: React.FC = () => {
                       <td>
                         <span className={`${styles.statusBadge} ${styles[booking.status]}`}>
                           {booking.status === 'pending' && 'Chờ duyệt'}
-                          {booking.status === 'confirmed' && 'Đã duyệt'}
-                          {booking.status === 'ongoing' && 'Đang thuê'}
-                          {booking.status === 'completed' && 'Hoàn thành'}
+                          {booking.status === 'confirmed' && 'Đã xác nhận'}
+                          {booking.status === 'processing' && 'Đang xử lý'}
+                          {booking.status === 'shipped' && 'Đang giao'}
+                          {booking.status === 'delivered' && 'Đã giao'}
                           {booking.status === 'cancelled' && 'Đã hủy'}
                         </span>
                       </td>
@@ -1161,13 +1564,31 @@ const AdminPage: React.FC = () => {
                       </td>
                       <td>
                         <div className={styles.tableActions}>
-                          <button className={styles.viewButton} title="Xem chi tiết">
+                          <button 
+                            className={styles.viewButton} 
+                            title="Xem chi tiết"
+                            onClick={() => handleViewOrderDetail(booking.id)}
+                          >
                             <i className="fas fa-eye"></i>
                           </button>
-                          <button className={styles.editButton} title="Chỉnh sửa">
-                            <i className="fas fa-edit"></i>
+                          <button 
+                            className={styles.deleteButton} 
+                            title="Hủy đơn hàng"
+                            onClick={() => handleCancelOrder(
+                              booking.id, 
+                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
+                            )}
+                          >
+                            <i className="fas fa-times"></i>
                           </button>
-                          <button className={styles.approveButton} title="Duyệt">
+                          <button 
+                            className={styles.approveButton} 
+                            title="Xác nhận giao hàng"
+                            onClick={() => handleConfirmDelivery(
+                              booking.id, 
+                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
+                            )}
+                          >
                             <i className="fas fa-check"></i>
                           </button>
                         </div>
@@ -1176,6 +1597,169 @@ const AdminPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Order Detail Modal */}
+        {showOrderDetail && (
+          <div className={modalStyles.modalOverlay} onClick={() => setShowOrderDetail(false)}>
+            <div className={modalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <div className={modalStyles.modalHeader}>
+                <h2>
+                  <i className="fas fa-file-invoice"></i>
+                  Chi tiết đơn hàng
+                </h2>
+                <button 
+                  onClick={() => setShowOrderDetail(false)} 
+                  className={modalStyles.closeBtn}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+
+              <div className={modalStyles.modalBody}>
+                {loadingOrderDetail ? (
+                  <div className={modalStyles.loading}>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <p>Đang tải thông tin đơn hàng...</p>
+                  </div>
+                ) : selectedOrder ? (
+                  <>
+                    {/* Order Info Section */}
+                    <div className={modalStyles.detailSection}>
+                      <h3><i className="fas fa-info-circle"></i> Thông tin đơn hàng</h3>
+                      <div className={modalStyles.infoGrid}>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Mã đơn hàng:</span>
+                          <span className={modalStyles.value} title={String(selectedOrder.orderId)}>
+                            #{typeof selectedOrder.orderId === 'string' 
+                              ? selectedOrder.orderId.substring(0, 12) + '...' 
+                              : selectedOrder.orderId}
+                          </span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Đại lý:</span>
+                          <span className={modalStyles.value}>{selectedOrder.dealerName || 'N/A'}</span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Ngày đặt:</span>
+                          <span className={modalStyles.value}>{selectedOrder.orderDate || 'N/A'}</span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Ngày giao dự kiến:</span>
+                          <span className={modalStyles.value}>{selectedOrder.desiredDeliveryDate}</span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Trạng thái đơn hàng:</span>
+                          <span className={`${modalStyles.badge} ${modalStyles[selectedOrder.orderStatus.toLowerCase()]}`}>
+                            {selectedOrder.orderStatus}
+                          </span>
+                        </div>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Trạng thái thanh toán:</span>
+                          <span className={`${modalStyles.badge} ${modalStyles[selectedOrder.paymentStatus.toLowerCase()]}`}>
+                            {selectedOrder.paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Order Items Section */}
+                    {selectedOrder.orderItems && selectedOrder.orderItems.length > 0 && (
+                      <div className={modalStyles.detailSection}>
+                        <h3><i className="fas fa-car"></i> Danh sách xe</h3>
+                        <table className={modalStyles.itemsTable}>
+                          <thead>
+                            <tr>
+                              <th>Tên xe</th>
+                              <th>Số lượng</th>
+                              <th>Đơn giá</th>
+                              <th>Tạm tính</th>
+                              <th>Chiết khấu</th>
+                              <th>Thành tiền</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedOrder.orderItems.map((item, index) => (
+                              <tr key={index}>
+                                <td>{item.vehicleName}</td>
+                                <td>{item.quantity}</td>
+                                <td>{formatCurrency(item.unitPrice)}</td>
+                                <td>{formatCurrency(item.itemSubtotal)}</td>
+                                <td className={modalStyles.discount}>-{formatCurrency(item.itemDiscount)}</td>
+                                <td><strong>{formatCurrency(item.itemTotal)}</strong></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Pricing Summary Section */}
+                    <div className={modalStyles.detailSection}>
+                      <h3><i className="fas fa-calculator"></i> Tổng quan thanh toán</h3>
+                      <div className={modalStyles.pricingSummary}>
+                        <div className={modalStyles.priceRow}>
+                          <span>Tạm tính:</span>
+                          <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                        </div>
+                        {selectedOrder.dealerDiscount > 0 && (
+                          <div className={modalStyles.priceRow}>
+                            <span>Chiết khấu đại lý:</span>
+                            <span className={modalStyles.discount}>-{formatCurrency(selectedOrder.dealerDiscount)}</span>
+                          </div>
+                        )}
+                        <div className={modalStyles.priceRow}>
+                          <span>VAT (10%):</span>
+                          <span>{formatCurrency(selectedOrder.vatAmount)}</span>
+                        </div>
+                        <div className={`${modalStyles.priceRow} ${modalStyles.total}`}>
+                          <strong>Tổng cộng:</strong>
+                          <strong className={modalStyles.totalPrice}>{formatCurrency(selectedOrder.grandTotal)}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery Info Section */}
+                    <div className={modalStyles.detailSection}>
+                      <h3><i className="fas fa-truck"></i> Thông tin giao hàng</h3>
+                      <div className={modalStyles.deliveryInfo}>
+                        <div className={modalStyles.infoRow}>
+                          <span className={modalStyles.label}>Địa chỉ:</span>
+                          <span className={modalStyles.value}>{selectedOrder.deliveryAddress}</span>
+                        </div>
+                        {selectedOrder.deliveryNote && (
+                          <div className={modalStyles.infoRow}>
+                            <span className={modalStyles.label}>Ghi chú:</span>
+                            <span className={modalStyles.value}>{selectedOrder.deliveryNote}</span>
+                          </div>
+                        )}
+                        {selectedOrder.actualDeliveryDate && (
+                          <div className={modalStyles.infoRow}>
+                            <span className={modalStyles.label}>Ngày giao thực tế:</span>
+                            <span className={modalStyles.value}>{selectedOrder.actualDeliveryDate}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className={modalStyles.error}>
+                    <i className="fas fa-exclamation-triangle"></i>
+                    <p>Không thể tải thông tin đơn hàng</p>
+                  </div>
+                )}
+              </div>
+
+              <div className={modalStyles.modalFooter}>
+                <button 
+                  onClick={() => setShowOrderDetail(false)} 
+                  className={modalStyles.closeButton}
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1818,8 +2402,12 @@ const AdminPage: React.FC = () => {
                         totalCars: prevStats.totalCars + 1
                       }));
 
-                      // Success - hiển thị success message
-                      setSuccessMessage('✅ Đã thêm xe mới thành công!');
+                      // Success - hiển thị success notification
+                      setNotification({
+                        isVisible: true,
+                        message: '✅ Đã thêm xe mới thành công!',
+                        type: 'success'
+                      });
                       console.log('✅ Đã thêm xe mới thành công!');
                     } catch (error) {
                       console.error('❌ Lỗi khi thêm xe:', error);
@@ -2358,8 +2946,12 @@ const AdminPage: React.FC = () => {
                         manufactureYear: new Date().getFullYear()
                       });
 
-                      // Success - hiển thị success message
-                      setSuccessMessage('✅ Đã cập nhật xe thành công!');
+                      // Success - hiển thị success notification
+                      setNotification({
+                        isVisible: true,
+                        message: '✅ Đã cập nhật xe thành công!',
+                        type: 'success'
+                      });
                       console.log('✅ Đã cập nhật xe thành công!');
                     } catch (error) {
                       console.error('❌ Lỗi khi cập nhật xe:', error);
@@ -3322,6 +3914,18 @@ const AdminPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        confirmText="OK"
+        cancelText="Hủy"
+      />
     </AdminLayout>
   );
 };

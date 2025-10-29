@@ -2,19 +2,13 @@
 
 import axios from "axios";
 
-// Get token from localStorage dynamically
-export const getAccessToken = () => {
-  return localStorage.getItem('accessToken') || localStorage.getItem('token');
-};
+let accessToken: string | null = null;
 
 export const setAccessToken = (token: string | null) => {
-  if (token) {
-    localStorage.setItem('accessToken', token);
-  } else {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('token');
-  }
+  accessToken = token;
 };
+
+export const getAccessToken = () => accessToken;
 
 const api = axios.create({
   baseURL: 'http://localhost:8080',
@@ -24,10 +18,14 @@ const api = axios.create({
   },
 });
 
-// Request interceptor - attach JWT token from localStorage
+// Request interceptor - attach JWT token
 api.interceptors.request.use(
   (config) => {
-    const token = getAccessToken();
+    // Try to get token from multiple sources
+    const token = accessToken || 
+                  localStorage.getItem('accessToken') || 
+                  localStorage.getItem('token');
+    
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -43,30 +41,22 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      const { status, config } = error.response;
+      const { status } = error.response;
       
       // Handle 401 - unauthorized
       if (status === 401) {
-        console.error('❌ 401 Unauthorized on:', config?.url);
-        
-        // Clear tokens
+        // Clear token and redirect to home (login modal will appear)
         setAccessToken(null);
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        
-        // Only redirect if not already on login page
-        if (!window.location.pathname.includes('/login')) {
-          console.log('🔄 Redirecting to login...');
-          // Use setTimeout to avoid redirect during render
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 100);
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('e-drive-user');
+        localStorage.removeItem('isLoggedIn');
+        window.location.href = '/';
       }
       
       // Handle 403 - forbidden
       if (status === 403) {
-        console.error('❌ 403 Access forbidden:', config?.url);
+        console.error('Access forbidden');
       }
     }
     
