@@ -4,6 +4,7 @@ import Compare from "./Pages/Compare";
 import ProductsPage from "./Pages/ProductsPage";
 import ProductDetailPage from "./Pages/ProductDetailPage";
 import QuotePage from "./Pages/QuotePage";
+import QuoteListPage from "./Pages/QuoteListPage";
 import DealerOrderPage from "./Pages/DealerOrderPage";
 import ProfilePage from "./Pages/ProfilePage";
 import AdminPage from "./Pages/AdminPage";
@@ -47,6 +48,7 @@ function App() {
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
         <Route path="/quote" element={<QuotePage />} />
+        <Route path="/quotes" element={<QuoteListPage />} />
         <Route path="/dealer-order" element={<DealerOrderPage />} />
         <Route path="/test-drive" element={<TestDrivePage />} />
         <Route path="/drive" element={<TestDriveManagementPage />} />

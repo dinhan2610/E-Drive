@@ -38,6 +38,9 @@ const QuotePage: React.FC = () => {
   const navigate = useNavigate();
   const incomingProduct = location.state?.product as Product | undefined;
   
+  // Tab management
+  const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
+  
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(incomingProduct || null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -420,77 +423,77 @@ const QuotePage: React.FC = () => {
         <div className={styles.container}>
         
           <div className={styles.header}>
-           
             <h1>Tạo báo giá xe điện</h1>
-            <p>
-              {selectedProduct 
-                ? `Điền thông tin để tạo báo giá chính thức cho ${selectedProduct.name}` 
-                : 'Chọn sản phẩm và điền thông tin để tạo báo giá'}
-            </p>
+            <p>Điền thông tin để tạo báo giá chính thức</p>
           </div>
 
-          {/* Product Selector Dropdown - Only show when no product selected */}
-          {!selectedProduct && (
-            <div className={styles.productSelectorSection}>
-              <div className={styles.selectorHeader}>
-                <h3>
-                  <i className="fas fa-car"></i>
-                  Chọn sản phẩm cần báo giá
-                </h3>
-              </div>
-              {isLoadingProducts ? (
-                <div className={styles.loading}>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  Đang tải danh sách xe...
-                </div>
-              ) : (
-                <div className={styles.dropdownWrapper}>
-                  <select 
-                    className={styles.productDropdown}
-                    onChange={(e) => handleSelectProduct(e.target.value)}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>-- Chọn xe để tạo báo giá --</option>
-                    {availableProducts.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name} - {product.variant} ({formatPrice(product.price)})
-                      </option>
-                    ))}
-                  </select>
-                  <i className="fas fa-chevron-down"></i>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Tabs */}
+          <div className={styles.tabs}>
+            <button
+              type="button"
+              className={`${styles.tab} ${activeTab === 'create' ? styles.active : ''}`}
+              onClick={() => setActiveTab('create')}
+            >
+              📝 Tạo báo giá
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${activeTab === 'list' ? styles.active : ''}`}
+              onClick={() => navigate('/quotes')}
+            >
+              📋 Báo giá đã tạo
+            </button>
+          </div>
 
-          {selectedProduct && (
-            <>
-              {/* Selected Product Banner */}
-              <div className={styles.selectedProductBanner}>
-                <div className={styles.bannerContent}>
-                  <img src={selectedProduct.image} alt={selectedProduct.name} />
-                  <div className={styles.bannerInfo}>
-                    <span className={styles.label}>Đang tạo báo giá cho:</span>
-                    <h3>{selectedProduct.name} - {selectedProduct.variant}</h3>
-                    <p className={styles.price}>{formatPrice(selectedProduct.price)}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className={styles.changeProductButton}
-                  onClick={() => {
-                    setSelectedProduct(null);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                >
-                  <i className="fas fa-exchange-alt"></i>
-                  Đổi sản phẩm
-                </button>
-              </div>
-
-              <div className={styles.content}>
+          {/* Create Quote Form */}
+          {activeTab === 'create' && (
+          <div className={styles.content}>
             {/* Left: Form */}
             <form className={styles.form} onSubmit={handleSubmit}>
+              
+              {/* Product Selection */}
+              <section className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <i className="fas fa-car"></i>
+                  <h2>Chọn sản phẩm</h2>
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="product">
+                    Sản phẩm <span className={styles.required}>*</span>
+                  </label>
+                  {isLoadingProducts ? (
+                    <div className={styles.loading}>
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Đang tải danh sách xe...
+                    </div>
+                  ) : (
+                    <select
+                      id="product"
+                      className={styles.productSelect}
+                      value={selectedProduct?.id || ''}
+                      onChange={(e) => handleSelectProduct(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Chọn xe để tạo báo giá --</option>
+                      {availableProducts.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} - {product.variant} ({formatPrice(product.price)})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {selectedProduct && (
+                    <div className={styles.selectedProductInfo}>
+                      <img src={selectedProduct.image} alt={selectedProduct.name} />
+                      <div>
+                        <p><strong>{selectedProduct.name} - {selectedProduct.variant}</strong></p>
+                        <p className={styles.price}>{formatPrice(selectedProduct.price)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+
               {/* Customer Information */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
@@ -823,7 +826,6 @@ const QuotePage: React.FC = () => {
 
              
           </div>
-          </>
           )}
         </div>
       </div>
