@@ -11,6 +11,7 @@ import AdminPage from "./Pages/AdminPage";
 import CustomersPage from "./Pages/CustomersPage";
 import TestDrivePage from "./Pages/TestDrivePage";
 import TestDriveManagementPage from "./Pages/TestDriveManagementPage";
+import OrderManagementPage from "./Pages/OrderManagementPage";
 import PromotionsPage from "./Pages/PromotionsPage";
 import FinancingPage from "./Pages/FinancingPage";
 import PaymentPage from "./Pages/payment/PaymentPage";
@@ -58,6 +59,7 @@ function App() {
         <Route path="/dealer-order" element={<DealerOrderPage />} />
         <Route path="/test-drive" element={<TestDrivePage />} />
         <Route path="/drive" element={<TestDriveManagementPage />} />
+        <Route path="/delivery-status" element={<OrderManagementPage />} />
         <Route path="/promotions" element={<PromotionsPage />} />
         <Route path="/installment" element={<FinancingPage />} />
         <Route path="/contact" element={<Contact />} />

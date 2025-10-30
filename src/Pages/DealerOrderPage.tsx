@@ -16,8 +16,6 @@ interface DealerOrderForm {
   contactPerson: string;
   email: string;
   phone: string;
-  
-  // Dealer Address
   address: string;
   ward: string;
   district: string;
