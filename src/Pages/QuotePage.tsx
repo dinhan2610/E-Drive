@@ -3,9 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { formatPrice } from '../utils/productUtils';
 import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
+import { 
+  createQuotation, 
+  type QuotationRequest 
+} from '../services/quotationApi';
 import Footer from '../components/Footer';
-import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/QuotePage.module.scss';
+import modalStyles from '../styles/OrderStyles/QuoteSuccessModal.module.scss';
 
 interface QuoteForm {
   // Customer Info
@@ -46,6 +50,9 @@ const QuotePage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [createdQuoteData, setCreatedQuoteData] = useState<any>(null);
   
   const [formData, setFormData] = useState<QuoteForm>({
     fullName: '',
@@ -165,254 +172,82 @@ const QuotePage: React.FC = () => {
       installmentDetails,
     };
   };
-
-  const generatePDF = async () => {
-    if (!selectedProduct) {
-      alert('Vui lòng chọn sản phẩm trước khi tạo báo giá');
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      // Import jsPDF and html2canvas dynamically
-      const jsPDF = (await import('jspdf')).default;
-      const html2canvas = (await import('html2canvas')).default;
-
-      const pricing = calculatePricing();
-      const quoteNumber = `BG-${Date.now()}`;
-      const quoteDate = new Date().toLocaleDateString('vi-VN');
-
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      // Header with gradient background
-      pdf.setFillColor(255, 77, 48);
-      pdf.rect(0, 0, pageWidth, 40, 'F');
-      
-      // Company Logo/Name
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(24);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('E-DRIVE', 20, 20);
-      
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Future Electric Vehicles', 20, 28);
-      pdf.text('Hotline: (0123) 456 789 | Email: contact@e-drive.vn', 20, 34);
-
-      // Quote Number & Date
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Số: ${quoteNumber}`, pageWidth - 70, 20);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Ngày: ${quoteDate}`, pageWidth - 70, 28);
-
-      // Title
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('BẢNG BÁO GIÁ', pageWidth / 2, 55, { align: 'center' });
-
-      let yPos = 70;
-
-      // Customer Information
-      pdf.setFillColor(248, 249, 250);
-      pdf.rect(15, yPos, pageWidth - 30, 8, 'F');
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('THÔNG TIN KHÁCH HÀNG', 20, yPos + 5);
-      
-      yPos += 12;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Họ tên: ${formData.fullName}`, 20, yPos);
-      yPos += 6;
-      if (formData.company) {
-        pdf.text(`Công ty: ${formData.company}`, 20, yPos);
-        yPos += 6;
-      }
-      pdf.text(`Email: ${formData.email}`, 20, yPos);
-      yPos += 6;
-      pdf.text(`Điện thoại: ${formData.phone}`, 20, yPos);
-      yPos += 6;
-      pdf.text(`Địa chỉ: ${formData.address}, ${formData.ward}, ${formData.district}, ${formData.city}`, 20, yPos);
-      
-      yPos += 12;
-
-      // Product Information
-      pdf.setFillColor(248, 249, 250);
-      pdf.rect(15, yPos, pageWidth - 30, 8, 'F');
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('CHI TIẾT SẢN PHẨM', 20, yPos + 5);
-      
-      yPos += 12;
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Sản phẩm: ${selectedProduct.name} ${selectedProduct.variant}`, 20, yPos);
-      yPos += 6;
-      pdf.text(`Số lượng: ${formData.quantity} xe`, 20, yPos);
-      yPos += 6;
-      pdf.text(`Đơn giá: ${formatPrice(selectedProduct.price)}`, 20, yPos);
-      
-      yPos += 12;
-
-      // Pricing Table
-      pdf.setFillColor(248, 249, 250);
-      pdf.rect(15, yPos, pageWidth - 30, 8, 'F');
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('CHI TIẾT GIÁ', 20, yPos + 5);
-      
-      yPos += 12;
-      pdf.setFont('helvetica', 'normal');
-      
-      // Table headers
-      pdf.setDrawColor(222, 226, 230);
-      pdf.line(20, yPos, pageWidth - 20, yPos);
-      yPos += 1;
-      
-      const items = [
-        { label: 'Giá xe cơ bản', value: formatPrice(pricing.basePrice) },
-      ];
-      
-      if (formData.includeInsurance) {
-        items.push({ label: 'Bảo hiểm (3%)', value: formatPrice(pricing.insurancePrice) });
-      }
-      if (formData.includeWarrantyExtension) {
-        items.push({ label: 'Gia hạn bảo hành', value: formatPrice(pricing.warrantyPrice) });
-      }
-      if (formData.includeAccessories) {
-        items.push({ label: 'Phụ kiện đi kèm', value: formatPrice(pricing.accessoriesPrice) });
-      }
-      
-      items.forEach(item => {
-        yPos += 6;
-        pdf.text(item.label, 20, yPos);
-        pdf.text(item.value, pageWidth - 20, yPos, { align: 'right' });
-      });
-      
-      yPos += 8;
-      pdf.line(20, yPos, pageWidth - 20, yPos);
-      yPos += 6;
-      pdf.text('Tạm tính:', 20, yPos);
-      pdf.text(formatPrice(pricing.subtotal), pageWidth - 20, yPos, { align: 'right' });
-      
-      yPos += 6;
-      pdf.text('VAT (10%):', 20, yPos);
-      pdf.text(formatPrice(pricing.vat), pageWidth - 20, yPos, { align: 'right' });
-      
-      yPos += 8;
-      pdf.setDrawColor(255, 77, 48);
-      pdf.setLineWidth(1);
-      pdf.line(20, yPos, pageWidth - 20, yPos);
-      yPos += 6;
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
-      pdf.setTextColor(255, 77, 48);
-      pdf.text('TỔNG CỘNG:', 20, yPos);
-      pdf.text(formatPrice(pricing.total), pageWidth - 20, yPos, { align: 'right' });
-      
-      yPos += 10;
-
-      // Installment Details
-      if (pricing.installmentDetails) {
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('PHƯƠNG THỨC TRẢ GÓP:', 20, yPos);
-        yPos += 6;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Trả trước: ${formatPrice(pricing.installmentDetails.downPayment)}`, 25, yPos);
-        yPos += 5;
-        pdf.text(`Góp ${pricing.installmentDetails.months} tháng: ${formatPrice(pricing.installmentDetails.monthlyPayment)}/tháng`, 25, yPos);
-        yPos += 5;
-        pdf.text(`Tổng thanh toán: ${formatPrice(pricing.installmentDetails.totalPayment)}`, 25, yPos);
-        yPos += 8;
-      }
-
-      // Notes
-      if (formData.notes) {
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('GHI CHÚ:', 20, yPos);
-        yPos += 6;
-        pdf.setFont('helvetica', 'normal');
-        const splitNotes = pdf.splitTextToSize(formData.notes, pageWidth - 40);
-        pdf.text(splitNotes, 20, yPos);
-        yPos += splitNotes.length * 5 + 5;
-      }
-
-      // Terms & Conditions
-      yPos += 5;
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('ĐIỀU KHOẢN & ĐIỀU KIỆN:', 20, yPos);
-      yPos += 5;
-      
-      pdf.setFont('helvetica', 'normal');
-      const terms = [
-        '• Báo giá có hiệu lực trong 30 ngày kể từ ngày phát hành',
-        '• Giá chưa bao gồm chi phí vận chuyển và lắp đặt',
-        '• Thời gian giao hàng: 15-30 ngày làm việc kể từ ngày đặt cọc',
-        '• Đặt cọc tối thiểu 30% giá trị đơn hàng',
-        '• Bảo hành chính hãng theo quy định nhà sản xuất',
-      ];
-      
-      terms.forEach(term => {
-        pdf.text(term, 20, yPos);
-        yPos += 5;
-      });
-
-      // Footer with signatures
-      if (yPos > pageHeight - 60) {
-        pdf.addPage();
-        yPos = 20;
-      } else {
-        yPos = pageHeight - 55;
-      }
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      
-      // Customer signature
-      pdf.text('KHÁCH HÀNG', 40, yPos);
-      pdf.text('(Ký và ghi rõ họ tên)', 35, yPos + 5);
-      
-      // Company signature
-      pdf.text('ĐẠI DIỆN E-DRIVE', pageWidth - 80, yPos);
-      pdf.text('(Ký và đóng dấu)', pageWidth - 75, yPos + 5);
-
-      // Save PDF
-      const fileName = `BaoGia_${selectedProduct.name.replace(/\s+/g, '_')}_${quoteNumber}.pdf`;
-      pdf.save(fileName);
-
-      console.log('✅ PDF generated:', fileName);
-      setShowSuccess(true);
-      
-    } catch (error) {
-      console.error('❌ Error generating PDF:', error);
-      alert('Có lỗi xảy ra khi tạo báo giá. Vui lòng thử lại.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedProduct) {
-      alert('Vui lòng chọn sản phẩm trước khi tạo báo giá');
+      setErrorMessage('Vui lòng chọn sản phẩm trước khi tạo báo giá');
       return;
     }
 
-    await generatePDF();
-  };
+    // Check if user is logged in
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setErrorMessage('Vui lòng đăng nhập để sử dụng tính năng này.');
+      setShowLoginPrompt(true);
+      return;
+    }
 
-  const handleSuccessClose = () => {
-    setShowSuccess(false);
+    // Validate required fields
+    if (!formData.fullName || !formData.phone || !formData.email) {
+      setErrorMessage('Vui lòng điền đầy đủ thông tin khách hàng');
+      return;
+    }
+
+    setIsGenerating(true);
+    setErrorMessage('');
+
+    try {
+      const requestData: QuotationRequest = {
+        vehicleId: Number(selectedProduct.id),
+        includeInsurancePercent: formData.includeInsurance,
+        includeWarrantyExtension: formData.includeWarrantyExtension,
+        includeAccessories: formData.includeAccessories,
+        customerFullName: formData.fullName,
+        phone: formData.phone,
+        email: formData.email,
+        street: formData.address,
+        ward: formData.ward,
+        district: formData.district,
+        city: formData.city,
+        notes: formData.notes
+      };
+
+      const result = await createQuotation(requestData);
+      
+      setCreatedQuoteData(result);
+      setShowSuccess(true);
+      
+      // Reset form after successful creation
+      setFormData({
+        fullName: '',
+        email: '',
+        phone: '',
+        company: '',
+        address: '',
+        ward: '',
+        district: '',
+        city: '',
+        quantity: 1,
+        paymentMethod: 'full',
+        notes: '',
+        includeInsurance: false,
+        includeWarrantyExtension: false,
+        includeAccessories: false,
+      });
+      setSelectedProduct(null);
+      
+    } catch (error: any) {
+      console.error('❌ Create quotation error:', error);
+      setErrorMessage(error.message || 'Không thể tạo báo giá. Vui lòng thử lại.');
+      
+      // Show login prompt if auth error
+      if (error.message?.includes('đăng nhập')) {
+        setShowLoginPrompt(true);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const pricing = calculatePricing();
@@ -787,7 +622,24 @@ const QuotePage: React.FC = () => {
                 )}
               </section>
 
-              
+              {/* Error Message */}
+              {errorMessage && (
+                <div className={styles.errorMessage}>
+                  <i className="fas fa-exclamation-circle"></i>
+                  <div className={styles.errorContent}>
+                    <span>{errorMessage}</span>
+                    {showLoginPrompt && (
+                      <button 
+                        className={styles.loginButton}
+                        onClick={() => navigate('/', { state: { openAuth: true } })}
+                      >
+                        <i className="fas fa-sign-in-alt"></i>
+                        Đăng nhập ngay
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Submit */}
               <div className={styles.submitSection}>
@@ -799,20 +651,21 @@ const QuotePage: React.FC = () => {
                   <i className="fas fa-arrow-left"></i>
                   Quay lại
                 </button>
+                
                 <button
                   type="submit"
                   className={styles.submitButton}
-                  disabled={isGenerating}
+                  disabled={isGenerating || !selectedProduct}
                 >
                   {isGenerating ? (
                     <>
                       <i className="fas fa-spinner fa-spin"></i>
-                      Đang tạo PDF...
+                      Đang tạo báo giá...
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-file-pdf"></i>
-                      Tạo báo giá PDF
+                      <i className="fas fa-paper-plane"></i>
+                      Tạo báo giá
                     </>
                   )}
                 </button>
@@ -830,12 +683,72 @@ const QuotePage: React.FC = () => {
         </div>
       </div>
 
-      <SuccessModal
-        isOpen={showSuccess}
-        onClose={handleSuccessClose}
-        title="Tạo báo giá thành công!"
-        message="File PDF báo giá đã được tải xuống. Vui lòng kiểm tra thư mục Downloads."
-      />
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className={modalStyles.modalOverlay} onClick={() => setShowSuccess(false)}>
+          <div className={modalStyles.successModal} onClick={(e) => e.stopPropagation()}>
+            <div className={modalStyles.modalIcon}>
+              <div className={modalStyles.checkmarkCircle}>
+                <i className="fas fa-check"></i>
+              </div>
+            </div>
+            
+            <h2 className={modalStyles.modalTitle}>Tạo báo giá thành công!</h2>
+            <p className={modalStyles.modalMessage}>
+              Báo giá đã được lưu vào hệ thống. Bạn có thể xem lại trong danh sách báo giá.
+            </p>
+
+            {createdQuoteData && (
+              <div className={modalStyles.quoteInfo}>
+                <div className={modalStyles.infoRow}>
+                  <span className={modalStyles.label}>Mã báo giá:</span>
+                  <span className={modalStyles.value}>BG-{createdQuoteData.quotationId}</span>
+                </div>
+                <div className={modalStyles.infoRow}>
+                  <span className={modalStyles.label}>Xe:</span>
+                  <span className={modalStyles.value}>{createdQuoteData.vehicleModel}</span>
+                </div>
+                <div className={modalStyles.infoRow}>
+                  <span className={modalStyles.label}>Khách hàng:</span>
+                  <span className={modalStyles.value}>{createdQuoteData.customerFullName}</span>
+                </div>
+                <div className={modalStyles.infoRow}>
+                  <span className={modalStyles.label}>Tổng giá trị:</span>
+                  <span className={modalStyles.valueHighlight}>{formatPrice(createdQuoteData.grandTotal)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className={modalStyles.modalActions}>
+              <button
+                className={modalStyles.viewListButton}
+                onClick={() => {
+                  setShowSuccess(false);
+                  navigate('/quotes');
+                }}
+              >
+                <i className="fas fa-list"></i>
+                Xem danh sách báo giá
+              </button>
+              
+              <button
+                className={modalStyles.createNewButton}
+                onClick={() => setShowSuccess(false)}
+              >
+                <i className="fas fa-plus"></i>
+                Tạo báo giá mới
+              </button>
+            </div>
+
+            <button 
+              className={modalStyles.closeButton}
+              onClick={() => setShowSuccess(false)}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </>

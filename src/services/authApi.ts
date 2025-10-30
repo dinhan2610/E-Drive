@@ -139,7 +139,20 @@ export const authApi = {
 
       // Lưu tokens vào localStorage
       console.log('💾 Lưu tokens...');
+      console.log('🔑 Token từ backend:', {
+        token: token ? `${token.substring(0, 30)}... (length: ${token.length})` : 'NULL',
+        refreshToken: refreshToken ? `${refreshToken.substring(0, 30)}... (length: ${refreshToken.length})` : 'NULL'
+      });
+      
       tokenManager.setTokens(token, refreshToken || '');
+      
+      // Verify after saving
+      const savedAccessToken = localStorage.getItem('accessToken');
+      const savedRefreshToken = localStorage.getItem('refreshToken');
+      console.log('✅ Tokens đã lưu vào localStorage:', {
+        accessToken: savedAccessToken ? `${savedAccessToken.substring(0, 30)}... (length: ${savedAccessToken.length})` : 'NULL',
+        refreshToken: savedRefreshToken ? `${savedRefreshToken.substring(0, 30)}... (length: ${savedRefreshToken.length})` : 'NULL'
+      });
 
       // Decode JWT để lấy thông tin user (nếu cần)
       // Token format: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PAYLOAD.SIGNATURE

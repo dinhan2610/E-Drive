@@ -79,6 +79,74 @@
   }
 }
 
+.errorBanner {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+  border: 2px solid #ff4d30;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  animation: slideDown 0.3s ease;
+
+  i.fa-exclamation-triangle {
+    font-size: 3rem;
+    color: #ff4d30;
+    flex-shrink: 0;
+  }
+
+  > span {
+    flex: 1;
+    color: #c92a2a;
+    font-size: 1.6rem;
+    font-weight: 500;
+  }
+
+  .loginButton {
+    padding: 1rem 2rem;
+    background: #ff4d30;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.4rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    white-space: nowrap;
+
+    &:hover {
+      background: #e63c1f;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3);
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @include respond-to('md') {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .loginButton {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
 .filters {
   display: flex;
   gap: 2rem;
@@ -231,6 +299,33 @@
     font-size: 1.5rem;
     color: #6c757d;
     margin-bottom: 2rem;
+  }
+
+  .createButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.4rem 3rem;
+    background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.6rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.2);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 77, 48, 0.3);
+    }
+
+    i {
+      font-size: 1.6rem;
+      color: white;
+      margin: 0;
+    }
   }
 }
 

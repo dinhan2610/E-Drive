@@ -115,7 +115,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       });
       
       if (result.success && result.data) {
-        const { user } = result.data;
+        const { user, token, refreshToken } = result.data;
         
         // Set user name for success modal
         setLoggedInUserName(user?.fullName || user?.name || formData.username);
@@ -131,7 +131,17 @@ const LoginForm: React.FC<LoginFormProps> = ({
         localStorage.setItem('e-drive-user', JSON.stringify(userData));
         localStorage.setItem('isLoggedIn', 'true');
         
+        // Verify tokens are stored
+        const storedAccessToken = localStorage.getItem('accessToken');
+        const storedRefreshToken = localStorage.getItem('refreshToken');
+        
         console.log('💾 Đã lưu thông tin user:', userData);
+        console.log('🔑 Token check:', {
+          tokenFromAPI: token ? `${token.substring(0, 30)}...` : 'NULL',
+          storedAccessToken: storedAccessToken ? `${storedAccessToken.substring(0, 30)}...` : 'NULL',
+          refreshTokenFromAPI: refreshToken ? 'EXISTS' : 'NULL',
+          storedRefreshToken: storedRefreshToken ? 'EXISTS' : 'NULL'
+        });
         
         // Dispatch login success event
         window.dispatchEvent(new Event('loginSuccess'));

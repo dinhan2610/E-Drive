@@ -1,0 +1,267 @@
+@use "../global/colors" as *;
+@use "../global/boilerplate" as *;
+@use "../global/typhography" as *;
+@use "../global/breakpoints" as *;
+
+// Success Modal
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 2rem;
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+.successModal {
+  background: white;
+  border-radius: 24px;
+  padding: 4rem 3rem;
+  max-width: 560px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @include respond-to('md') {
+    padding: 3rem 2rem;
+    max-width: 95%;
+  }
+}
+
+.modalIcon {
+  margin-bottom: 2.5rem;
+  
+  .checkmarkCircle {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+    box-shadow: 0 10px 30px rgba(255, 77, 48, 0.3);
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0);
+      }
+      to {
+        transform: scale(1);
+      }
+    }
+
+    i {
+      font-size: 4rem;
+      color: white;
+    }
+  }
+}
+
+.modalTitle {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 1.2rem;
+  font-family: $titles-font;
+
+  @include respond-to('md') {
+    font-size: 2.4rem;
+  }
+}
+
+.modalMessage {
+  font-size: 1.6rem;
+  color: #6c757d;
+  line-height: 1.6;
+  margin-bottom: 3rem;
+
+  @include respond-to('md') {
+    font-size: 1.5rem;
+  }
+}
+
+.quoteInfo {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  padding: 2.5rem;
+  margin-bottom: 3rem;
+  border: 2px solid #e9ecef;
+
+  .infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 0;
+    border-bottom: 1px dashed #dee2e6;
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    &:first-child {
+      padding-top: 0;
+    }
+
+    .label {
+      font-size: 1.5rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    .value {
+      font-size: 1.6rem;
+      color: #212529;
+      font-weight: 600;
+    }
+
+    .valueHighlight {
+      font-size: 2rem;
+      color: #ff4d30;
+      font-weight: 700;
+    }
+  }
+
+  @include respond-to('md') {
+    padding: 2rem 1.5rem;
+  }
+}
+
+.modalActions {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  button {
+    flex: 1;
+    padding: 1.4rem 2rem;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+
+    i {
+      font-size: 1.6rem;
+    }
+  }
+
+  .viewListButton {
+    background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 77, 48, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 77, 48, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  .createNewButton {
+    background: white;
+    color: #ff4d30;
+    border: 2px solid #ff4d30;
+
+    &:hover {
+      background: #ff4d30;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(255, 77, 48, 0.2);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  @include respond-to('md') {
+    flex-direction: column;
+    gap: 1.2rem;
+
+    button {
+      padding: 1.2rem 1.5rem;
+      font-size: 1.4rem;
+    }
+  }
+}
+
+.closeButton {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f8f9fa;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 1.8rem;
+    color: #6c757d;
+  }
+
+  &:hover {
+    background: #ff4d30;
+    transform: rotate(90deg);
+
+    i {
+      color: white;
+    }
+  }
+
+  @include respond-to('md') {
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 36px;
+    height: 36px;
+
+    i {
+      font-size: 1.6rem;
+    }
+  }
+}

@@ -12,7 +12,21 @@ export class ApiClient {
     const url = `${this.baseURL}${endpoint}`;
     
     // Add authorization header if token exists
-    const token = tokenManager.getAccessToken();
+    // Support both 'accessToken' (new) and 'token' (old) keys for backward compatibility
+    const accessToken = localStorage.getItem('accessToken');
+    const legacyToken = localStorage.getItem('token');
+    const managerToken = tokenManager.getAccessToken();
+    const token = managerToken || accessToken || legacyToken;
+    
+    // Check if token is required (all endpoints except public ones)
+    const publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];
+    const isPublicEndpoint = publicEndpoints.some(pe => endpoint.includes(pe));
+    
+    if (!token && !isPublicEndpoint) {
+      console.error('❌ No token found! Cannot make authenticated request.');
+      throw new Error('Vui lòng đăng nhập để sử dụng tính năng này.');
+    }
+    
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers,
