@@ -16,6 +16,7 @@ import PromotionsPage from "./Pages/PromotionsPage";
 import FinancingPage from "./Pages/FinancingPage";
 import PaymentPage from "./Pages/payment/PaymentPage";
 import PaymentReturnPage from "./Pages/payment/PaymentReturnPage";
+import TicketsPage from "./Pages/TicketsPage";
 import Navbar from "../src/components/Navbar";
 import Footer from "../src/components/Footer";
 import ChatBox from "../src/components/ChatBox";
@@ -67,6 +68,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/customers" element={<CustomersPage />} />
+        <Route path="/feedback" element={<TicketsPage />} />
         <Route path="/orders/:orderId/payment" element={<PaymentPage />} />
         <Route path="/payment/vnpay-return" element={<PaymentReturnPage />} />
         <Route path="/payments/vnpay-return" element={<PaymentReturnPage />} />
