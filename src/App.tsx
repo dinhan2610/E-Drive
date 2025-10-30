@@ -16,6 +16,7 @@ import FinancingPage from "./Pages/FinancingPage";
 import PaymentPage from "./Pages/payment/PaymentPage";
 import PaymentReturnPage from "./Pages/payment/PaymentReturnPage";
 import Navbar from "../src/components/Navbar";
+import Footer from "../src/components/Footer";
 import ChatBox from "../src/components/ChatBox";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
@@ -25,6 +26,11 @@ import { useEffect } from "react";
 function App() {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
+
+  // Scroll to top when route changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Add/remove admin-page class to body
   useEffect(() => {
@@ -63,6 +69,7 @@ function App() {
         <Route path="/payment/vnpay-return" element={<PaymentReturnPage />} />
         <Route path="/payments/vnpay-return" element={<PaymentReturnPage />} />
       </Routes>
+      {!isAdminPage && <Footer />}
       {!isAdminPage && <ChatBox />}
     </>
   );

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Footer from '../components/Footer';
 import { getProfile, updateProfile } from '../services/profileApi';
 import '../styles/ProfileStyles/_profile.scss';
 
@@ -549,7 +548,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <Footer />
+        
       </>
   );
 };

@@ -7,7 +7,6 @@ import {
   createQuotation, 
   type QuotationRequest 
 } from '../services/quotationApi';
-import Footer from '../components/Footer';
 import styles from '../styles/OrderStyles/QuotePage.module.scss';
 import modalStyles from '../styles/OrderStyles/QuoteSuccessModal.module.scss';
 
@@ -643,14 +642,7 @@ const QuotePage: React.FC = () => {
 
               {/* Submit */}
               <div className={styles.submitSection}>
-                <button
-                  type="button"
-                  className={styles.backButton}
-                  onClick={() => navigate(-1)}
-                >
-                  <i className="fas fa-arrow-left"></i>
-                  Quay lại
-                </button>
+               
                 
                 <button
                   type="submit"
@@ -749,8 +741,6 @@ const QuotePage: React.FC = () => {
           </div>
         </div>
       )}
-
-      <Footer />
     </>
   );
 };

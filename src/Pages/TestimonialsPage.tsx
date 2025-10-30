@@ -1,5 +1,4 @@
 import type { FC } from 'react';
-import Footer from "../components/Footer";
 import HeroPages from "../components/HeroPages";
 import Testimonials from "../components/feedback";
 
@@ -23,7 +22,7 @@ const TestimonialsPage: FC<TestimonialsPageProps> = () => {
             </div>
           </div>
         </div>
-        <Footer />
+        
       </section>
     </>
   );

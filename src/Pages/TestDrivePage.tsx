@@ -6,7 +6,6 @@ import { createTestDrive, TestDriveApiError } from "../services/testDriveApi";
 import { createCustomer } from "../services/customersApi";
 import { getProfile } from "../services/profileApi";
 import type { VehicleApiResponse } from "../types/product";
-import Footer from "../components/Footer";
 import styles from "../styles/TestDriveStyles/TestDrivePage.module.scss";
 
 interface BookingFormData {
@@ -758,7 +757,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
         message="Cảm ơn bạn đã đăng ký lái thử xe điện E-Drive. Chúng tôi sẽ liên hệ với bạn để xác nhận lịch hẹn trong thời gian sớm nhất!"
       />
       
-      <Footer />
+      
     </>
   );
 };

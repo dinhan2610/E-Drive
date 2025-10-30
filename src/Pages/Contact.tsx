@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Footer from "../components/Footer";
 import HeroPages from "../components/HeroPages";
 import "../styles/ContactStyles/_contact.scss";
 
@@ -523,8 +522,6 @@ const Contact: React.FC = () => {
           </div>
         </div>
       </section>
-      
-      <Footer />
     </>
   );
 };

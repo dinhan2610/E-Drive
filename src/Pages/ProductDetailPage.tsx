@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import type { Product, VehicleApiResponse } from '../types/product';
 import { convertVehicleToProduct } from '../services/vehicleApi';
 import { formatPrice } from '../utils/productUtils';
-import Footer from '../components/Footer';
 import styles from '../styles/ProductsStyles/ProductDetail.module.scss';
 
 const ProductDetailPage: React.FC = () => {
@@ -76,7 +75,7 @@ const ProductDetailPage: React.FC = () => {
             <p>Đang tải thông tin xe...</p>
           </div>
         </div>
-        <Footer />
+        
       </>
     );
   }
@@ -94,7 +93,7 @@ const ProductDetailPage: React.FC = () => {
             </button>
           </div>
         </div>
-        <Footer />
+        
       </>
     );
   }
@@ -103,14 +102,7 @@ const ProductDetailPage: React.FC = () => {
     <>
       <div className={styles.wrap}>
         <div className={styles.container}>
-          {/* Breadcrumb */}
-          <nav className={styles.breadcrumb}>
-            <button onClick={() => navigate('/')}>Trang chủ</button>
-            <span className={styles.separator}>/</span>
-            <button onClick={() => navigate('/products')}>Sản phẩm</button>
-            <span className={styles.separator}>/</span>
-            <span className={styles.current}>{product.name}</span>
-          </nav>
+          
 
           {/* Main Content */}
           <div className={styles.content}>
@@ -257,7 +249,7 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
-      <Footer />
+      
     </>
   );
 };

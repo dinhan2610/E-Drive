@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { formatPrice } from '../utils/productUtils';
 import { createOrder, OrderApiError } from '../services/orderApi';
-import Footer from '../components/Footer';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/OrderPage.module.scss';
 
@@ -614,7 +613,7 @@ const OrderPage: React.FC = () => {
         message={`Cảm ơn bạn đã đặt hàng ${product.name}. Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất.`}
       />
 
-      <Footer />
+      
     </>
   );
 };

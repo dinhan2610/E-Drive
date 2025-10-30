@@ -1,22 +1,49 @@
-// ProductCard component styles
+// ProductCard component styles - Đồng bộ với ProductDetail
 .card {
   background: white;
-  border-radius: 24px;
-  border: 2px solid rgba(255, 77, 48, 0.1);
+  border-radius: 2rem;
+  border: 2px solid rgba(226, 232, 240, 0.6);
   overflow: hidden;
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100%;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 25px rgba(255, 77, 48, 0.08);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 2rem;
+    padding: 2px;
+    background: linear-gradient(135deg, rgba(255, 77, 48, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none; // Quan trọng: không chặn click events
+    z-index: 0;
+  }
   
   &:hover {
-    box-shadow: 0 20px 40px rgba(255, 77, 48, 0.15);
-    transform: translateY(-6px);
-    border-color: #ff4d30;
+    box-shadow: 
+      0 20px 60px rgba(255, 77, 48, 0.15),
+      0 8px 24px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-8px);
+    border-color: rgba(255, 77, 48, 0.3);
+    
+    &::before {
+      opacity: 1;
+    }
     
     .imageContainer img {
-      transform: scale(1.08);
+      transform: scale(1.1);
     }
   }
 }
@@ -25,13 +52,13 @@
   position: relative;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
   
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 200ms ease;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
@@ -46,29 +73,40 @@
 }
 
 .badge {
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 0.85rem;
-  font-weight: 700;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.8rem;
+  font-size: 1.3rem;
+  font-weight: 600;
   text-align: center;
   color: white;
   font-family: 'Roboto', sans-serif;
   letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: scale(1.05);
+  }
   
   &.popular {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
   &.discount {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
   &.installment {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
   &.outOfStock {
-    background: linear-gradient(135deg, #6b7280, #4b5563);
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -103,22 +141,25 @@
 }
 
 .pricing {
-  margin-bottom: 20px;
+  margin-bottom: 2rem;
   
   .price {
-    font-size: 2rem;
+    font-size: 2.4rem;
     font-weight: 800;
-    color: #ff4d30;
+    background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin: 0;
     letter-spacing: -0.02em;
     font-family: 'Roboto', sans-serif;
   }
   
   .originalPrice {
-    font-size: 1.25rem;
-    color: #9ca3af;
+    font-size: 1.4rem;
+    color: #94a3b8;
     text-decoration: line-through;
-    margin-left: 10px;
+    margin-left: 1rem;
     font-weight: 500;
   }
 }
@@ -185,6 +226,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  position: relative;
+  z-index: 10;
 }
 
 .button {
@@ -202,6 +245,9 @@
   justify-content: center;
   letter-spacing: -0.01em;
   font-family: 'Roboto', sans-serif;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
   
   &:focus {
     outline: 2px solid #ff4d30;

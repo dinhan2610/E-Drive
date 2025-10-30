@@ -32,8 +32,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleViewDetails = () => {
+    console.log('🔍 ProductCard - View Details clicked');
+    console.log('📦 Product:', item);
+    console.log('🔗 onViewDetails function:', onViewDetails);
+    
     if (onViewDetails) {
       onViewDetails(item);
+    } else {
+      console.warn('⚠️ onViewDetails prop is not provided');
     }
   };
 

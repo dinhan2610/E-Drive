@@ -6,7 +6,6 @@ import ProductCard from '../components/Products/ProductCard';
 import SortBar from '../components/Products/SortBar';
 import Pagination from '../components/Products/Pagination';
 import EmptyState from '../components/Products/EmptyState';
-import Footer from '../components/Footer';
 
 import styles from '../styles/ProductsStyles/ProductsPage.module.scss';
 
@@ -220,7 +219,6 @@ const ProductsPage: React.FC = () => {
         </main>
       </div>
     </div>
-    <Footer />
     </>
   );
 };

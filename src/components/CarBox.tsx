@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import "../styles/PickStyles/_pick.scss";
 
 interface Car {
   img: string;

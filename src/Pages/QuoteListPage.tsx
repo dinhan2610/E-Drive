@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllQuotations, getQuotationById, type QuotationResponseData } from '../services/quotationApi';
-import Footer from '../components/Footer';
 import styles from '../styles/OrderStyles/QuoteListPage.module.scss';
 import modalStyles from '../styles/OrderStyles/QuoteDetailModal.module.scss';
 import jsPDF from 'jspdf';
@@ -746,8 +745,6 @@ const QuoteListPage: React.FC = () => {
           </div>
         </div>
       )}
-
-      <Footer />
     </>
   );
 };

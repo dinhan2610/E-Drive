@@ -5,7 +5,7 @@ import { getProfile } from '../services/profileApi';
 import { createOrder, getOrdersByDealer, type CreateOrderRequest, type Order } from '../services/orderApi';
 import { confirmDelivery, DeliveryApiError } from '../services/deliveryApi';
 import { startVnPay } from '../services/paymentApi';
-import Footer from '../components/Footer';
+import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/DealerOrderPage.module.scss';
 
@@ -39,7 +39,7 @@ interface DealerOrderForm {
   deliveryNote: string;
   
   // Payment
-  paymentMethod: 'bank-transfer' | 'credit' | 'cod';
+  paymentMethod: 'bank-transfer';
   
   // Additional
   notes: string;
@@ -64,7 +64,7 @@ const DealerOrderPage: React.FC = () => {
   
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableVehicles, setAvailableVehicles] = useState<any[]>([]);
+  const [availableVehicles, setAvailableVehicles] = useState<Product[]>([]);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   
@@ -98,7 +98,6 @@ const DealerOrderPage: React.FC = () => {
     urgentOrder: false,
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [showProductSelector, setShowProductSelector] = useState(false);
 
   // Auto-load profile data
@@ -268,19 +267,24 @@ const DealerOrderPage: React.FC = () => {
   }, []);
 
   const fetchVehicles = async () => {
+    console.log('🚗 fetchVehicles called');
     setIsLoadingVehicles(true);
     try {
-      const response = await fetch('http://localhost:8080/api/vehicles');
-      if (!response.ok) throw new Error('Failed to fetch vehicles');
+      console.log('📡 Calling fetchVehiclesFromApi...');
+      const { vehicles } = await fetchVehiclesFromApi({ size: 100 });
+      console.log('✅ Fetched vehicles:', vehicles);
+      console.log('📊 Number of vehicles:', vehicles.length);
       
-      const data = await response.json();
-      const vehicles = Array.isArray(data) ? data : data.content || [];
-      setAvailableVehicles(vehicles);
+      // Convert API vehicles to Product format
+      const products = vehicles.map(convertVehicleToProduct);
+      console.log('🔄 Converted products:', products);
+      setAvailableVehicles(products);
     } catch (error) {
-      console.error('Error fetching vehicles:', error);
+      console.error('❌ Error fetching vehicles:', error);
       setAvailableVehicles([]);
     } finally {
       setIsLoadingVehicles(false);
+      console.log('✅ Loading complete');
     }
   };
 
@@ -322,7 +326,6 @@ const DealerOrderPage: React.FC = () => {
     }));
     
     setShowProductSelector(false);
-    setSearchTerm('');
   };
 
   const handleUpdateQuantity = (index: number, newQuantity: number) => {
@@ -410,27 +413,21 @@ const DealerOrderPage: React.FC = () => {
       console.log('Order created successfully:', createdOrder);
       console.log('Created order ID:', createdOrder.orderId);
 
-      // Check if online payment method
-      if (formData.paymentMethod === 'bank-transfer') {
-        // Initiate VNPay payment and redirect to sandbox
-        console.log('💳 Initiating VNPay payment for new order:', createdOrder.orderId);
+      // Initiate VNPay payment and redirect to sandbox
+      console.log('💳 Initiating VNPay payment for new order:', createdOrder.orderId);
+      
+      try {
+        const vnpayResponse = await startVnPay(createdOrder.orderId);
+        console.log('✅ VNPay URL received:', vnpayResponse.paymentUrl);
         
-        try {
-          const vnpayResponse = await startVnPay(createdOrder.orderId);
-          console.log('✅ VNPay URL received:', vnpayResponse.paymentUrl);
-          
-          // Redirect to VNPay sandbox
-          window.location.href = vnpayResponse.paymentUrl;
-        } catch (paymentError: any) {
-          console.error('❌ Error initiating VNPay:', paymentError);
-          alert(`Đơn hàng đã tạo thành công nhưng không thể khởi tạo thanh toán VNPay.\n\nVui lòng vào "Đơn hàng của tôi" để thanh toán sau.`);
-          
-          // Switch to orders list tab to show the created order
-          setActiveTab('list');
-        }
-      } else {
-        // Show success modal for other payment methods
-        setShowSuccess(true);
+        // Redirect to VNPay sandbox
+        window.location.href = vnpayResponse.paymentUrl;
+      } catch (paymentError: any) {
+        console.error('❌ Error initiating VNPay:', paymentError);
+        alert(`Đơn hàng đã tạo thành công nhưng không thể khởi tạo thanh toán VNPay.\n\nVui lòng vào "Đơn hàng của tôi" để thanh toán sau.`);
+        
+        // Switch to orders list tab to show the created order
+        setActiveTab('list');
       }
     } catch (error: any) {
       console.error('Error creating order:', error);
@@ -445,11 +442,6 @@ const DealerOrderPage: React.FC = () => {
     // Navigate to home or order list page
     navigate('/');
   };
-
-  const filteredVehicles = availableVehicles.filter(vehicle =>
-    vehicle.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.variant?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const pricing = calculateTotal();
 
@@ -550,12 +542,28 @@ const DealerOrderPage: React.FC = () => {
                 <div className={styles.sectionHeader}>
                   <i className="fas fa-car"></i>
                   <h2>Xe đã chọn</h2>
-                  
+                  <button
+                    type="button"
+                    className={styles.addProductButton}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('🔘 Add button clicked!');
+                      console.log('Current showProductSelector:', showProductSelector);
+                      setShowProductSelector(!showProductSelector);
+                      if (!showProductSelector) {
+                        console.log('📡 Fetching vehicles...');
+                        fetchVehicles(); // Refresh vehicle list when opening
+                      }
+                    }}
+                  >
+                    <i className="fas fa-plus"></i>
+                    Thêm xe
+                  </button>
                 </div>
 
               
 
-                {formData.selectedProducts.length > 0 && (
+                {formData.selectedProducts.length > 0 ? (
                   <div className={styles.selectedProducts}>
                     {formData.selectedProducts.map((product, index) => (
                       <div key={index} className={styles.selectedProduct}>
@@ -643,42 +651,11 @@ const DealerOrderPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                )}
-
-                {showProductSelector && (
-                  <div className={styles.productSelector}>
-                    <div className={styles.searchBox}>
-                      <i className="fas fa-search"></i>
-                      <input
-                        type="text"
-                        placeholder="Tìm kiếm xe..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-
-                    {isLoadingVehicles ? (
-                      <div className={styles.loading}>Đang tải...</div>
-                    ) : (
-                      <div className={styles.productList}>
-                        {filteredVehicles.map(vehicle => (
-                          <div
-                            key={vehicle.id}
-                            className={styles.productItem}
-                            onClick={() => handleAddProduct(vehicle)}
-                          >
-                            <img src={vehicle.image} alt={vehicle.name} />
-                            <div className={styles.productItemInfo}>
-                              <h4>{vehicle.name}</h4>
-                              <p>{vehicle.variant}</p>
-                              <span className={styles.price}>
-                                {formatPrice(vehicle.price)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                ) : (
+                  <div className={styles.emptyProductState}>
+                    <i className="fas fa-car"></i>
+                    <p>Chưa có xe nào được chọn</p>
+                    <span>Nhấn nút "Thêm xe" để bắt đầu đặt hàng</span>
                   </div>
                 )}
 
@@ -759,26 +736,9 @@ const DealerOrderPage: React.FC = () => {
                         <i className="fas fa-university"></i>
                         <span>Thanh toán trực tuyến</span>
                       </div>
-                      
-                    </div>
-                  </label>
-
-                 
-
-                  <label className={styles.radioCard}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={formData.paymentMethod === 'cod'}
-                      onChange={handleInputChange}
-                    />
-                    <div className={styles.radioContent}>
-                      <div className={styles.radioHeader}>
-                        <i className="fas fa-money-bill-wave"></i>
-                        <span>Thanh toán khi nhận hàng</span>
-                      </div>
-                      
+                      <p className={styles.radioDescription}>
+                        Thanh toán ngay qua VNPay - An toàn & nhanh chóng
+                      </p>
                     </div>
                   </label>
                 </div>
@@ -788,14 +748,7 @@ const DealerOrderPage: React.FC = () => {
 
               {/* Submit */}
               <div className={styles.submitSection}>
-                <button
-                  type="button"
-                  className={styles.backButton}
-                  onClick={() => navigate('/')}
-                >
-                  <i className="fas fa-arrow-left"></i>
-                  Quay lại
-                </button>
+                
                 <button
                   type="submit"
                   className={styles.submitButton}
@@ -804,14 +757,12 @@ const DealerOrderPage: React.FC = () => {
                   {isSubmitting ? (
                     <>
                       <i className="fas fa-spinner fa-spin"></i>
-                      {formData.paymentMethod === 'bank-transfer' 
-                        ? 'Đang chuyển đến VNPay...' 
-                        : 'Đang xử lý...'}
+                      Đang chuyển đến VNPay...
                     </>
                   ) : (
                     <>
                       <i className="fas fa-check-circle"></i>
-                      {formData.paymentMethod === 'bank-transfer' ? 'Thanh toán' : 'Xác nhận đặt hàng'}
+                      Thanh toán
                     </>
                   )}
                 </button>
@@ -1068,7 +1019,65 @@ const DealerOrderPage: React.FC = () => {
         </div>
       )}
 
-      <Footer />
+      {/* Vehicle Selection Modal */}
+      {showProductSelector && (
+        <div className={styles.modalOverlay} onClick={() => setShowProductSelector(false)}>
+          <div className={styles.vehicleModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitle}>
+                <i className="fas fa-car"></i>
+                <h2>Chọn xe cần đặt hàng</h2>
+              </div>
+              <button
+                type="button"
+                className={styles.closeModalBtn}
+                onClick={() => setShowProductSelector(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.dropdownContainer}>
+                <label htmlFor="vehicleSelect">
+                  <i className="fas fa-car"></i>
+                  Chọn xe
+                </label>
+                <select
+                  id="vehicleSelect"
+                  className={styles.vehicleDropdown}
+                  onChange={(e) => {
+                    const vehicleId = e.target.value;
+                    console.log('🚗 Selected vehicle ID:', vehicleId);
+                    if (vehicleId) {
+                      const vehicle = availableVehicles.find(v => v.id === vehicleId);
+                      console.log('🔍 Found vehicle:', vehicle);
+                      if (vehicle) {
+                        handleAddProduct(vehicle);
+                        setShowProductSelector(false);
+                      }
+                    }
+                  }}
+                  disabled={isLoadingVehicles}
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    {isLoadingVehicles ? 'Đang tải...' : 'Chọn xe từ danh sách'}
+                  </option>
+                  {availableVehicles.map(vehicle => {
+                    console.log('🎨 Rendering option:', vehicle);
+                    return (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.name} - {vehicle.variant} - {formatPrice(vehicle.price)}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
