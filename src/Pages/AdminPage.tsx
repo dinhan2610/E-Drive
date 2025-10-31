@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle } from '../services/vehicleApi';
+import { fetchManufacturerInventory } from '../services/inventoryApi';
+import type { ManufacturerInventoryItem } from '../types/inventory';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
 import { getOrders, getOrderById, cancelOrder, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
@@ -181,7 +183,7 @@ interface CarWithStatus extends CarType {
 const AdminPage: React.FC = () => {
   const location = useLocation();
   const initialTab = (location.state as any)?.tab || 'dashboard';
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'dealers' | 'bookings' | 'analytics' | 'settings'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'inventory' | 'dealers' | 'bookings' | 'analytics' | 'settings'>(initialTab);
   const [cars, setCars] = useState<CarWithStatus[]>([]);
 
   // Helper function để set token từ console
@@ -273,6 +275,11 @@ const AdminPage: React.FC = () => {
   const [isUpdatingVehicle, setIsUpdatingVehicle] = useState<boolean>(false);
   const [newCarErrors, setNewCarErrors] = useState<Record<string, string>>({});
   const [editCarErrors, setEditCarErrors] = useState<Record<string, string>>({});
+  // Image upload / preview states for add/edit
+  const [newCarImagePreview, setNewCarImagePreview] = useState<string>('');
+  const [newCarImageUrl, setNewCarImageUrl] = useState<string>('');
+  const [editCarImagePreview, setEditCarImagePreview] = useState<string>('');
+  const [editCarImageUrl, setEditCarImageUrl] = useState<string>('');
   const [notification, setNotification] = useState<{
     isVisible: boolean;
     message: string;
@@ -284,6 +291,7 @@ const AdminPage: React.FC = () => {
   });
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [unverifiedAccounts, setUnverifiedAccounts] = useState<UnverifiedAccount[]>([]);
+  const [inventory, setInventory] = useState<ManufacturerInventoryItem[]>([]);
   const [dealerViewMode, setDealerViewMode] = useState<'verified' | 'unverified'>('verified');
   const [showAddDealerModal, setShowAddDealerModal] = useState<boolean>(false);
   const [showViewDealerModal, setShowViewDealerModal] = useState<boolean>(false);
@@ -356,7 +364,7 @@ const AdminPage: React.FC = () => {
           // Map API fields to UI fields
           id: v.vehicleId,
           name: `${v.modelName} ${v.version}`,
-          img: `/src/images/cars-big/car-${v.vehicleId}.jpg`,
+          img: (v as any).imageUrl || `/src/images/cars-big/car-${v.vehicleId}.jpg`,
           mark: v.modelName,
           model: v.version || v.modelName,
           year: (v as any).manufactureYear || 2024,
@@ -383,6 +391,18 @@ const AdminPage: React.FC = () => {
           lastMaintenance: '2024-09-15'
         }));
         setCars(fallbackCars);
+      }
+    })();
+
+    // Fetch manufacturer inventory
+    (async () => {
+      try {
+        const inv = await fetchManufacturerInventory();
+        setInventory(inv);
+        console.log('✅ Loaded manufacturer inventory:', inv);
+      } catch (error) {
+        console.error('❌ Failed to load manufacturer inventory:', error);
+        setInventory([]);
       }
     })();
 
@@ -687,6 +707,9 @@ const AdminPage: React.FC = () => {
       });
 
       setEditCarErrors({});
+      // Set image preview/url for edit modal
+  setEditCarImagePreview((vehicleData as any).imageUrl || '');
+  setEditCarImageUrl((vehicleData as any).imageUrl || '');
       setShowEditCarModal(true);
     } catch (error) {
       console.error('❌ Error fetching car details for edit:', error);
@@ -1058,6 +1081,7 @@ const AdminPage: React.FC = () => {
         cars: cars.length,
         dealers: dealers.length,
         unverifiedDealers: unverifiedAccounts.length,
+        inventory: inventory.length,
         bookings: bookings.length,
         testDrives: 0
       }}
@@ -1335,6 +1359,51 @@ const AdminPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'inventory' && (
+          <div className={styles.usersManagement}>
+            <div className={styles.sectionHeader}>
+              <h3>Kho Hàng</h3>
+            </div>
+
+            <div className={styles.usersTable}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Chủ sở hữu</th>
+                    <th>Vehicle ID</th>
+                    <th>Model</th>
+                    <th>Số lượng</th>
+                    <th>Cập nhật lần cuối</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inventory.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '20px' }}>Không có dữ liệu</td>
+                    </tr>
+                  ) : (
+                    inventory.map(item => (
+                      <tr key={item.inventoryId}>
+                        <td>#{item.inventoryId}</td>
+                        <td>
+                          <div style={{fontWeight: '700'}}>{item.ownerName}</div>
+                        </td>
+                        <td>{item.vehicleId}</td>
+                        <td>
+                          <div style={{fontSize: '14px', fontWeight: 600}}>{item.vehicleModel}</div>
+                        </td>
+                        <td>{item.quantity}</td>
+                        <td>{item.lastUpdated ? new Date(item.lastUpdated).toLocaleString() : '-'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -1935,14 +2004,103 @@ const AdminPage: React.FC = () => {
                   className={styles.closeButton}
                   aria-label="Đóng"
                   onClick={() => {
-                    setShowAddCarModal(false);
-                    setNewCarErrors({});
+                      setShowAddCarModal(false);
+                      setNewCarErrors({});
+                      setNewCarImagePreview('');
+                      setNewCarImageUrl('');
                   }}
                 >
                   <i className="fas fa-times"></i>
                 </button>
               </div>
               <div className={styles.modalBody}>
+                {/* Image Upload Section - Spanning full width */}
+                <div className={styles.imageUploadSection}>
+                  <div className={styles.imageUploadContainer}>
+                    <div className={styles.imageUrlInput}>
+                      <label className={styles.imageLabel}>
+                        <i className="fas fa-link"></i>
+                        Link hình ảnh xe
+                      </label>
+                      <input
+                        type="text"
+                        className={styles.settingInput}
+                        value={newCarImageUrl}
+                        placeholder="Nhập URL hình ảnh (https://...)"
+                        onChange={(e) => {
+                          setNewCarImageUrl(e.target.value);
+                          if (e.target.value.trim()) {
+                            setNewCarImagePreview(e.target.value.trim());
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className={styles.uploadDivider}>
+                      <span>HOẶC</span>
+                    </div>
+                    <div className={styles.fileUploadWrapper}>
+                      <label className={styles.imageLabel}>
+                        <i className="fas fa-image"></i>
+                        Upload hình ảnh từ máy
+                      </label>
+                      <div className={styles.fileUploadBox}>
+                        <input
+                          type="file"
+                          id="newCarImageFile"
+                          accept="image/jpeg,image/png,image/jpg,image/webp"
+                          className={styles.fileInput}
+                          onChange={(e) => {
+                            const file = e.target.files && e.target.files[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                setNewCarImagePreview(reader.result as string);
+                                setNewCarImageUrl(''); // Clear URL when file is selected
+                              };
+                              reader.readAsDataURL(file);
+                            } else {
+                              setNewCarImagePreview('');
+                            }
+                          }}
+                        />
+                        <label htmlFor="newCarImageFile" className={styles.fileUploadLabel}>
+                          <div className={styles.uploadIcon}>
+                            <i className="fas fa-cloud-upload-alt"></i>
+                          </div>
+                          <div className={styles.uploadText}>
+                            <span className={styles.uploadMainText}>Kéo thả hoặc click để chọn file</span>
+                            <span className={styles.uploadSubText}>JPG, PNG, WEBP (Max 5MB)</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                    {newCarImagePreview && (
+                      <div className={styles.imagePreviewContainer}>
+                        <label className={styles.imageLabel}>
+                          <i className="fas fa-eye"></i>
+                          Preview hình ảnh
+                        </label>
+                        <div className={styles.imagePreviewBox}>
+                          <img src={newCarImagePreview} alt="Preview" className={styles.previewImage} />
+                          <button
+                            type="button"
+                            className={styles.removeImageBtn}
+                            onClick={() => {
+                              setNewCarImagePreview('');
+                              setNewCarImageUrl('');
+                              const fileInput = document.getElementById('newCarImageFile') as HTMLInputElement;
+                              if (fileInput) fileInput.value = '';
+                            }}
+                            title="Xóa hình ảnh"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className={styles.formGrid}>
                   <div className={styles.formColumn}>
                     <div className={styles.settingItem}>
@@ -2276,8 +2434,10 @@ const AdminPage: React.FC = () => {
                 <button
                   className={styles.cancelButton}
                   onClick={() => {
-                    setShowAddCarModal(false);
-                    setNewCarErrors({});
+                      setShowAddCarModal(false);
+                      setNewCarErrors({});
+                      setNewCarImagePreview('');
+                      setNewCarImageUrl('');
                   }}
                 >
                   Hủy
@@ -2347,6 +2507,14 @@ const AdminPage: React.FC = () => {
                         manufactureYear: newCar.manufactureYear
                       };
 
+                      // Attach image info if provided
+                      if (newCarImageUrl && newCarImageUrl.trim()) {
+                        (vehicleData as any).imageUrl = newCarImageUrl.trim();
+                      } else if (newCarImagePreview) {
+                        // If user selected a file, include the base64 preview as imageBase64
+                        (vehicleData as any).imageBase64 = newCarImagePreview;
+                      }
+
                       console.log('🚗 Creating vehicle with data:', vehicleData);
 
                       // Gửi lên API để lưu vào database
@@ -2356,7 +2524,7 @@ const AdminPage: React.FC = () => {
                       const created: CarWithStatus = {
                         id: createdVehicle.vehicleId,
                         name: `${createdVehicle.modelName} ${createdVehicle.version}`.trim(),
-                        img: '/src/images/cars-big/carforbox.jpg',
+                        img: (createdVehicle as any).imageUrl || newCarImagePreview || `/src/images/cars-big/car-${createdVehicle.vehicleId}.jpg`,
                         mark: createdVehicle.modelName,
                         model: createdVehicle.version,
                         year: newCar.manufactureYear,
@@ -2395,6 +2563,9 @@ const AdminPage: React.FC = () => {
                         status: 'AVAILABLE',
                         manufactureYear: new Date().getFullYear()
                       });
+                      // Reset image inputs
+                      setNewCarImagePreview('');
+                      setNewCarImageUrl('');
 
                       // Cập nhật stats
                       setStats(prevStats => ({
@@ -2488,15 +2659,104 @@ const AdminPage: React.FC = () => {
                   className={styles.closeButton}
                   aria-label="Đóng"
                   onClick={() => {
-                    setShowEditCarModal(false);
-                    setEditingCar(null);
-                    setEditCarErrors({});
+                      setShowEditCarModal(false);
+                      setEditingCar(null);
+                      setEditCarErrors({});
+                      setEditCarImagePreview('');
+                      setEditCarImageUrl('');
                   }}
                 >
                   <i className="fas fa-times"></i>
                 </button>
               </div>
               <div className={styles.modalBody}>
+                {/* Image Upload Section - Spanning full width */}
+                <div className={styles.imageUploadSection}>
+                  <div className={styles.imageUploadContainer}>
+                    <div className={styles.imageUrlInput}>
+                      <label className={styles.imageLabel}>
+                        <i className="fas fa-link"></i>
+                        Link hình ảnh xe
+                      </label>
+                      <input
+                        type="text"
+                        className={styles.settingInput}
+                        value={editCarImageUrl}
+                        placeholder="Nhập URL hình ảnh (https://...)"
+                        onChange={(e) => {
+                          setEditCarImageUrl(e.target.value);
+                          if (e.target.value.trim()) {
+                            setEditCarImagePreview(e.target.value.trim());
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className={styles.uploadDivider}>
+                      <span>HOẶC</span>
+                    </div>
+                    <div className={styles.fileUploadWrapper}>
+                      <label className={styles.imageLabel}>
+                        <i className="fas fa-image"></i>
+                        Upload hình ảnh từ máy
+                      </label>
+                      <div className={styles.fileUploadBox}>
+                        <input
+                          type="file"
+                          id="editCarImageFile"
+                          accept="image/jpeg,image/png,image/jpg,image/webp"
+                          className={styles.fileInput}
+                          onChange={(e) => {
+                            const file = e.target.files && e.target.files[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                setEditCarImagePreview(reader.result as string);
+                                setEditCarImageUrl(''); // Clear URL when file is selected
+                              };
+                              reader.readAsDataURL(file);
+                            } else {
+                              setEditCarImagePreview('');
+                            }
+                          }}
+                        />
+                        <label htmlFor="editCarImageFile" className={styles.fileUploadLabel}>
+                          <div className={styles.uploadIcon}>
+                            <i className="fas fa-cloud-upload-alt"></i>
+                          </div>
+                          <div className={styles.uploadText}>
+                            <span className={styles.uploadMainText}>Kéo thả hoặc click để chọn file</span>
+                            <span className={styles.uploadSubText}>JPG, PNG, WEBP (Max 5MB)</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                    {editCarImagePreview && (
+                      <div className={styles.imagePreviewContainer}>
+                        <label className={styles.imageLabel}>
+                          <i className="fas fa-eye"></i>
+                          Preview hình ảnh
+                        </label>
+                        <div className={styles.imagePreviewBox}>
+                          <img src={editCarImagePreview} alt="Preview" className={styles.previewImage} />
+                          <button
+                            type="button"
+                            className={styles.removeImageBtn}
+                            onClick={() => {
+                              setEditCarImagePreview('');
+                              setEditCarImageUrl('');
+                              const fileInput = document.getElementById('editCarImageFile') as HTMLInputElement;
+                              if (fileInput) fileInput.value = '';
+                            }}
+                            title="Xóa hình ảnh"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className={styles.formGrid}>
                   <div className={styles.formColumn}>
                     <div className={styles.settingItem}>
@@ -2830,9 +3090,11 @@ const AdminPage: React.FC = () => {
                 <button
                   className={styles.cancelButton}
                   onClick={() => {
-                    setShowEditCarModal(false);
-                    setEditingCar(null);
-                    setEditCarErrors({});
+                      setShowEditCarModal(false);
+                      setEditingCar(null);
+                      setEditCarErrors({});
+                      setEditCarImagePreview('');
+                      setEditCarImageUrl('');
                   }}
                 >
                   Hủy
@@ -2902,6 +3164,13 @@ const AdminPage: React.FC = () => {
                         manufactureYear: editCar.manufactureYear
                       };
 
+                      // Attach image info if provided
+                      if (editCarImageUrl && editCarImageUrl.trim()) {
+                        (vehicleData as any).imageUrl = editCarImageUrl.trim();
+                      } else if (editCarImagePreview && editCarImagePreview.startsWith('data:')) {
+                        (vehicleData as any).imageBase64 = editCarImagePreview;
+                      }
+
                       // Gửi lên API để cập nhật trong database
                       const updatedVehicle = await updateVehicle(editingCar.vehicleId, vehicleData);
 
@@ -2925,6 +3194,8 @@ const AdminPage: React.FC = () => {
                       setShowEditCarModal(false);
                       setEditingCar(null);
                       setEditCarErrors({});
+                      setEditCarImagePreview('');
+                      setEditCarImageUrl('');
 
                       // Reset form
                       setEditCar({
@@ -3042,6 +3313,16 @@ const AdminPage: React.FC = () => {
               <div className={styles.modalBody}>
                 <div className={styles.formGrid}>
                   <div className={styles.formColumn}>
+                    {/* Show image(s) */}
+                    <div className={styles.settingItem} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <div style={{ minWidth: 220 }}>
+                        <img
+                          src={(selectedCar as any).imageUrl || `/src/images/cars-big/car-${selectedCar.vehicleId}.jpg`}
+                          alt={`${selectedCar.modelName} ${selectedCar.version}`}
+                          style={{ width: '100%', maxWidth: 420, height: 240, objectFit: 'cover', borderRadius: 12 }}
+                        />
+                      </div>
+                    </div>
                     <div className={styles.settingItem}>
                       <label>Model name</label>
                       <input
@@ -3233,6 +3514,9 @@ const AdminPage: React.FC = () => {
                     });
 
                     setEditCarErrors({});
+                    // populate image fields for edit modal
+                    setEditCarImagePreview((selectedCar as any).imageUrl || '');
+                    setEditCarImageUrl((selectedCar as any).imageUrl || '');
                     setShowEditCarModal(true);
                     setSelectedCar(null);
                   }}

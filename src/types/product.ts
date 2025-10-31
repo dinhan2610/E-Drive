@@ -4,6 +4,8 @@ export interface VehicleApiResponse {
   modelName: string;
   version: string;
   color: string;
+  // Optional image URL provided by backend
+  imageUrl?: string;
   batteryCapacityKwh: number;
   rangeKm: number;
   maxSpeedKmh: number;

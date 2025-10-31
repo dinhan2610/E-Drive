@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getProfile, updateProfile } from '../services/profileApi';
+import { authApi } from '../services/authApi';
 import '../styles/ProfileStyles/_profile.scss';
 
 interface UserProfile {
@@ -40,6 +41,23 @@ const ProfilePage: React.FC = () => {
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
+  });
+
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success'
   });
 
   const [avatarPreview, setAvatarPreview] = useState<string>('');
@@ -194,26 +212,106 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleChangePassword = () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Mật khẩu xác nhận không khớp!');
+  const handleChangePassword = async () => {
+    // Reset errors
+    setPasswordErrors({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+
+    // Validation
+    let hasError = false;
+    const errors = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    };
+
+    if (!passwordData.currentPassword) {
+      errors.currentPassword = 'Vui lòng nhập mật khẩu hiện tại';
+      hasError = true;
+    }
+
+    if (!passwordData.newPassword) {
+      errors.newPassword = 'Vui lòng nhập mật khẩu mới';
+      hasError = true;
+    } else if (passwordData.newPassword.length < 6) {
+      errors.newPassword = 'Mật khẩu phải có ít nhất 6 ký tự';
+      hasError = true;
+    }
+
+    if (!passwordData.confirmPassword) {
+      errors.confirmPassword = 'Vui lòng xác nhận mật khẩu mới';
+      hasError = true;
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+      hasError = true;
+    }
+
+    if (hasError) {
+      setPasswordErrors(errors);
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      alert('Mật khẩu phải có ít nhất 6 ký tự!');
-      return;
-    }
-
-    // Simulate password change
-    setTimeout(() => {
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+    // Call API
+    setIsChangingPassword(true);
+    try {
+      const result = await authApi.changePassword({
+        oldPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
       });
-      alert('Đổi mật khẩu thành công!');
-    }, 1000);
+
+      if (result.success) {
+        // Reset form
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        
+        // Show success notification
+        setNotification({
+          show: true,
+          message: result.message || 'Đổi mật khẩu thành công!',
+          type: 'success'
+        });
+
+        // Auto hide after 3 seconds
+        setTimeout(() => {
+          setNotification({ show: false, message: '', type: 'success' });
+        }, 3000);
+      } else {
+        // Show error notification
+        setNotification({
+          show: true,
+          message: result.message || 'Đổi mật khẩu thất bại!',
+          type: 'error'
+        });
+
+        // Auto hide after 3 seconds
+        setTimeout(() => {
+          setNotification({ show: false, message: '', type: 'error' });
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Change password error:', error);
+      
+      // Show error notification
+      setNotification({
+        show: true,
+        message: 'Có lỗi xảy ra khi đổi mật khẩu. Vui lòng thử lại!',
+        type: 'error'
+      });
+
+      // Auto hide after 3 seconds
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: 'error' });
+      }, 3000);
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   if (!user) {
@@ -227,6 +325,22 @@ const ProfilePage: React.FC = () => {
 
   return (
       <>
+        {/* Toast Notification */}
+        {notification.show && (
+          <div className={`toast-notification ${notification.type}`}>
+            <div className="toast-content">
+              <i className={`fas ${notification.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
+              <span>{notification.message}</span>
+            </div>
+            <button 
+              className="toast-close" 
+              onClick={() => setNotification({ show: false, message: '', type: 'success' })}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+        )}
+
         <div className="profile-container">
           <div className="profile-sidebar">
             {/* User Avatar & Basic Info */}
@@ -489,7 +603,15 @@ const ProfilePage: React.FC = () => {
                             value={passwordData.currentPassword}
                             onChange={handlePasswordChange}
                             placeholder="Nhập mật khẩu hiện tại"
+                            className={passwordErrors.currentPassword ? 'error' : ''}
+                            disabled={isChangingPassword}
                         />
+                        {passwordErrors.currentPassword && (
+                            <span className="error-message">
+                              <i className="fas fa-exclamation-circle"></i>
+                              {passwordErrors.currentPassword}
+                            </span>
+                        )}
                       </div>
 
                       <div className="form-group">
@@ -499,8 +621,16 @@ const ProfilePage: React.FC = () => {
                             name="newPassword"
                             value={passwordData.newPassword}
                             onChange={handlePasswordChange}
-                            placeholder="Nhập mật khẩu mới"
+                            placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                            className={passwordErrors.newPassword ? 'error' : ''}
+                            disabled={isChangingPassword}
                         />
+                        {passwordErrors.newPassword && (
+                            <span className="error-message">
+                              <i className="fas fa-exclamation-circle"></i>
+                              {passwordErrors.newPassword}
+                            </span>
+                        )}
                       </div>
 
                       <div className="form-group">
@@ -511,13 +641,34 @@ const ProfilePage: React.FC = () => {
                             value={passwordData.confirmPassword}
                             onChange={handlePasswordChange}
                             placeholder="Nhập lại mật khẩu mới"
+                            className={passwordErrors.confirmPassword ? 'error' : ''}
+                            disabled={isChangingPassword}
                         />
+                        {passwordErrors.confirmPassword && (
+                            <span className="error-message">
+                              <i className="fas fa-exclamation-circle"></i>
+                              {passwordErrors.confirmPassword}
+                            </span>
+                        )}
                       </div>
                     </div>
 
-                    <button className="change-password-btn" onClick={handleChangePassword}>
-                      <i className="fas fa-lock"></i>
-                      Đổi mật khẩu
+                    <button 
+                      className="change-password-btn" 
+                      onClick={handleChangePassword}
+                      disabled={isChangingPassword}
+                    >
+                      {isChangingPassword ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i>
+                          Đang xử lý...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-lock"></i>
+                          Đổi mật khẩu
+                        </>
+                      )}
                     </button>
                   </div>
 

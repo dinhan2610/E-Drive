@@ -688,6 +688,70 @@
   }
 }
 
+// Inventory (Kho Hàng)
+.inventoryManagement {
+  display: flex;
+  flex-direction: column;
+}
+
+.inventoryTable {
+  background: linear-gradient(145deg, #ffffff 0%, #fbfcfd 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+  padding: 18px;
+  overflow-x: auto;
+  margin-bottom: 24px;
+
+  table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+      vertical-align: middle;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    th {
+      background: transparent;
+      font-weight: 700;
+      color: #111827;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 13px;
+    }
+
+    tbody tr {
+      transition: background 0.18s ease, transform 0.12s ease;
+      background: transparent;
+
+      &:hover {
+        background: rgba(255, 77, 48, 0.03);
+        transform: translateY(-2px);
+      }
+    }
+  }
+
+  /* small screens: reduce min-width and font-size */
+  @media (max-width: 900px) {
+    table {
+      min-width: 600px;
+      th, td { padding: 10px 12px; font-size: 13px; }
+    }
+  }
+
+  @media (max-width: 640px) {
+    padding: 12px;
+    table { min-width: 520px; th, td { font-size: 12px; padding: 8px 10px; } }
+  }
+}
+
+
 // Test Drives Management
 .testDrivesManagement {
   display: flex;
@@ -1099,6 +1163,10 @@
     0 20px 60px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   overflow: hidden;
+  /* Keep modal centered but limit height so content can scroll inside modalBody */
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
 }
 
 .modalHeader {
@@ -1148,6 +1216,246 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* allow internal scrolling when modal content is taller than available viewport */
+  overflow-y: auto;
+  max-height: calc(100vh - 180px); /* account for header/footer */
+}
+
+// ===== Image Upload Section Styles =====
+.imageUploadSection {
+  width: 100%;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: #ff4d30;
+    background: linear-gradient(135deg, #fff5f3 0%, #ffe8e3 100%);
+  }
+}
+
+.imageUploadContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.imageLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+
+  i {
+    color: #ff4d30;
+    font-size: 16px;
+  }
+}
+
+.imageUrlInput {
+  display: flex;
+  flex-direction: column;
+}
+
+.uploadDivider {
+  position: relative;
+  text-align: center;
+  margin: 8px 0;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 42%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #cbd5e1, transparent);
+  }
+
+  &::before {
+    left: 0;
+  }
+
+  &::after {
+    right: 0;
+  }
+
+  span {
+    display: inline-block;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: transparent;
+    letter-spacing: 1px;
+  }
+}
+
+.fileUploadWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.fileUploadBox {
+  position: relative;
+  width: 100%;
+  min-height: 160px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #ff4d30;
+    background: #fff5f3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.15);
+  }
+}
+
+.fileInput {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.fileUploadLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  cursor: pointer;
+  height: 100%;
+  min-height: 160px;
+}
+
+.uploadIcon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff4d30, #ff6b47);
+  border-radius: 50%;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3);
+
+  i {
+    font-size: 28px;
+    color: #ffffff;
+  }
+
+  .fileUploadBox:hover & {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 6px 20px rgba(255, 77, 48, 0.4);
+  }
+}
+
+.uploadText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.uploadMainText {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.uploadSubText {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.imagePreviewContainer {
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.imagePreviewBox {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  background: #ffffff;
+  border: 3px solid #ff4d30;
+}
+
+.previewImage {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.removeImageBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.95);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+
+  &:hover {
+    background: #dc2626;
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  i {
+    pointer-events: none;
+  }
 }
 
 .formGrid {

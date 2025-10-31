@@ -12,6 +12,7 @@ interface AdminLayoutProps {
     unverifiedDealers: number;
     bookings: number;
     testDrives: number;
+    inventory: number; // number of inventory records
   };
 }
 
@@ -27,6 +28,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
   const getPageTitle = () => {
     switch (activeTab) {
       case 'dashboard': return 'Dashboard';
+      case 'inventory': return 'Kho Hàng';
       case 'cars': return 'Quản lý xe';
       case 'dealers': return 'Đại lý';
       case 'bookings': return 'Đặt xe';
@@ -39,6 +41,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
   const getPageIcon = () => {
     switch (activeTab) {
       case 'dashboard': return 'fas fa-chart-line';
+      case 'inventory': return 'fas fa-warehouse';
       case 'cars': return 'fas fa-car';
       case 'dealers': return 'fas fa-store';
       case 'bookings': return 'fas fa-calendar-alt';
@@ -88,6 +91,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
             >
               <i className="fas fa-car"></i>
               <span>Quản lý xe ({counters.cars})</span>
+            </div>
+            <div
+              className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
+              onClick={() => {
+                onTabChange('inventory');
+                setSidebarOpen(false);
+              }}
+            >
+              <i className="fas fa-warehouse"></i>
+              <span>Kho Hàng ({counters.inventory})</span>
             </div>
             <div
               className={`${styles.navItem} ${activeTab === 'dealers' ? styles.active : ''}`}

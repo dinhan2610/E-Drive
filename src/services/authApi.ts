@@ -17,6 +17,12 @@ interface LoginRequest {
   password: string;
 }
 
+interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 // API Response format từ backend
 interface ApiResponse<T = any> {
   statusCode: number;
@@ -261,6 +267,49 @@ export const authApi = {
     } catch (error) {
       console.error('Error decoding token:', error);
       return null;
+    }
+  },
+
+  // Change Password API
+  async changePassword(passwordData: ChangePasswordRequest): Promise<AuthResponse> {
+    try {
+      const token = tokenManager.getAccessToken();
+      
+      if (!token) {
+        throw new Error('Bạn chưa đăng nhập');
+      }
+
+      console.log('🔐 Đang gửi yêu cầu đổi mật khẩu...');
+
+      const response = await fetch(`${API_BASE_URL}/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': '*/*'
+        },
+        body: JSON.stringify(passwordData),
+      });
+
+      console.log('📡 Response status:', response.status);
+
+      const apiResponse: ApiResponse = await response.json();
+      console.log('📦 API Response:', apiResponse);
+
+      if (!response.ok || apiResponse.statusCode !== 200) {
+        throw new Error(apiResponse.message || 'Đổi mật khẩu thất bại');
+      }
+
+      return {
+        success: true,
+        message: apiResponse.message || 'Đổi mật khẩu thành công'
+      };
+    } catch (error) {
+      console.error('❌ Change password error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi đổi mật khẩu'
+      };
     }
   }
 };
