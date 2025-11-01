@@ -50,7 +50,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedule }) => {
             {displayItems.map((item) => (
               <tr 
                 key={item.period}
-                className={item.remaining === 0 ? styles.finalRow : ''}
               >
                 <td className={styles.period}>
                   <span className={styles.periodBadge}>{item.period}</span>
@@ -58,14 +57,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedule }) => {
                 <td className={styles.month}>Tháng {item.period}</td>
                 <td className={styles.payment}>{toVND(item.monthly)}</td>
                 <td className={styles.remaining}>
-                  {item.remaining === 0 ? (
-                    <span className={styles.paidOff}>
-                      <i className="fas fa-check-circle"></i>
-                      Hoàn thành
-                    </span>
-                  ) : (
-                    toVND(item.remaining)
-                  )}
+                  {toVND(item.remaining)}
                 </td>
               </tr>
             ))}

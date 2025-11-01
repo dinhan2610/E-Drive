@@ -154,17 +154,29 @@ export const authApi = {
         refreshToken: savedRefreshToken ? `${savedRefreshToken.substring(0, 30)}... (length: ${savedRefreshToken.length})` : 'NULL'
       });
 
-      // Decode JWT để lấy thông tin user (nếu cần)
+      // Decode JWT để lấy thông tin user (bao gồm role)
       // Token format: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PAYLOAD.SIGNATURE
       let user: any = { username: credentials.username };
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('🔍 JWT Payload:', payload);
+        
+        // Parse role từ JWT - có thể là 'role', 'roles', hoặc 'authorities'
+        let role = payload.role || payload.roles?.[0] || payload.authorities?.[0] || 'dealer';
+        
+        // Chuẩn hóa role: "ROLE_ADMIN" -> "admin", "ROLE_DEALER" -> "dealer"
+        if (role && typeof role === 'string') {
+          role = role.replace('ROLE_', '').toLowerCase();
+        }
+        
         user = {
           ...payload,
           username: credentials.username,
-          fullName: payload.fullName || payload.name || credentials.username
+          fullName: payload.fullName || payload.name || credentials.username,
+          role: role
         };
-        console.log('👤 User info từ token:', user);
+        console.log('👤 User info từ token (bao gồm role):', user);
+        console.log('🎯 Normalized role:', role);
       } catch (e) {
         console.warn('Không thể decode token, sử dụng thông tin mặc định');
       }

@@ -15,10 +15,15 @@ const DownPaymentInput: React.FC<DownPaymentInputProps> = ({
 }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    const percent = parseFloat(inputValue) || 0;
+    const percent = parseFloat(inputValue) || 30;
     
-    if (percent >= 0 && percent <= 100) {
+    // Giới hạn: tối thiểu 30%, tối đa 90%
+    if (percent >= 30 && percent <= 90) {
       onValueChange(percent);
+    } else if (percent < 30) {
+      onValueChange(30);
+    } else if (percent > 90) {
+      onValueChange(90);
     }
   };
 
@@ -35,9 +40,9 @@ const DownPaymentInput: React.FC<DownPaymentInputProps> = ({
           className={styles.input}
           value={value}
           onChange={handleInputChange}
-          placeholder="20"
-          min="0"
-          max="100"
+          placeholder="30"
+          min="30"
+          max="90"
           step="5"
         />
         <span className={styles.suffix}>%</span>
@@ -45,7 +50,7 @@ const DownPaymentInput: React.FC<DownPaymentInputProps> = ({
 
       <div className={styles.hint}>
         <i className="fas fa-info-circle"></i>
-        Số tiền: {toVND((carPrice * value) / 100)}
+        Số tiền: {toVND((carPrice * value) / 100)} (Tối thiểu 30%, tối đa 90%)
       </div>
     </div>
   );

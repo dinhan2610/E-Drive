@@ -1,7 +1,7 @@
 .exportButtons {
   display: flex;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 16px;
 
   .button {
     flex: 1;
@@ -38,15 +38,6 @@
     }
 
     &.pdf {
-      background: linear-gradient(135deg, #e53935 0%, #ef5350 100%);
-      color: white;
-
-      &:hover:not(:disabled) {
-        box-shadow: 0 6px 20px rgba(229, 57, 53, 0.4);
-      }
-    }
-
-    &.consult {
       background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
       color: white;
 

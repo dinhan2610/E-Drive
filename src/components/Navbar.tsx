@@ -63,6 +63,10 @@ const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('e-drive-user');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     setIsLoggedIn(false);
     setUserProfile(null);
     window.dispatchEvent(new Event('userLogout'));
