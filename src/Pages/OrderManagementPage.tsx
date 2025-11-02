@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { trackByPhoneWithOtp } from '../services/trackingApi';
 import type { TrackingItem } from '../types/tracking';
 import OrderDetailModal from '../components/order/OrderDetailModal';
@@ -38,6 +39,7 @@ const getStatusLabel = (status: string) => {
 };
 
 const OrderManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<TrackingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<TrackingItem | null>(null);
@@ -252,6 +254,13 @@ const OrderManagementPage: React.FC = () => {
                             onClick={() => handleEdit(order)}
                           >
                             <i className="fas fa-edit"></i>
+                          </button>
+                          <button 
+                            className={`${styles.actionButton} ${styles.contract}`}
+                            title="Tạo hợp đồng"
+                            onClick={() => navigate(`/admin/contracts/new?orderId=${order.id}`)}
+                          >
+                            <i className="fas fa-file-contract"></i>
                           </button>
                           <button 
                             className={`${styles.actionButton} ${styles.delete}`}

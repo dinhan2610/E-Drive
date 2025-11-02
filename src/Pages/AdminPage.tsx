@@ -1572,14 +1572,11 @@ const AdminPage: React.FC = () => {
                             <i className="fas fa-eye"></i>
                           </button>
                           <button 
-                            className={styles.deleteButton} 
-                            title="Hủy đơn hàng"
-                            onClick={() => handleCancelOrder(
-                              booking.id, 
-                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
-                            )}
+                            className={styles.contractButton} 
+                            title="Tạo hợp đồng"
+                            onClick={() => window.location.href = `/admin/contracts/new?orderId=${booking.id}`}
                           >
-                            <i className="fas fa-times"></i>
+                            <i className="fas fa-file-contract"></i>
                           </button>
                           <button 
                             className={styles.approveButton} 
@@ -1590,6 +1587,16 @@ const AdminPage: React.FC = () => {
                             )}
                           >
                             <i className="fas fa-check"></i>
+                          </button>
+                          <button 
+                            className={styles.deleteButton} 
+                            title="Hủy đơn hàng"
+                            onClick={() => handleCancelOrder(
+                              booking.id, 
+                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
+                            )}
+                          >
+                            <i className="fas fa-times"></i>
                           </button>
                         </div>
                       </td>

@@ -4,7 +4,6 @@ import type { Product } from '../types/product';
 import { getProfile } from '../services/profileApi';
 import { createOrder, getOrdersByDealer, type CreateOrderRequest, type Order } from '../services/orderApi';
 import { confirmDelivery, DeliveryApiError } from '../services/deliveryApi';
-import { startVnPay } from '../services/paymentApi';
 import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/DealerOrderPage.module.scss';
@@ -73,7 +72,6 @@ const DealerOrderPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [confirmingOrderId, setConfirmingOrderId] = useState<number | string | null>(null);
-  const [payingOrderId, setPayingOrderId] = useState<number | string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   
@@ -210,28 +208,6 @@ const DealerOrderPage: React.FC = () => {
       }
     } finally {
       setConfirmingOrderId(null);
-    }
-  };
-
-  const handlePayment = async (orderId: number | string) => {
-    setPayingOrderId(orderId as any);
-    try {
-      console.log(`💳 Initiating VNPay payment for order ${orderId}...`);
-      
-      // Remove '#' prefix if exists (orderId might be displayed as "#84d8772d-...")
-      const cleanOrderId = typeof orderId === 'string' ? orderId.replace('#', '') : orderId;
-      console.log('🔍 Clean order ID:', cleanOrderId);
-      
-      const vnpayResponse = await startVnPay(cleanOrderId);
-      
-      console.log('✅ VNPay URL received:', vnpayResponse.paymentUrl);
-      
-      // Redirect to VNPay sandbox
-      window.location.href = vnpayResponse.paymentUrl;
-    } catch (error: any) {
-      console.error('❌ Error initiating payment:', error);
-      alert(`Không thể khởi tạo thanh toán: ${error.message || 'Vui lòng thử lại.'}`);
-      setPayingOrderId(null);
     }
   };
 
@@ -411,22 +387,37 @@ const DealerOrderPage: React.FC = () => {
       console.log('Order created successfully:', createdOrder);
       console.log('Created order ID:', createdOrder.orderId);
 
-      // Initiate VNPay payment and redirect to sandbox
-      console.log('💳 Initiating VNPay payment for new order:', createdOrder.orderId);
+      // Show success message
+      setShowSuccess(true);
       
-      try {
-        const vnpayResponse = await startVnPay(createdOrder.orderId);
-        console.log('✅ VNPay URL received:', vnpayResponse.paymentUrl);
-        
-        // Redirect to VNPay sandbox
-        window.location.href = vnpayResponse.paymentUrl;
-      } catch (paymentError: any) {
-        console.error('❌ Error initiating VNPay:', paymentError);
-        alert(`Đơn hàng đã tạo thành công nhưng không thể khởi tạo thanh toán VNPay.\n\nVui lòng vào "Đơn hàng của tôi" để thanh toán sau.`);
-        
-        // Switch to orders list tab to show the created order
+      // Reset form and switch to orders list
+      setFormData({
+        dealerName: '',
+        dealerCode: '',
+        contactPerson: '',
+        email: '',
+        phone: '',
+        address: '',
+        ward: '',
+        district: '',
+        city: '',
+        selectedProducts: [],
+        preferredDeliveryDate: '',
+        deliveryAddress: '',
+        deliveryNote: '',
+        paymentMethod: 'bank-transfer',
+        notes: '',
+        urgentOrder: false
+      });
+      
+      // Reload orders list
+      await loadOrders();
+      
+      // Switch to list tab after short delay
+      setTimeout(() => {
         setActiveTab('list');
-      }
+      }, 2000);
+      
     } catch (error: any) {
       console.error('Error creating order:', error);
       alert(`Lỗi khi tạo đơn hàng: ${error.message || 'Vui lòng thử lại'}`);
@@ -713,37 +704,6 @@ const DealerOrderPage: React.FC = () => {
                 
               </section>
 
-              {/* Payment Method */}
-              <section className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <i className="fas fa-credit-card"></i>
-                  <h2>Phương thức thanh toán</h2>
-                </div>
-
-                <div className={styles.paymentOptions}>
-                  <label className={styles.radioCard}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="bank-transfer"
-                      checked={formData.paymentMethod === 'bank-transfer'}
-                      onChange={handleInputChange}
-                    />
-                    <div className={styles.radioContent}>
-                      <div className={styles.radioHeader}>
-                        <i className="fas fa-university"></i>
-                        <span>Thanh toán trực tuyến</span>
-                      </div>
-                      <p className={styles.radioDescription}>
-                        Thanh toán ngay qua VNPay - An toàn & nhanh chóng
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              </section>
-
-              
-
               {/* Submit */}
               <div className={styles.submitSection}>
                 
@@ -755,12 +715,12 @@ const DealerOrderPage: React.FC = () => {
                   {isSubmitting ? (
                     <>
                       <i className="fas fa-spinner fa-spin"></i>
-                      Đang chuyển đến VNPay...
+                      Đang xử lý...
                     </>
                   ) : (
                     <>
                       <i className="fas fa-check-circle"></i>
-                      Thanh toán
+                      Đặt hàng
                     </>
                   )}
                 </button>
@@ -849,27 +809,6 @@ const DealerOrderPage: React.FC = () => {
                             )}
                           </button>
                         )}
-                        
-                        {order.paymentStatus === 'PENDING' && (
-                          <button
-                            type="button"
-                            onClick={() => handlePayment(order.orderId)}
-                            disabled={payingOrderId === order.orderId}
-                            className={styles.payButton}
-                          >
-                            {payingOrderId === order.orderId ? (
-                              <>
-                                <i className="fas fa-spinner fa-spin"></i>
-                                Đang chuyển hướng...
-                              </>
-                            ) : (
-                              <>
-                                <i className="fas fa-credit-card"></i>
-                                Thanh toán
-                              </>
-                            )}
-                          </button>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -885,7 +824,7 @@ const DealerOrderPage: React.FC = () => {
         isOpen={showSuccess}
         onClose={handleSuccessClose}
         title="Đặt hàng thành công!"
-        message={`Đơn hàng của bạn đã được ghi nhận. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất. Mã đơn hàng: DH-${Date.now()}`}
+        message="Đơn hàng của bạn đã được gửi thành công và đang chờ Admin duyệt. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất."
       />
 
       {/* Order Detail Modal */}
@@ -1000,18 +939,6 @@ const DealerOrderPage: React.FC = () => {
               <button onClick={() => setShowOrderDetail(false)} className={styles.closeButton}>
                 Đóng
               </button>
-              {selectedOrder.paymentStatus === 'PENDING' && (
-                <button 
-                  onClick={() => {
-                    setShowOrderDetail(false);
-                    handlePayment(selectedOrder.orderId);
-                  }}
-                  className={styles.payButton}
-                >
-                  <i className="fas fa-credit-card"></i>
-                  Thanh toán ngay
-                </button>
-              )}
             </div>
           </div>
         </div>

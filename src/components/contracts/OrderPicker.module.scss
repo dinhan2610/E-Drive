@@ -1,0 +1,249 @@
+@use "../../styles/global/colors" as *;
+@use "../../styles/global/boilerplate" as *;
+
+.picker {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  height: calc(100vh - 16rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  margin-bottom: 2rem;
+
+  .title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    i {
+      color: #ff4d30;
+    }
+  }
+
+  .subtitle {
+    font-size: 1.4rem;
+    color: #6c757d;
+  }
+}
+
+.search {
+  position: relative;
+  margin-bottom: 2rem;
+
+  i.fa-search {
+    position: absolute;
+    left: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 1.6rem;
+  }
+
+  .searchInput {
+    width: 100%;
+    padding: 1.2rem 4rem 1.2rem 4.5rem;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    font-size: 1.5rem;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #ff4d30;
+      box-shadow: 0 0 0 4px rgba(255, 77, 48, 0.1);
+    }
+
+    &::placeholder {
+      color: #adb5bd;
+    }
+  }
+
+  .clearBtn {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    color: #6c757d;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #dc3545;
+    }
+  }
+}
+
+.orderList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 10px;
+
+    &:hover {
+      background: #adb5bd;
+    }
+  }
+}
+
+.loading,
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  color: #6c757d;
+
+  i {
+    font-size: 4rem;
+  }
+
+  p {
+    font-size: 1.6rem;
+  }
+}
+
+.orderCard {
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  &:hover {
+    border-color: #ff4d30;
+    transform: translateX(4px);
+    box-shadow: 0 4px 16px rgba(255, 77, 48, 0.15);
+  }
+
+  &.selected {
+    border-color: #ff4d30;
+    background: linear-gradient(135deg, rgba(255, 77, 48, 0.05) 0%, rgba(255, 77, 48, 0.02) 100%);
+    box-shadow: 0 4px 16px rgba(255, 77, 48, 0.2);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+
+  .orderCode {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #212529;
+  }
+
+  .statusBadge {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &.confirmed {
+      background: rgba(40, 167, 69, 0.1);
+      color: #28a745;
+    }
+
+    &.allocated {
+      background: rgba(0, 123, 255, 0.1);
+      color: #007bff;
+    }
+
+    &.pending {
+      background: rgba(255, 193, 7, 0.1);
+      color: #ffc107;
+    }
+  }
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+
+  .infoRow {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.4rem;
+    color: #495057;
+
+    i {
+      width: 20px;
+      color: #6c757d;
+      text-align: center;
+    }
+
+    .vin {
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      color: #212529;
+    }
+  }
+}
+
+.cardFooter {
+  padding-top: 1.2rem;
+  border-top: 1px solid #e9ecef;
+
+  .moneyInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+
+    .moneyRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.4rem;
+
+      strong {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #212529;
+      }
+
+      .paid {
+        color: #28a745;
+        font-weight: 600;
+      }
+
+      .remaining {
+        color: #ff4d30;
+        font-weight: 700;
+      }
+    }
+  }
+}

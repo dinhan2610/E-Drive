@@ -379,7 +379,8 @@
 .viewButton,
 .editButton,
 .deleteButton,
-.approveButton {
+.approveButton,
+.contractButton {
   width: 32px;
   height: 32px;
   border: none;
@@ -409,6 +410,16 @@
 
   &:hover {
     background: #10b981;
+    transform: scale(1.1);
+  }
+}
+
+.contractButton {
+  background: rgba(13, 110, 253, 0.9);
+  color: white;
+
+  &:hover {
+    background: #0d6efd;
     transform: scale(1.1);
   }
 }
@@ -594,6 +605,7 @@
 
   .viewButton,
   .editButton,
+  .contractButton,
   .deleteButton,
   .approveButton {
     width: 28px;

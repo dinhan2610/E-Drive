@@ -14,9 +14,8 @@ import TestDriveManagementPage from "./Pages/TestDriveManagementPage";
 import OrderManagementPage from "./Pages/OrderManagementPage";
 import PromotionsPage from "./Pages/PromotionsPage";
 import FinancingPage from "./Pages/FinancingPage";
-import PaymentPage from "./Pages/payment/PaymentPage";
-import PaymentReturnPage from "./Pages/payment/PaymentReturnPage";
 import TicketsPage from "./Pages/TicketsPage";
+import ContractCreatePageNew from "./Pages/ContractCreatePage_new";
 import Navbar from "../src/components/Navbar";
 import Footer from "../src/components/Footer";
 import ChatBox from "../src/components/ChatBox";
@@ -132,26 +131,17 @@ function App() {
             <CustomersPage />
           </ProtectedRoute>
         } />
-        <Route path="/orders/:orderId/payment" element={
-          <ProtectedRoute requiredRole="dealer">
-            <PaymentPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/payment/vnpay-return" element={
-          <ProtectedRoute requiredRole="dealer">
-            <PaymentReturnPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/payments/vnpay-return" element={
-          <ProtectedRoute requiredRole="dealer">
-            <PaymentReturnPage />
-          </ProtectedRoute>
-        } />
         
         {/* Admin Protected Routes - Only /admin */}
         <Route path="/admin" element={
           <ProtectedRoute requiredRole="admin">
             <AdminPage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/contracts/new" element={
+          <ProtectedRoute requiredRole="admin">
+            <ContractCreatePageNew />
           </ProtectedRoute>
         } />
       </Routes>
