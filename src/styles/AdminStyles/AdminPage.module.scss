@@ -204,6 +204,46 @@
   }
 }
 
+// Inventory Summary Badges
+.inventorySummary {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.summaryBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: #ff4d30;
+    background: linear-gradient(135deg, #fff5f3 0%, #ffe8e3 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.15);
+  }
+
+  i {
+    color: #ff4d30;
+    font-size: 18px;
+  }
+
+  strong {
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 16px;
+  }
+}
+
 .addButton {
   background: linear-gradient(135deg, #ff4d30, #ff6b47);
   color: white;
@@ -516,6 +556,11 @@
   &.inactive {
     background: rgba(156, 163, 175, 0.1);
     color: #6b7280;
+  }
+
+  &.warning {
+    background: rgba(251, 191, 36, 0.1);
+    color: #d97706;
   }
 
   &.available {
@@ -1805,4 +1850,10 @@
   i {
     font-size: 12px;
   }
+}
+
+.divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 20px 0;
 }

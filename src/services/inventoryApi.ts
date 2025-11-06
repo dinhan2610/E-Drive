@@ -1,36 +1,53 @@
-import type { ManufacturerInventoryItem } from '../types/inventory';
+// import type { ManufacturerInventorySummary, VehicleInventoryItem } from '../types/inventory';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// const API_BASE_URL = 'http://localhost:8080/api';
 
-export async function fetchManufacturerInventory(): Promise<ManufacturerInventoryItem[]> {
-  const url = `${API_BASE_URL}/manufacturer-inventory`;
-  console.log('🌐 Fetching manufacturer inventory from:', url);
+// /**
+//  * Fetch manufacturer inventory summary
+//  * GET /api/manufacturer-inventory/summary
+//  * Returns: { manufacturerName, totalQuantity, vehicles: [...] }
+//  */
+// export async function fetchManufacturerInventorySummary(): Promise<ManufacturerInventorySummary> {
+//   const url = `${API_BASE_URL}/manufacturer-inventory/summary`;
+//   console.log('🌐 Fetching manufacturer inventory summary from:', url);
 
-  try {
-    const res = await fetch(url, { headers: { Accept: '*/*' } });
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-    }
+//   try {
+//     const res = await fetch(url, { 
+//       headers: { 
+//         Accept: 'application/json',
+//         'Content-Type': 'application/json'
+//       } 
+//     });
 
-    const data = await res.json();
-    // API may return array directly or wrapper { statusCode, data }
-    if (Array.isArray(data)) {
-      return data as ManufacturerInventoryItem[];
-    }
+//     if (!res.ok) {
+//       throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+//     }
 
-    if (data && Array.isArray(data.data)) {
-      return data.data as ManufacturerInventoryItem[];
-    }
+//     const data = await res.json();
+//     console.log('✅ API Response:', data);
 
-    // If single object with fields, try to detect
-    if (data && typeof data === 'object' && 'inventoryId' in data) {
-      return [data as ManufacturerInventoryItem];
-    }
+//     // Check if API returns an array (take first item) or direct object
+//     let summary: ManufacturerInventorySummary;
+    
+//     if (Array.isArray(data) && data.length > 0) {
+//       console.log('📦 API returned array, using first item');
+//       summary = data[0];
+//     } else if (data && typeof data === 'object' && 'vehicles' in data) {
+//       console.log('📦 API returned direct object');
+//       summary = data;
+//     } else {
+//       console.warn('⚠️ Unexpected response format', data);
+//       return {
+//         manufacturerName: 'Unknown',
+//         totalQuantity: 0,
+//         vehicles: []
+//       };
+//     }
 
-    console.warn('⚠️ Unexpected manufacturer-inventory response format', data);
-    return [];
-  } catch (error) {
-    console.error('❌ fetchManufacturerInventory error:', error);
-    throw error;
-  }
-}
+//     console.log('✅ Manufacturer inventory summary:', summary);
+//     return summary;
+//   } catch (error) {
+//     console.error('❌ fetchManufacturerInventorySummary error:', error);
+//     throw error;
+//   }
+// }

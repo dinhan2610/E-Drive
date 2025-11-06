@@ -86,8 +86,61 @@ export async function fetchVehiclesFromApi(params: ApiParams = {}): Promise<{ ve
   }
 }
 
+// Type for creating vehicle with multiple colors - NEW API FORMAT
+export interface CreateVehicleRequest {
+  modelName: string;
+  version: string;
+  colors: Array<{
+    colorId: number;
+    imageUrl: string; // Can be URL string or base64 string
+  }>;
+  batteryCapacityKwh: number;
+  rangeKm: number;
+  maxSpeedKmh: number;
+  chargingTimeHours: number;
+  seatingCapacity: number;
+  motorPowerKw: number;
+  weightKg: number;
+  lengthMm: number;
+  widthMm: number;
+  heightMm: number;
+  priceRetail: number;
+  status: 'AVAILABLE' | 'DISCONTINUED';
+  manufactureYear: number;
+}
+
+// Response type when creating multiple vehicles
+export interface CreateVehiclesResponse {
+  statusCode: number;
+  message: string;
+  data: VehicleApiResponse[];
+}
+
+// Type for updating a single vehicle by ID - API expects colors array
+export interface UpdateVehicleRequest {
+  modelName: string;
+  version: string;
+  colors: Array<{
+    colorId: number;
+    imageUrl: string; // URL or base64 string
+  }>;
+  batteryCapacityKwh: number;
+  rangeKm: number;
+  maxSpeedKmh: number;
+  chargingTimeHours: number;
+  seatingCapacity: number;
+  motorPowerKw: number;
+  weightKg: number;
+  lengthMm: number;
+  widthMm: number;
+  heightMm: number;
+  priceRetail: number;
+  status: 'AVAILABLE' | 'DISCONTINUED';
+  manufactureYear: number;
+}
+
 // Create new vehicle in database
-export async function createVehicle(vehicleData: Omit<VehicleApiResponse, 'vehicleId'>): Promise<VehicleApiResponse> {
+export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<CreateVehiclesResponse | VehicleApiResponse | VehicleApiResponse[]> {
   const url = `${API_BASE_URL}/vehicles`;
   
   // Loại bỏ các field undefined/null
@@ -145,36 +198,31 @@ export async function createVehicle(vehicleData: Omit<VehicleApiResponse, 'vehic
     console.log('✅ Vehicle Created Response:', data);
 
     // Xử lý các format response khác nhau
-    let createdVehicle: VehicleApiResponse | null = null;
-
-    // Format 1: ApiCreateResponse với data object (như trong hình - ưu tiên cao nhất)
-    if ((data.statusCode === 200 || data.statusCode === 201) && data.data && typeof data.data === 'object' && !Array.isArray(data.data) && 'vehicleId' in data.data) {
-      createdVehicle = data.data as VehicleApiResponse;
-      console.log('✅ Format 1: Response với statusCode + data object');
+    
+    // Format 1: Response với statusCode + data array (như trong hình API - ưu tiên cao nhất)
+    // { statusCode: 201, message: "Vehicles created", data: [...] }
+    if ((data.statusCode === 200 || data.statusCode === 201) && data.data && Array.isArray(data.data)) {
+      console.log('✅ Format 1: Response với statusCode + data array (nhiều xe)');
+      return {
+        statusCode: data.statusCode,
+        message: data.message || 'Vehicles created',
+        data: data.data
+      } as CreateVehiclesResponse;
     }
-    // Format 2: ApiCreateResponse với data array
-    else if ((data.statusCode === 200 || data.statusCode === 201) && data.data && Array.isArray(data.data) && data.data.length > 0) {
-      createdVehicle = data.data[0];
-      console.log('✅ Format 2: Response với data array');
+    // Format 2: ApiCreateResponse với data object (single vehicle)
+    else if ((data.statusCode === 200 || data.statusCode === 201) && data.data && typeof data.data === 'object' && !Array.isArray(data.data) && 'vehicleId' in data.data) {
+      console.log('✅ Format 2: Response với statusCode + data object (single vehicle)');
+      return data.data as VehicleApiResponse;
     }
     // Format 3: Direct VehicleApiResponse
     else if ('vehicleId' in data && 'modelName' in data) {
-      createdVehicle = data as unknown as VehicleApiResponse;
       console.log('✅ Format 3: Direct VehicleApiResponse');
+      return data as unknown as VehicleApiResponse;
     }
     // Format 4: Response với message thành công nhưng không có data chi tiết
     else if (data.statusCode === 200 || data.statusCode === 201) {
-      console.log('🔄 API trả về thành công nhưng không có data, tạo từ input data...');
-      // Tạo vehicle data từ input + vehicleId từ response hoặc timestamp
-      createdVehicle = {
-        vehicleId: (data as any).vehicleId || (data.data as any)?.vehicleId || Date.now(),
-        ...vehicleData
-      } as VehicleApiResponse;
-    }
-
-    if (createdVehicle) {
-      console.log('✅ Created vehicle data:', createdVehicle);
-      return createdVehicle;
+      console.log('🔄 API trả về thành công nhưng không có data...');
+      throw new Error('API created vehicle successfully but did not return vehicle data');
     }
     
     console.error('❌ Unhandled response format:', data);
@@ -234,52 +282,67 @@ export async function getVehicleById(vehicleId: number): Promise<VehicleApiRespo
   }
 }
 
-// Update vehicle by ID
-export async function updateVehicle(vehicleId: number, vehicleData: Omit<VehicleApiResponse, 'vehicleId'>): Promise<VehicleApiResponse> {
+// Update vehicle by ID - Updates a single vehicle
+export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicleRequest): Promise<VehicleApiResponse> {
   const url = `${API_BASE_URL}/vehicles/${vehicleId}`;
-  console.log('✏️ Updating vehicle:', url, vehicleData);
+  
+  // Clean data - remove undefined/null
+  const cleanedData = Object.fromEntries(
+    Object.entries(vehicleData).filter(([_, value]) => value !== undefined && value !== null)
+  );
+  
+  console.log('✏️ Updating vehicle at:', url);
+  console.log('📤 Update request body:', JSON.stringify(cleanedData, null, 2));
 
   try {
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
-      body: JSON.stringify(vehicleData),
+      body: JSON.stringify(cleanedData),
     });
 
+    const responseText = await response.text();
+    console.log('📥 Raw update response:', responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = responseText;
       console.error('❌ Update Vehicle Error Response:', errorText);
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}\n${errorText}`);
     }
 
-    const data = await response.json();
+    // Parse response
+    let data: any;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      throw new Error('Invalid JSON response from server');
+    }
+
     console.log('✅ Vehicle Updated Response:', data);
 
     // Handle different response formats
     let updatedVehicle: VehicleApiResponse | null = null;
 
-    // Format 1: ApiListResponse với data array
-    if (data.statusCode === 200 && data.data && Array.isArray(data.data) && data.data.length > 0) {
-      updatedVehicle = data.data[0];
+    // Format 1: Response with statusCode and data object
+    if ((data.statusCode === 200 || data.statusCode === 0) && data.data && typeof data.data === 'object') {
+      if ('vehicleId' in data.data) {
+        updatedVehicle = data.data;
+        console.log('✅ Format: Response with statusCode + data object');
+      }
     }
     // Format 2: Direct VehicleApiResponse
     else if (data.vehicleId && data.modelName) {
       updatedVehicle = data;
+      console.log('✅ Format: Direct VehicleApiResponse');
     }
-    // Format 3: Data object trực tiếp
-    else if (data.data && data.data.vehicleId) {
-      updatedVehicle = data.data;
-    }
-    // Format 4: Response với message thành công nhưng không có data
-    else if (data.statusCode === 200 || data.statusCode === 201 || response.ok) {
-      console.log('🔄 API trả về thành công nhưng không có data, tạo từ input data...');
-      // Tạo vehicle data từ input + vehicleId
-      updatedVehicle = {
-        vehicleId: vehicleId,
-        ...vehicleData
-      };
+    // Format 3: Success message without detailed data
+    else if (data.statusCode === 200 || data.statusCode === 0) {
+      console.log('🔄 API returned success without vehicle data, refetching...');
+      // Refetch the vehicle to get updated data
+      return await getVehicleById(vehicleId);
     }
 
     if (updatedVehicle) {

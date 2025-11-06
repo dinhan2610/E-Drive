@@ -8,6 +8,7 @@ interface AdminLayoutProps {
   onTabChange: (tab: string) => void;
   counters: {
     cars: number;
+    colors: number;
     dealers: number;
     unverifiedDealers: number;
     bookings: number;
@@ -30,6 +31,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'dashboard': return 'Dashboard';
       case 'inventory': return 'Kho Hàng';
       case 'cars': return 'Quản lý xe';
+      case 'colors': return 'Quản lý màu xe';
       case 'dealers': return 'Đại lý';
       case 'bookings': return 'Đặt xe';
       case 'analytics': return 'Thống kê';
@@ -43,6 +45,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'dashboard': return 'fas fa-chart-line';
       case 'inventory': return 'fas fa-warehouse';
       case 'cars': return 'fas fa-car';
+      case 'colors': return 'fas fa-palette';
       case 'dealers': return 'fas fa-store';
       case 'bookings': return 'fas fa-calendar-alt';
       case 'analytics': return 'fas fa-chart-bar';
@@ -91,6 +94,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
             >
               <i className="fas fa-car"></i>
               <span>Quản lý xe ({counters.cars})</span>
+            </div>
+            <div
+              className={`${styles.navItem} ${activeTab === 'colors' ? styles.active : ''}`}
+              onClick={() => {
+                onTabChange('colors');
+                setSidebarOpen(false);
+              }}
+            >
+              <i className="fas fa-palette"></i>
+              <span>Quản lý màu xe ({counters.colors})</span>
             </div>
             <div
               className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
