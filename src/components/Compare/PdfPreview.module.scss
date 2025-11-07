@@ -1,0 +1,255 @@
+.pdfPreview {
+  height: 100%;
+  overflow-y: auto;
+  background: #f9fafb;
+  padding: 1rem;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f3f4f6;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+
+    &:hover {
+      background: #9ca3af;
+    }
+  }
+
+  .contractDocument {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-size: 0.9rem;
+    line-height: 1.6;
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #ff4d30;
+
+      h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        text-transform: uppercase;
+      }
+
+      .contractCode {
+        font-size: 0.95rem;
+        color: #6b7280;
+        font-weight: 500;
+      }
+    }
+
+    .section {
+      margin-bottom: 1.5rem;
+
+      h2 {
+        margin: 0 0 1rem 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .infoGrid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+
+        .infoRow {
+          display: flex;
+          gap: 0.5rem;
+
+          &.fullWidth {
+            grid-column: 1 / -1;
+          }
+
+          .label {
+            font-weight: 600;
+            color: #374151;
+            min-width: 120px;
+            flex-shrink: 0;
+          }
+
+          .value {
+            color: #111827;
+            flex: 1;
+          }
+        }
+      }
+
+      .pricingTable {
+        .priceRow {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.5rem 0;
+          border-bottom: 1px solid #f3f4f6;
+          color: #374151;
+
+          span:last-child {
+            font-weight: 500;
+            color: #111827;
+          }
+        }
+
+        .totalRow {
+          display: flex;
+          justify-content: space-between;
+          padding: 1rem;
+          margin-top: 0.5rem;
+          background: #fff7f5;
+          border-radius: 6px;
+          font-weight: 700;
+          font-size: 1.05rem;
+          color: #111827;
+
+          span:last-child {
+            color: #ff4d30;
+            font-size: 1.25rem;
+          }
+        }
+      }
+
+      .notes {
+        margin: 0;
+        padding: 0.75rem;
+        background: #f9fafb;
+        border-radius: 6px;
+        color: #374151;
+        white-space: pre-wrap;
+      }
+    }
+
+    .signatures {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 2px solid #e5e7eb;
+
+      .signatureBlock {
+        text-align: center;
+
+        .signatureLabel {
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 3rem;
+          text-transform: uppercase;
+          font-size: 0.9rem;
+        }
+
+        .signatureLine {
+          height: 1px;
+          background: #d1d5db;
+          margin-bottom: 0.5rem;
+        }
+
+        .signatureName {
+          font-weight: 500;
+          color: #111827;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .pdfPreview {
+    padding: 0.5rem;
+
+    .contractDocument {
+      padding: 1.5rem 1rem;
+      font-size: 0.85rem;
+
+      .header {
+        margin-bottom: 1.5rem;
+
+        h1 {
+          font-size: 1.2rem;
+        }
+
+        .contractCode {
+          font-size: 0.85rem;
+        }
+      }
+
+      .section {
+        margin-bottom: 1.25rem;
+
+        h2 {
+          font-size: 1rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .infoGrid {
+          grid-template-columns: 1fr;
+          gap: 0.5rem;
+
+          .infoRow {
+            flex-direction: column;
+            gap: 0.25rem;
+
+            .label {
+              min-width: auto;
+              font-size: 0.8rem;
+            }
+
+            .value {
+              font-size: 0.85rem;
+            }
+          }
+        }
+
+        .pricingTable {
+          .priceRow {
+            font-size: 0.85rem;
+            padding: 0.4rem 0;
+          }
+
+          .totalRow {
+            padding: 0.75rem;
+            font-size: 0.95rem;
+
+            span:last-child {
+              font-size: 1.1rem;
+            }
+          }
+        }
+
+        .notes {
+          font-size: 0.85rem;
+          padding: 0.6rem;
+        }
+      }
+
+      .signatures {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+
+        .signatureBlock {
+          .signatureLabel {
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+          }
+        }
+      }
+    }
+  }
+}

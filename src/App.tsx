@@ -14,12 +14,12 @@ import TestDriveManagementPage from "./Pages/TestDriveManagementPage";
 import OrderManagementPage from "./Pages/OrderManagementPage";
 import PromotionsPage from "./Pages/PromotionsPage";
 import FinancingPage from "./Pages/FinancingPage";
-import PaymentPage from "./Pages/payment/PaymentPage";
-import PaymentReturnPage from "./Pages/payment/PaymentReturnPage";
 import TicketsPage from "./Pages/TicketsPage";
+import ContractCreatePageNew from "./Pages/ContractCreatePage_new";
 import Navbar from "../src/components/Navbar";
 import Footer from "../src/components/Footer";
 import ChatBox from "../src/components/ChatBox";
+import ProtectedRoute from "../src/components/ProtectedRoute";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -52,26 +52,98 @@ function App() {
     <>
       {!isAdminPage && <Navbar />}
       <Routes>
+        {/* Public Routes */}
         <Route index path="/" element={<Home />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/products/:id" element={<ProductDetailPage />} />
-        <Route path="/quote" element={<QuotePage />} />
-        <Route path="/quotes" element={<QuoteListPage />} />
-        <Route path="/dealer-order" element={<DealerOrderPage />} />
-        <Route path="/test-drive" element={<TestDrivePage />} />
-        <Route path="/drive" element={<TestDriveManagementPage />} />
-        <Route path="/delivery-status" element={<OrderManagementPage />} />
-        <Route path="/promotions" element={<PromotionsPage />} />
-        <Route path="/installment" element={<FinancingPage />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/compare-slots" element={<Compare />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/customers" element={<CustomersPage />} />
-        <Route path="/feedback" element={<TicketsPage />} />
-        <Route path="/orders/:orderId/payment" element={<PaymentPage />} />
-        <Route path="/payment/vnpay-return" element={<PaymentReturnPage />} />
-        <Route path="/payments/vnpay-return" element={<PaymentReturnPage />} />
+        
+        {/* Dealer Protected Routes - All routes except /admin */}
+        <Route path="/products" element={
+          <ProtectedRoute requiredRole="dealer">
+            <ProductsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/products/:id" element={
+          <ProtectedRoute requiredRole="dealer">
+            <ProductDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/contact" element={
+          <ProtectedRoute requiredRole="dealer">
+            <Contact />
+          </ProtectedRoute>
+        } />
+        <Route path="/compare-slots" element={
+          <ProtectedRoute requiredRole="dealer">
+            <Compare />
+          </ProtectedRoute>
+        } />
+        <Route path="/promotions" element={
+          <ProtectedRoute requiredRole="dealer">
+            <PromotionsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/installment" element={
+          <ProtectedRoute requiredRole="dealer">
+            <FinancingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/quote" element={
+          <ProtectedRoute requiredRole="dealer">
+            <QuotePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/quotes" element={
+          <ProtectedRoute requiredRole="dealer">
+            <QuoteListPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/dealer-order" element={
+          <ProtectedRoute requiredRole="dealer">
+            <DealerOrderPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/test-drive" element={
+          <ProtectedRoute requiredRole="dealer">
+            <TestDrivePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/drive" element={
+          <ProtectedRoute requiredRole="dealer">
+            <TestDriveManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/delivery-status" element={
+          <ProtectedRoute requiredRole="dealer">
+            <OrderManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute requiredRole="dealer">
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/feedback" element={
+          <ProtectedRoute requiredRole="dealer">
+            <TicketsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers" element={
+          <ProtectedRoute requiredRole="dealer">
+            <CustomersPage />
+          </ProtectedRoute>
+        } />
+        
+        {/* Admin Protected Routes - Only /admin */}
+        <Route path="/admin" element={
+          <ProtectedRoute requiredRole="admin">
+            <AdminPage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/contracts/new" element={
+          <ProtectedRoute requiredRole="admin">
+            <ContractCreatePageNew />
+          </ProtectedRoute>
+        } />
       </Routes>
       {!isAdminPage && <Footer />}
       {!isAdminPage && <ChatBox />}

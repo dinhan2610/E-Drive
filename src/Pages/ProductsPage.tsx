@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { Product, ProductFilters } from '../types/product';
-import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
+import { fetchVehiclesFromApi, groupVehiclesByModel } from '../services/vehicleApi';
 import ProductCard from '../components/Products/ProductCard';
 import SortBar from '../components/Products/SortBar';
 import Pagination from '../components/Products/Pagination';
@@ -61,7 +61,7 @@ const ProductsPage: React.FC = () => {
       console.log('🔄 Loading products from API with:', { currentFilters, currentSort, currentPage, currentPageSize });
       
       try {
-        // Fetch from API
+        // Fetch from API với pagination
         const { vehicles, total } = await fetchVehiclesFromApi({
           page: currentPage - 1, // API uses 0-based index
           size: currentPageSize,
@@ -70,10 +70,10 @@ const ProductsPage: React.FC = () => {
           maxPrice: currentFilters.priceMax,
         });
         
-        // Convert API response to UI Product format
-        let productList = vehicles.map(convertVehicleToProduct);
+        // Group vehicles theo model+version với color variants
+        let productList = groupVehiclesByModel(vehicles);
         
-        // Apply sorting (since API might not support all sort options)
+        // Client-side sorting (vì API chưa hỗ trợ sort params)
         const [sortField, sortOrder] = currentSort.split('-');
         productList.sort((a, b) => {
           let aValue: any, bValue: any;
@@ -87,7 +87,7 @@ const ProductsPage: React.FC = () => {
               aValue = a.name;
               bValue = b.name;
               break;
-            default:
+            default: // createdAt
               aValue = a.createdAt;
               bValue = b.createdAt;
           }

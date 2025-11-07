@@ -1,0 +1,139 @@
+.priceSummary {
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .title {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #ff4d30;
+  }
+
+  .priceRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+
+    label {
+      font-size: 0.9rem;
+      color: #374151;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    input {
+      width: 180px;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      text-align: right;
+      transition: all 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: #ff4d30;
+        box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+      }
+
+      &[type='number'] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  .divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 1.25rem 0;
+  }
+
+  .calculation {
+    .calcRow {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+      color: #6b7280;
+
+      span:last-child {
+        font-weight: 500;
+        color: #374151;
+      }
+    }
+  }
+
+  .totalRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #fff7f5;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #111827;
+
+    .totalAmount {
+      color: #ff4d30;
+      font-size: 1.25rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .priceSummary {
+    padding: 1rem;
+
+    .title {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .priceRow {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+
+      label {
+        font-size: 0.85rem;
+      }
+
+      input {
+        width: 100%;
+        font-size: 0.85rem;
+      }
+    }
+
+    .calculation {
+      .calcRow {
+        font-size: 0.85rem;
+        margin-bottom: 0.6rem;
+      }
+    }
+
+    .totalRow {
+      padding: 0.75rem;
+      font-size: 0.95rem;
+
+      .totalAmount {
+        font-size: 1.1rem;
+      }
+    }
+  }
+}

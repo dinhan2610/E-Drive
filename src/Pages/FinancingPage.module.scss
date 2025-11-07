@@ -1,65 +1,80 @@
 .financingPage {
   min-height: 100vh;
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 
   .hero {
     background: white;
-    padding: 40px 20px;
-    margin-top: 80px;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 8rem 2rem 6rem;
+    margin-top: 8rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 
     .heroContent {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
 
       .heroText {
         text-align: center;
 
         .heroTitle {
-          margin: 0 0 12px;
-          color: #010103;
-          font-size: 32px;
+          margin: 0 0 1.5rem;
+          font-size: 4.2rem;
           font-weight: 800;
+          background: linear-gradient(135deg, #212529 0%, #ff4d30 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 12px;
+          gap: 1.5rem;
+          line-height: 1.2;
 
           i {
-            font-size: 28px;
-            color: #ff4d30;
+            font-size: 3.6rem;
+            background: linear-gradient(135deg, #ff4d30, #fa4226);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
           }
         }
 
         .heroSubtitle {
-          margin: 0 0 24px;
-          color: #706f7b;
-          font-size: 16px;
-          max-width: 600px;
+          margin: 0 0 3rem;
+          color: #6c757d;
+          font-size: 1.8rem;
+          max-width: 700px;
           margin-left: auto;
           margin-right: auto;
+          line-height: 1.6;
         }
 
         .heroFeatures {
           display: flex;
           justify-content: center;
-          gap: 24px;
+          gap: 2.5rem;
           flex-wrap: wrap;
 
           .feature {
             display: flex;
             align-items: center;
-            gap: 8px;
-            color: #010103;
-            font-size: 14px;
-            font-weight: 600;
-            padding: 8px 16px;
-            background: #fff5f3;
-            border-radius: 20px;
-            border: 1px solid #e0e0e0;
+            gap: 1rem;
+            color: #212529;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 1.2rem 2.4rem;
+            background: linear-gradient(135deg, rgba(255,77,48,0.08) 0%, rgba(255,77,48,0.04) 100%);
+            border-radius: 50px;
+            border: 2px solid rgba(255, 77, 48, 0.2);
+            transition: all 0.3s ease;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(255, 77, 48, 0.15);
+              border-color: #ff4d30;
+            }
 
             i {
-              font-size: 14px;
+              font-size: 1.6rem;
               color: #ff4d30;
             }
           }
@@ -69,76 +84,90 @@
   }
 
   .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 6rem 3rem;
 
     .grid {
       display: grid;
-      grid-template-columns: 1fr 480px;
-      gap: 32px;
+      grid-template-columns: 420px 1fr;
+      gap: 4rem;
       align-items: start;
+
+      @media (max-width: 1024px) {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
 
       .formColumn {
         .card {
           background: white;
-          border-radius: 16px;
-          padding: 28px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          border: 1px solid #f0f0f0;
+          border-radius: 20px;
+          padding: 3.5rem;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e9ecef;
           position: sticky;
-          top: 100px;
+          top: 10rem;
 
           .cardTitle {
-            margin: 0 0 24px;
-            font-size: 22px;
-            font-weight: 700;
-            color: #010103;
+            margin: 0 0 3rem;
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #212529 0%, #ff4d30 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 1.2rem;
 
             i {
-              color: #ff4d30;
-              font-size: 20px;
+              font-size: 2.2rem;
+              background: linear-gradient(135deg, #ff4d30, #fa4226);
+              -webkit-background-clip: text;
+              background-clip: text;
+              -webkit-text-fill-color: transparent;
             }
           }
 
           .calculateButton {
             width: 100%;
-            padding: 18px;
+            padding: 2rem;
             border: none;
-            background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
+            background: linear-gradient(135deg, #ff4d30 0%, #fa4226 100%);
             color: white;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
+            border-radius: 14px;
+            font-size: 1.7rem;
+            font-weight: 800;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            box-shadow: 0 4px 16px rgba(255, 77, 48, 0.3);
-            margin-top: 24px;
+            gap: 1.2rem;
+            box-shadow: 0 6px 20px rgba(255, 77, 48, 0.35);
+            margin-top: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
 
             i {
-              font-size: 18px;
+              font-size: 2rem;
             }
 
             &:hover:not(:disabled) {
-              transform: translateY(-2px);
-              box-shadow: 0 6px 24px rgba(255, 77, 48, 0.4);
+              transform: translateY(-3px);
+              box-shadow: 0 10px 30px rgba(255, 77, 48, 0.45);
             }
 
             &:active:not(:disabled) {
-              transform: translateY(0);
+              transform: translateY(-1px);
             }
 
             &:disabled {
               opacity: 0.5;
               cursor: not-allowed;
               transform: none;
+              box-shadow: 0 4px 12px rgba(255, 77, 48, 0.2);
             }
           }
         }
@@ -149,94 +178,85 @@
 
         .emptyState {
           background: white;
-          border-radius: 16px;
-          padding: 60px 40px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          border: 2px dashed #e0e0e0;
+          border-radius: 20px;
+          padding: 6rem 4rem;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+          border: 2px dashed #e9ecef;
           text-align: center;
 
           .emptyIcon {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 24px;
-            background: linear-gradient(135deg, #fff5f3 0%, #ffe8e3 100%);
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 2.5rem;
+            background: linear-gradient(135deg, rgba(255,77,48,0.12) 0%, rgba(255,77,48,0.06) 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 3px solid rgba(255, 77, 48, 0.2);
 
             i {
-              font-size: 48px;
-              color: #ff4d30;
+              font-size: 5.5rem;
+              background: linear-gradient(135deg, #ff4d30, #fa4226);
+              -webkit-background-clip: text;
+              background-clip: text;
+              -webkit-text-fill-color: transparent;
             }
           }
 
           h3 {
-            margin: 0 0 12px;
-            font-size: 24px;
-            color: #010103;
+            margin: 0 0 1.5rem;
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: #212529;
           }
 
           p {
-            margin: 0 0 32px;
-            color: #706f7b;
-            font-size: 15px;
+            margin: 0 0 4rem;
+            color: #6c757d;
+            font-size: 1.6rem;
+            line-height: 1.6;
           }
 
           .emptySteps {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 16px;
+            gap: 2rem;
             flex-wrap: wrap;
 
             .step {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 8px;
+              gap: 1rem;
 
               .stepNumber {
-                width: 40px;
-                height: 40px;
-                background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
+                width: 50px;
+                height: 50px;
+                background: linear-gradient(135deg, #ff4d30 0%, #fa4226 100%);
                 color: white;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-weight: 700;
-                font-size: 18px;
-                box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3);
+                font-weight: 800;
+                font-size: 2rem;
+                box-shadow: 0 6px 18px rgba(255, 77, 48, 0.35);
               }
 
               span {
-                font-size: 13px;
-                color: #706f7b;
-                font-weight: 500;
+                font-size: 1.4rem;
+                color: #495057;
+                font-weight: 600;
               }
             }
 
             .stepArrow {
-              color: #e0e0e0;
-              font-size: 20px;
+              color: #dee2e6;
+              font-size: 2.2rem;
+              margin: 0 0.5rem;
             }
-          }
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 1024px) {
-  .financingPage {
-    .container {
-      .grid {
-        grid-template-columns: 1fr;
-
-        .formColumn {
-          .card {
-            position: static;
           }
         }
       }
@@ -247,34 +267,34 @@
 @media (max-width: 768px) {
   .financingPage {
     .hero {
-      padding: 30px 20px;
-      margin-top: 70px;
+      padding: 5rem 2rem 4rem;
+      margin-top: 7rem;
 
       .heroContent {
         .heroText {
           .heroTitle {
-            font-size: 24px;
-            gap: 8px;
+            font-size: 2.8rem;
+            gap: 1rem;
 
             i {
-              font-size: 22px;
+              font-size: 2.4rem;
             }
           }
 
           .heroSubtitle {
-            font-size: 14px;
-            margin-bottom: 20px;
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
           }
 
           .heroFeatures {
-            gap: 12px;
+            gap: 1.5rem;
 
             .feature {
-              font-size: 13px;
-              padding: 7px 14px;
+              font-size: 1.3rem;
+              padding: 1rem 1.8rem;
 
               i {
-                font-size: 13px;
+                font-size: 1.3rem;
               }
             }
           }
@@ -283,26 +303,54 @@
     }
 
     .container {
-      padding: 24px 16px;
+      padding: 4rem 2rem;
 
       .grid {
-        .formColumn {
-          .card {
-            padding: 20px;
+        gap: 2.5rem;
 
-            .cardTitle {
-              font-size: 20px;
-            }
+        .formColumn .card {
+          padding: 2.5rem;
+
+          .cardTitle {
+            font-size: 2rem;
+          }
+
+          .calculateButton {
+            padding: 1.6rem;
+            font-size: 1.5rem;
           }
         }
 
-        .resultColumn {
-          .emptyState {
-            padding: 40px 20px;
+        .resultColumn .emptyState {
+          padding: 4rem 2.5rem;
 
-            .emptySteps {
-              .stepArrow {
-                display: none;
+          .emptyIcon {
+            width: 90px;
+            height: 90px;
+
+            i {
+              font-size: 4rem;
+            }
+          }
+
+          h3 {
+            font-size: 2rem;
+          }
+
+          p {
+            font-size: 1.4rem;
+          }
+
+          .emptySteps {
+            .step {
+              .stepNumber {
+                width: 40px;
+                height: 40px;
+                font-size: 1.6rem;
+              }
+
+              span {
+                font-size: 1.2rem;
               }
             }
           }

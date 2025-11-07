@@ -17,14 +17,18 @@ export interface VehicleApiResponse {
   widthMm: number;
   heightMm: number;
   priceRetail: number;
+  finalPrice: number; // Giá cuối cùng sau khuyến mãi
   status: 'AVAILABLE' | 'DISCONTINUED';
   manufactureYear?: number; // Optional field
+  imageUrl?: string; // URL hình ảnh từ API
 }
 
 export interface ApiListResponse {
   statusCode: number;
   message: string;
   data: VehicleApiResponse[];
+  totalElements?: number; // Tổng số phần tử (nếu API trả về)
+  totalPages?: number; // Tổng số trang (nếu API trả về)
 }
 
 // API Response cho create vehicle
@@ -33,6 +37,18 @@ export interface ApiCreateResponse {
   message: string;
   data?: VehicleApiResponse | VehicleApiResponse[];
   vehicleId?: number;
+}
+
+// Color variant cho một màu xe cụ thể
+export interface ColorVariant {
+  vehicleId: number;
+  color: string;
+  colorHex: string; // Mã màu hex để hiển thị
+  colorGradient?: string; // Gradient cho màu metallic
+  priceRetail: number;
+  finalPrice: number;
+  imageUrl?: string;
+  inStock: boolean;
 }
 
 // UI Product - đơn giản cho hiển thị
@@ -64,6 +80,10 @@ export interface Product {
   description: string;
   features: string[];
   createdAt: string;
+  
+  // Color variants - THÊM MỚI
+  colorVariants?: ColorVariant[];
+  selectedColor?: string; // Màu đang được chọn
 }
 
 // Filters cho UI

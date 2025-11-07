@@ -417,9 +417,12 @@
 }
 
 .viewButton,
+.viewButton,
 .editButton,
 .deleteButton,
-.approveButton {
+.approveButton,
+.contractButton,
+.billButton {
   width: 32px;
   height: 32px;
   border: none;
@@ -431,11 +434,11 @@
   font-size: 12px;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
+  color: white;
 }
 
 .viewButton {
   background: rgba(59, 130, 246, 0.9);
-  color: white;
 
   &:hover {
     background: #3b82f6;
@@ -445,7 +448,6 @@
 
 .editButton {
   background: rgba(16, 185, 129, 0.9);
-  color: white;
 
   &:hover {
     background: #10b981;
@@ -453,9 +455,26 @@
   }
 }
 
+.contractButton {
+  background: rgba(13, 110, 253, 0.9);
+
+  &:hover {
+    background: #0d6efd;
+    transform: scale(1.1);
+  }
+}
+
+.billButton {
+  background: rgba(245, 158, 11, 0.9);
+
+  &:hover {
+    background: #f59e0b;
+    transform: scale(1.1);
+  }
+}
+
 .deleteButton {
   background: rgba(239, 68, 68, 0.9);
-  color: white;
 
   &:hover {
     background: #ef4444;
@@ -465,7 +484,6 @@
 
 .approveButton {
   background: rgba(34, 197, 94, 0.9);
-  color: white;
 
   &:hover {
     background: #22c55e;
@@ -607,6 +625,17 @@
     background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
   }
+
+  // Contract statuses
+  &.draft {
+    background: rgba(156, 163, 175, 0.1);
+    color: #6b7280;
+  }
+
+  &.signing {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+  }
 }
 
 .paymentBadge {
@@ -633,12 +662,122 @@
   }
 }
 
+// Payment status dropdown
+.paymentStatusDropdown {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  
+  &.pending {
+    background: rgba(251, 191, 36, 0.1);
+    color: #d97706;
+    border-color: rgba(251, 191, 36, 0.3);
+    
+    &:hover {
+      background: rgba(251, 191, 36, 0.2);
+      border-color: rgba(251, 191, 36, 0.5);
+    }
+  }
+
+  &.paid {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border-color: rgba(16, 185, 129, 0.3);
+    
+    &:hover {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.5);
+    }
+  }
+
+  &.cancelled {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.3);
+    
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+  }
+  
+  // Dropdown arrow
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='currentColor' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  padding-right: 28px;
+}
+
+// Order status dropdown
+.orderStatusDropdown {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  
+  &.pending {
+    background: rgba(251, 191, 36, 0.1);
+    color: #d97706;
+    border-color: rgba(251, 191, 36, 0.3);
+    
+    &:hover {
+      background: rgba(251, 191, 36, 0.2);
+      border-color: rgba(251, 191, 36, 0.5);
+    }
+  }
+
+  &.confirmed {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    border-color: rgba(34, 197, 94, 0.3);
+    
+    &:hover {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: rgba(34, 197, 94, 0.5);
+    }
+  }
+
+  &.cancelled {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.3);
+    
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+  }
+  
+  // Dropdown arrow
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='currentColor' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  padding-right: 28px;
+}
+
 .tableActions {
   display: flex;
   gap: 6px;
 
   .viewButton,
   .editButton,
+  .contractButton,
+  .billButton,
   .deleteButton,
   .approveButton {
     width: 28px;

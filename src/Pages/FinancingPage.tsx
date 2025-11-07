@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import type { VehicleApiResponse } from '../types/product';
 import { calc0Percent, type FinancingTerm } from '../utils/financing';
 import CarPicker from '../components/financing/CarPicker';
@@ -11,11 +11,9 @@ import styles from './FinancingPage.module.scss';
 
 const FinancingPage: React.FC = () => {
   const [selectedCar, setSelectedCar] = useState<VehicleApiResponse | null>(null);
-  const [downPayment, setDownPayment] = useState(20);
+  const [downPayment, setDownPayment] = useState(30);
   const [selectedTerm, setSelectedTerm] = useState<FinancingTerm>(12);
   const [calculationResult, setCalculationResult] = useState<ReturnType<typeof calc0Percent> | null>(null);
-  
-  const printAreaRef = useRef<HTMLDivElement>(null);
 
   const handleCalculate = () => {
     if (!selectedCar) {
@@ -131,7 +129,7 @@ const FinancingPage: React.FC = () => {
           {/* Right Column - Results */}
           <div className={styles.resultColumn}>
             {calculationResult && selectedCar ? (
-              <div ref={printAreaRef}>
+              <div>
                 <SummaryCard
                   carName={`${selectedCar.modelName} ${selectedCar.version}`}
                   result={calculationResult}
@@ -141,8 +139,26 @@ const FinancingPage: React.FC = () => {
                 <ScheduleTable schedule={calculationResult.schedule} />
 
                 <ExportButtons
-                  printAreaRef={printAreaRef}
                   carName={`${selectedCar.modelName} ${selectedCar.version}`}
+                  carData={{
+                    modelName: selectedCar.modelName,
+                    version: selectedCar.version,
+                    priceRetail: selectedCar.priceRetail
+                  }}
+                  calculationData={{
+                    downPayment: calculationResult.dp,
+                    loanAmount: calculationResult.loanAmount,
+                    monthlyPayment: calculationResult.monthly,
+                    term: selectedTerm,
+                    totalPayment: calculationResult.totalPayable,
+                    schedule: calculationResult.schedule.map(item => ({
+                      month: item.period,
+                      payment: item.monthly,
+                      principal: item.monthly,
+                      interest: 0,
+                      balance: item.remaining
+                    }))
+                  }}
                   onConsult={handleConsult}
                 />
               </div>

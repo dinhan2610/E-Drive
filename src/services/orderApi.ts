@@ -271,6 +271,74 @@ export const updateOrder = async (id: number, orderData: Partial<CreateOrderRequ
 };
 
 /**
+ * Update payment status for an order
+ * @param orderId - ID of the order
+ * @param paymentStatus - New payment status
+ */
+export const updatePaymentStatus = async (
+  orderId: number | string, 
+  paymentStatus: 'PENDING' | 'PAID' | 'CANCELLED'
+): Promise<Order> => {
+  try {
+    console.log('💳 Updating payment status for order:', orderId, '→', paymentStatus);
+    
+    const response = await api.put<Order>(`/api/orders/${orderId}`, {
+      paymentStatus
+    });
+    
+    console.log('✅ Payment status updated:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Error updating payment status:', error);
+    
+    if (error.response?.status === 404) {
+      throw new OrderApiError('Không tìm thấy đơn hàng', 'ORDER_NOT_FOUND');
+    } else if (error.response?.status === 403) {
+      throw new OrderApiError('Bạn không có quyền cập nhật đơn hàng này', 'FORBIDDEN');
+    } else {
+      throw new OrderApiError(
+        error.response?.data?.message || 'Không thể cập nhật trạng thái thanh toán',
+        'UPDATE_FAILED'
+      );
+    }
+  }
+};
+
+/**
+ * Update order status
+ * @param orderId - ID of the order
+ * @param orderStatus - New order status
+ */
+export const updateOrderStatus = async (
+  orderId: number | string, 
+  orderStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+): Promise<Order> => {
+  try {
+    console.log('📦 Updating order status for order:', orderId, '→', orderStatus);
+    
+    const response = await api.put<Order>(`/api/orders/${orderId}`, {
+      orderStatus
+    });
+    
+    console.log('✅ Order status updated:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Error updating order status:', error);
+    
+    if (error.response?.status === 404) {
+      throw new OrderApiError('Không tìm thấy đơn hàng', 'ORDER_NOT_FOUND');
+    } else if (error.response?.status === 403) {
+      throw new OrderApiError('Bạn không có quyền cập nhật đơn hàng này', 'FORBIDDEN');
+    } else {
+      throw new OrderApiError(
+        error.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng',
+        'UPDATE_FAILED'
+      );
+    }
+  }
+};
+
+/**
  * DELETE /api/orders/{id} - Delete order
  */
 export const deleteOrder = async (id: number): Promise<void> => {
@@ -337,4 +405,85 @@ export const formatPaymentMethod = (method: string): string => {
     'FULL': 'Thanh toán đầy đủ',
   };
   return methodMap[method] || method;
+};
+
+/**
+ * Upload bill/invoice file for an order
+ * @param orderId - ID of the order
+ * @param file - Bill file to upload (image/pdf)
+ * @returns Promise<void>
+ */
+export const uploadOrderBill = async (orderId: number | string, file: File): Promise<void> => {
+  try {
+    console.log('📤 Uploading bill for order:', orderId);
+    console.log('📄 File details:', {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024).toFixed(2)} KB`
+    });
+    
+    // Create FormData
+    const formData = new FormData();
+    formData.append('bill', file);
+    
+    // Upload bill - Sử dụng /api prefix vì backend cần
+    const response = await api.post(`/api/orders/${orderId}/upload-bill`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    console.log('✅ Bill uploaded successfully:', response.data);
+  } catch (error: any) {
+    console.error('❌ Error uploading bill:', error);
+    console.error('Response:', error.response?.data);
+    
+    if (error.response?.status === 404) {
+      throw new OrderApiError('Không tìm thấy đơn hàng', 'ORDER_NOT_FOUND');
+    } else if (error.response?.status === 403) {
+      throw new OrderApiError('Bạn không có quyền upload hóa đơn cho đơn hàng này', 'FORBIDDEN');
+    } else if (error.response?.status === 400) {
+      const errorMsg = error.response?.data?.message || 'File không hợp lệ';
+      throw new OrderApiError(errorMsg, 'INVALID_FILE');
+    } else {
+      throw new OrderApiError(
+        error.response?.data?.message || 'Không thể upload hóa đơn',
+        'UPLOAD_FAILED'
+      );
+    }
+  }
+};
+
+/**
+ * Get bill preview for an order
+ * @param orderId - ID of the order
+ * @returns Promise<Blob> - Bill file as Blob
+ */
+export const getBillPreview = async (orderId: number | string): Promise<Blob> => {
+  try {
+    console.log('📥 Fetching bill preview for order:', orderId);
+    
+    const response = await api.get(`/api/orders/${orderId}/bill-preview`, {
+      responseType: 'blob', // Important: Get file as blob
+    });
+    
+    const blob = response.data as Blob;
+    
+    console.log('✅ Bill preview fetched:', {
+      size: `${(blob.size / 1024).toFixed(2)} KB`,
+      type: blob.type
+    });
+    
+    return blob;
+  } catch (error: any) {
+    console.error('❌ Error fetching bill preview:', error);
+    
+    if (error.response?.status === 404) {
+      throw new OrderApiError('Không tìm thấy hóa đơn cho đơn hàng này', 'BILL_NOT_FOUND');
+    } else if (error.response?.status === 403) {
+      throw new OrderApiError('Bạn không có quyền xem hóa đơn này', 'FORBIDDEN');
+    } else {
+      throw new OrderApiError('Không thể tải hóa đơn', 'FETCH_FAILED');
+    }
+  }
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/authApi';
 import { SuccessModal } from './SuccessModal';
 import "../styles/AuthStyles/_authforms.scss";
@@ -28,6 +29,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   onSwitchToRegister, 
   onLoginSuccess 
 }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     username: '',
     password: ''
@@ -38,6 +40,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loggedInUserName, setLoggedInUserName] = useState('');
+  const [userRole, setUserRole] = useState<'admin' | 'dealer'>('dealer');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -117,19 +120,48 @@ const LoginForm: React.FC<LoginFormProps> = ({
       if (result.success && result.data) {
         const { user, token, refreshToken } = result.data;
         
+        // Debug: Log user data from API
+        console.log('🔍 User data from API:', user);
+        console.log('🔍 User role from API:', user?.role);
+        
         // Set user name for success modal
         setLoggedInUserName(user?.fullName || user?.name || formData.username);
         
-        // Store user data for persistence
+        // Store user data for persistence (including role)
+        // Chuẩn hóa role: "ROLE_ADMIN" -> "admin", "ROLE_DEALER" -> "dealer"
+        let detectedRole = user?.role || 'dealer';
+        
+        // Normalize role từ Spring Security format (ROLE_ADMIN -> admin)
+        if (detectedRole && typeof detectedRole === 'string') {
+          detectedRole = detectedRole.replace('ROLE_', '').toLowerCase();
+        }
+        
+        // Fallback: nếu vẫn không có role, detect từ username
+        if (!detectedRole || detectedRole === 'dealer') {
+          if (formData.username.toLowerCase().startsWith('admin')) {
+            detectedRole = 'admin';
+            console.log('⚠️ Role detected from username');
+          }
+        }
+        
         const userData = {
           ...user,
           fullName: user?.fullName || user?.name || formData.username,
           name: user?.fullName || user?.name || formData.username,
-          username: formData.username
+          username: formData.username,
+          role: detectedRole
         };
+        
+        console.log('💾 User data to be stored:', userData);
+        console.log('👤 Final normalized role:', userData.role);
         
         localStorage.setItem('e-drive-user', JSON.stringify(userData));
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userRole', userData.role); // Lưu role riêng để dễ check
+        
+        // Set role for redirect
+        setUserRole(userData.role);
+        setLoggedInUserName(userData.fullName);
         
         // Verify tokens are stored
         const storedAccessToken = localStorage.getItem('accessToken');
@@ -309,9 +341,18 @@ const LoginForm: React.FC<LoginFormProps> = ({
         onContinue={() => {
           setShowSuccessModal(false);
           onClose(); // Close login form
+          
+          // Redirect based on role
+          if (userRole === 'admin') {
+            navigate('/admin');
+          } else {
+            // Dealer stays on current page or home
+            navigate('/');
+          }
+          
           // Dispatch success event for other components
           window.dispatchEvent(new CustomEvent('loginSuccess', {
-            detail: { userName: loggedInUserName }
+            detail: { userName: loggedInUserName, role: userRole }
           }));
         }}
       />

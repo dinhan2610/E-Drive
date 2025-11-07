@@ -1,0 +1,121 @@
+.contractForm {
+  .section {
+    margin-bottom: 2rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .sectionTitle {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #ff4d30;
+  }
+
+  .formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  .formGroup {
+    display: flex;
+    flex-direction: column;
+
+    &.fullWidth {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    input,
+    textarea {
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: #ff4d30;
+        box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+      }
+
+      &::placeholder {
+        color: #9ca3af;
+      }
+    }
+
+    textarea {
+      resize: vertical;
+      font-family: inherit;
+      min-height: 60px;
+    }
+
+    input[type='number'] {
+      -moz-appearance: textfield;
+
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    }
+
+    .inputError {
+      border-color: #ef4444;
+
+      &:focus {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+      }
+    }
+
+    .errorText {
+      margin-top: 0.35rem;
+      font-size: 0.8rem;
+      color: #ef4444;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .contractForm {
+    .section {
+      margin-bottom: 1.5rem;
+    }
+
+    .sectionTitle {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .formGroup {
+      label {
+        font-size: 0.85rem;
+      }
+
+      input,
+      textarea {
+        font-size: 0.85rem;
+        padding: 0.65rem;
+      }
+    }
+  }
+}

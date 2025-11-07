@@ -1,9 +1,13 @@
-import type { VehicleApiResponse, ApiCreateResponse, Product, ApiParams } from '../types/product';
+import type { VehicleApiResponse, ApiCreateResponse, Product, ApiParams, ApiListResponse, ColorVariant } from '../types/product';
+import { getColorStyle } from '../utils/colorMapping';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
 // Convert API vehicle data to UI Product format - chỉ dùng data từ API
 export function convertVehicleToProduct(vehicle: VehicleApiResponse): Product {
+  const hasDiscount = vehicle.finalPrice > 0 && vehicle.finalPrice < vehicle.priceRetail;
+  const imageUrl = vehicle.imageUrl || `/src/images/cars-big/car-${vehicle.vehicleId}.jpg`;
+
   return {
     id: vehicle.vehicleId.toString(),
     name: `${vehicle.modelName} ${vehicle.version}`,
@@ -14,8 +18,12 @@ export function convertVehicleToProduct(vehicle: VehicleApiResponse): Product {
   // Prefer remote imageUrl from backend if available, otherwise fallback to local asset
   image: (vehicle as any).imageUrl || `/src/images/cars-big/car-${vehicle.vehicleId}.jpg`, // Absolute path from root
   images: [ (vehicle as any).imageUrl || `/src/images/cars-big/car-${vehicle.vehicleId}.jpg` ],
-    
-    // Chỉ dùng data từ API
+    price: vehicle.finalPrice > 0 ? vehicle.finalPrice : vehicle.priceRetail,
+    originalPrice: hasDiscount ? vehicle.priceRetail : undefined,
+    image: imageUrl,
+    images: [imageUrl],
+
+    // Specs từ API
     rangeKm: vehicle.rangeKm,
     battery: `${vehicle.batteryCapacityKwh} kWh`,
     motor: `${vehicle.motorPowerKw} kW`,
@@ -26,22 +34,92 @@ export function convertVehicleToProduct(vehicle: VehicleApiResponse): Product {
     // Status từ API
     inStock: vehicle.status === 'AVAILABLE',
     isPopular: false,
-    hasDiscount: false,
+    hasDiscount: hasDiscount,
     tags: [vehicle.color.toLowerCase()],
     
     // Minimal info
     description: `${vehicle.modelName} ${vehicle.version} - ${vehicle.color}`,
     features: [`${vehicle.seatingCapacity} seats`, `${vehicle.rangeKm}km range`],
     createdAt: new Date().toISOString(),
+
+    // Color variants - sẽ được thêm bởi groupVehiclesByModel
+    colorVariants: [],
+    selectedColor: vehicle.color,
   };
+}
+
+/**
+ * Group vehicles theo modelName + version, tạo color variants
+ */
+export function groupVehiclesByModel(vehicles: VehicleApiResponse[]): Product[] {
+  // Group theo modelName + version
+  const grouped = new Map<string, VehicleApiResponse[]>();
+
+  vehicles.forEach(vehicle => {
+    const key = `${vehicle.modelName}-${vehicle.version}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key)!.push(vehicle);
+  });
+
+  console.log('🎨 Grouped vehicles by model+version:', grouped.size, 'groups');
+
+  // Convert mỗi group thành 1 Product với color variants
+  const products: Product[] = [];
+
+  grouped.forEach((vehicleGroup) => {
+    // Sắp xếp theo giá để lấy xe rẻ nhất làm default
+    vehicleGroup.sort((a, b) => {
+      const priceA = a.finalPrice > 0 ? a.finalPrice : a.priceRetail;
+      const priceB = b.finalPrice > 0 ? b.finalPrice : b.priceRetail;
+      return priceA - priceB;
+    });
+
+    const defaultVehicle = vehicleGroup[0]; // Xe đầu tiên (rẻ nhất) làm default
+
+    // Tạo color variants
+    const colorVariants: ColorVariant[] = vehicleGroup.map(vehicle => {
+      const colorStyle = getColorStyle(vehicle.color);
+      return {
+        vehicleId: vehicle.vehicleId,
+        color: vehicle.color,
+        colorHex: colorStyle.solid,
+        colorGradient: colorStyle.gradient,
+        priceRetail: vehicle.priceRetail,
+        finalPrice: vehicle.finalPrice,
+        imageUrl: vehicle.imageUrl,
+        inStock: vehicle.status === 'AVAILABLE',
+      };
+    });
+
+    // Convert vehicle đầu tiên thành Product
+    const product = convertVehicleToProduct(defaultVehicle);
+
+    // Thêm color variants
+    product.colorVariants = colorVariants;
+    product.selectedColor = defaultVehicle.color;
+
+    // Cập nhật tags để include tất cả màu
+    product.tags = vehicleGroup.map(v => v.color.toLowerCase());
+
+    console.log(`✨ Created product: ${product.name} with ${colorVariants.length} colors`);
+
+    products.push(product);
+  });
+
+  return products;
 }
 
 // Fetch vehicles from API
 export async function fetchVehiclesFromApi(params: ApiParams = {}): Promise<{ vehicles: VehicleApiResponse[], total: number }> {
   const queryParams = new URLSearchParams();
   
-  if (params.page) queryParams.append('page', params.page.toString());
+  // Page và size - API sử dụng page từ 0
+  if (params.page !== undefined) queryParams.append('page', params.page.toString());
   if (params.size) queryParams.append('size', params.size.toString());
+
+  // Search parameters (nếu API hỗ trợ)
   if (params.search) queryParams.append('search', params.search);
   if (params.minPrice) queryParams.append('minPrice', params.minPrice.toString());
   if (params.maxPrice) queryParams.append('maxPrice', params.maxPrice.toString());
@@ -57,28 +135,25 @@ export async function fetchVehiclesFromApi(params: ApiParams = {}): Promise<{ ve
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data: ApiListResponse = await response.json();
     console.log('✅ API Response:', data);
 
-    // Check if response has wrapper structure or is direct array
-    let vehicles: VehicleApiResponse[];
-    
-    if (Array.isArray(data)) {
-      // Direct array response
-      vehicles = data;
-    } else if (data.statusCode && data.data) {
-      // Wrapped response
-      if (data.statusCode !== 200) {
-        throw new Error(`API error: ${data.message}`);
-      }
-      vehicles = data.data;
-    } else {
-      throw new Error('Unexpected API response format');
+    // Kiểm tra response structure
+    if (data.statusCode !== 200) {
+      throw new Error(`API error: ${data.message}`);
     }
 
+    if (!Array.isArray(data.data)) {
+      throw new Error('Invalid API response: data is not an array');
+    }
+
+    // Return vehicles và total
+    // Nếu API trả về totalElements thì dùng, không thì dùng length của array
+    const total = data.totalElements !== undefined ? data.totalElements : data.data.length;
+
     return {
-      vehicles: vehicles,
-      total: vehicles.length, // Use array length as total
+      vehicles: data.data,
+      total: total,
     };
   } catch (error) {
     console.error('❌ API Error:', error);
@@ -198,7 +273,7 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
     console.log('✅ Vehicle Created Response:', data);
 
     // Xử lý các format response khác nhau
-    
+
     // Format 1: Response với statusCode + data array (như trong hình API - ưu tiên cao nhất)
     // { statusCode: 201, message: "Vehicles created", data: [...] }
     if ((data.statusCode === 200 || data.statusCode === 201) && data.data && Array.isArray(data.data)) {
@@ -285,12 +360,12 @@ export async function getVehicleById(vehicleId: number): Promise<VehicleApiRespo
 // Update vehicle by ID - Updates a single vehicle
 export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicleRequest): Promise<VehicleApiResponse> {
   const url = `${API_BASE_URL}/vehicles/${vehicleId}`;
-  
+
   // Clean data - remove undefined/null
   const cleanedData = Object.fromEntries(
     Object.entries(vehicleData).filter(([_, value]) => value !== undefined && value !== null)
   );
-  
+
   console.log('✏️ Updating vehicle at:', url);
   console.log('📤 Update request body:', JSON.stringify(cleanedData, null, 2));
 

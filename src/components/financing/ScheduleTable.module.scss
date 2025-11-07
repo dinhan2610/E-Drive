@@ -4,7 +4,7 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   border: 1px solid #e0e0e0;
-  margin-top: 20px;
+  margin-top: 16px;
 
   .header {
     background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
@@ -51,7 +51,6 @@
         tr {
           th {
             padding: 14px 16px;
-            text-align: left;
             font-size: 12px;
             font-weight: 600;
             color: #706f7b;
@@ -66,9 +65,24 @@
 
             &:first-child {
               padding-left: 20px;
+              width: 12%;
+              text-align: center;
+            }
+
+            &:nth-child(2) {
+              width: 20%;
+              text-align: left;
+            }
+
+            &:nth-child(3) {
+              width: 34%;
+              text-align: right;
+              padding-right: 24px;
             }
 
             &:last-child {
+              width: 34%;
+              text-align: right;
               padding-right: 20px;
             }
           }
@@ -85,11 +99,16 @@
           }
 
           &.finalRow {
-            background: #f0f9ff;
+            background: #e8f5e9;
             font-weight: 600;
 
             &:hover {
-              background: #e3f2fd;
+              background: #c8e6c9;
+            }
+
+            td.remaining {
+              color: #2e7d32;
+              font-weight: 700;
             }
           }
 
@@ -100,9 +119,24 @@
 
             &:first-child {
               padding-left: 20px;
+              width: 12%;
+              text-align: center;
+            }
+
+            &:nth-child(2) {
+              width: 20%;
+              text-align: left;
+            }
+
+            &:nth-child(3) {
+              width: 34%;
+              text-align: right;
+              padding-right: 24px;
             }
 
             &:last-child {
+              width: 34%;
+              text-align: right;
               padding-right: 20px;
             }
 
@@ -111,8 +145,8 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 30px;
-                height: 30px;
+                width: 32px;
+                height: 32px;
                 background: linear-gradient(135deg, #ff4d30 0%, #ff6347 100%);
                 color: white;
                 border-radius: 6px;
@@ -135,18 +169,6 @@
             &.remaining {
               color: #2196f3;
               font-weight: 600;
-
-              .paidOff {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                color: #4caf50;
-                font-weight: 700;
-
-                i {
-                  font-size: 15px;
-                }
-              }
             }
           }
         }

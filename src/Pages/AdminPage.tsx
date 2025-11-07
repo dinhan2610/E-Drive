@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
@@ -6,12 +6,14 @@ import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, del
 import { fetchManufacturerInventorySummary, fetchInventoryItemById, createInventoryRecord, updateInventoryRecord, deleteInventoryRecord, type CreateInventoryRequest, type UpdateInventoryRequest } from '../services/manufacturerInventoryApi';
 import type { ManufacturerInventorySummary, VehicleInventoryItem } from '../types/inventory';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
-import { getOrders, getOrderById, cancelOrder, type Order } from '../services/orderApi';
+import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, updateOrderStatus, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
 import { fetchColors, createColor, getColorById, updateColor, deleteColor } from '../services/colorApi';
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
 import { fetchDiscountPolicies, fetchActiveDiscountPolicies, getDiscountPolicyById, createDiscountPolicy, updateDiscountPolicy, deleteDiscountPolicy } from '../services/discountApi';
 import type { DiscountPolicy, CreateDiscountRequest, UpdateDiscountRequest } from '../types/discount';
+import { downloadContractPdf } from '../services/contractsApi';
+import { useContractCheck } from '../hooks/useContractCheck';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
 import modalStyles from '../styles/AdminStyles/OrderDetailModal.module.scss';
@@ -66,7 +68,7 @@ const formatVehicleDisplayName = (vehicle: { vehicleName: string; version?: stri
 };
 
 // Validation helper function
-const validateCarField = (fieldName: string, value: any): string => {
+const validateCarField = (fieldName: string, value: any, allValues?: any): string => {
   // Kiểm tra các field text
   if (fieldName === 'modelName') {
     if (!value || !value.trim()) {
@@ -76,7 +78,7 @@ const validateCarField = (fieldName: string, value: any): string => {
       return 'Model tối đa 100 ký tự';
     }
   }
-  
+
   if (fieldName === 'version') {
     if (!value || !value.trim()) {
       return 'Phiên bản không được để trống';
@@ -85,14 +87,14 @@ const validateCarField = (fieldName: string, value: any): string => {
       return 'Phiên bản tối đa 100 ký tự';
     }
   }
-  
+
   if (fieldName === 'color' && (!value || !value.trim())) {
     return 'Vui lòng chọn màu xe';
   }
 
   // Kiểm tra các field số
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  
+
   // Battery Capacity (5-300 kWh)
   if (fieldName === 'batteryCapacityKwh') {
     if (isNaN(numValue) || numValue === null || numValue === undefined) {
@@ -143,6 +145,20 @@ const validateCarField = (fieldName: string, value: any): string => {
     if (numValue > 72) {
       return 'Thời gian sạc tối đa 72 giờ';
     }
+  // Kiểm tra finalPrice (có thể là 0)
+  if (fieldName === 'finalPrice') {
+    if (isNaN(numValue) || numValue < 0) {
+      return 'Giá cuối cùng không được là số âm';
+    }
+    // Nếu finalPrice > 0, phải nhỏ hơn hoặc bằng priceRetail
+    if (allValues && numValue > 0 && numValue > allValues.priceRetail) {
+      return 'Giá khuyến mãi không được cao hơn giá gốc';
+    }
+  }
+
+  // Kiểm tra giới hạn tối đa
+  if (fieldName === 'chargingTimeHours' && numValue > 72) {
+    return 'Thời gian sạc tối đa 72 giờ';
   }
 
   // Seating Capacity (1-12 seats) - Backend dùng Pattern regex ^(?:[1-9]|1[0-2])$
@@ -391,10 +407,11 @@ const AdminPage: React.FC = () => {
     widthMm: 0,
     heightMm: 0,
     priceRetail: 0,
+    finalPrice: 0,
     status: 'AVAILABLE' as 'AVAILABLE' | 'DISCONTINUED',
     manufactureYear: new Date().getFullYear()
   });
-  
+
   // Image data for each selected color
   const [colorImages, setColorImages] = useState<Record<number, {
     imageUrl: string;
@@ -415,6 +432,7 @@ const AdminPage: React.FC = () => {
     widthMm: 0,
     heightMm: 0,
     priceRetail: 0,
+    finalPrice: 0,
     status: 'AVAILABLE' as 'AVAILABLE' | 'DISCONTINUED',
     manufactureYear: new Date().getFullYear()
   });
@@ -481,7 +499,7 @@ const AdminPage: React.FC = () => {
   });
   const [newDealerErrors, setNewDealerErrors] = useState<Record<string, string>>({});
   const [editDealerErrors, setEditDealerErrors] = useState<Record<string, string>>({});
-  
+
   // Color Management States
   const [showAddColorModal, setShowAddColorModal] = useState<boolean>(false);
   const [showEditColorModal, setShowEditColorModal] = useState<boolean>(false);
@@ -501,7 +519,7 @@ const AdminPage: React.FC = () => {
   });
   const [newColorErrors, setNewColorErrors] = useState<Record<string, string>>({});
   const [editColorErrors, setEditColorErrors] = useState<Record<string, string>>({});
-  
+
   // Inventory Management States
   const [showAddInventoryModal, setShowAddInventoryModal] = useState<boolean>(false);
   const [showEditInventoryModal, setShowEditInventoryModal] = useState<boolean>(false);
@@ -519,7 +537,7 @@ const AdminPage: React.FC = () => {
   });
   const [newInventoryErrors, setNewInventoryErrors] = useState<Record<string, string>>({});
   const [editInventoryErrors, setEditInventoryErrors] = useState<Record<string, string>>({});
-  
+
   // Discount Management States
   const [showAddDiscountModal, setShowAddDiscountModal] = useState<boolean>(false);
   const [showEditDiscountModal, setShowEditDiscountModal] = useState<boolean>(false);
@@ -544,8 +562,30 @@ const AdminPage: React.FC = () => {
   });
   const [newDiscountErrors, setNewDiscountErrors] = useState<Record<string, string>>({});
   const [editDiscountErrors, setEditDiscountErrors] = useState<Record<string, string>>({});
-  
+
   const [bookings, setBookings] = useState<Booking[]>([]);
+
+  // Use contract check hook for optimized one-contract-per-order lookup
+  const { hasContract, getContractId, reload: reloadContractMap } = useContractCheck();
+
+  // Reload contract map when navigating back from contract creation
+  // Use ref to track if we've already reloaded for this timestamp
+  const lastRefreshTimestamp = useRef<number | null>(null);
+
+  useEffect(() => {
+    const refreshTimestamp = (location.state as any)?.refresh;
+
+    // Only reload if:
+    // 1. There's a refresh signal
+    // 2. It's a NEW timestamp (not the same as last time)
+    if (refreshTimestamp && refreshTimestamp !== lastRefreshTimestamp.current) {
+      console.log('🔄 Refresh signal detected from ContractCreatePage, reloading contract map...');
+      lastRefreshTimestamp.current = refreshTimestamp;
+      reloadContractMap();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]); // Only depend on location.state, NOT reloadContractMap
+
   const [stats, setStats] = useState<AdminStats>({
     totalCars: 0,
     totalUsers: 0,
@@ -612,7 +652,7 @@ const AdminPage: React.FC = () => {
     try {
       console.log('🔄 Reloading discounts from API...');
       const response = await fetchDiscountPolicies();
-      
+
       // Handle response - might be array or object with data property
       let discountList: DiscountPolicy[] = [];
       if (Array.isArray(response)) {
@@ -620,7 +660,7 @@ const AdminPage: React.FC = () => {
       } else if (response && typeof response === 'object' && 'data' in response) {
         discountList = Array.isArray((response as any).data) ? (response as any).data : [];
       }
-      
+
       setDiscounts(discountList);
       console.log('✅ Discounts reloaded successfully:', discountList);
     } catch (err) {
@@ -669,33 +709,6 @@ const AdminPage: React.FC = () => {
       }
     })();
 
-    // Fetch manufacturer inventory summary
-    (async () => {
-      try {
-        const summary = await fetchManufacturerInventorySummary();
-        setInventorySummary(summary);
-        console.log('✅ Loaded manufacturer inventory summary:', summary);
-      } catch (error) {
-        console.error('❌ Failed to load manufacturer inventory:', error);
-        setInventorySummary(null);
-      }
-    })();
-
-    // Fetch colors from API
-    (async () => {
-      try {
-        console.log('🎨 Fetching colors from API...');
-        const colorList = await fetchColors();
-        setColors(colorList);
-        console.log('✅ Loaded colors:', colorList);
-        console.log('✅ Total colors:', colorList.length);
-        console.log('✅ Active colors:', colorList.filter(c => c.isActive).length);
-      } catch (error) {
-        console.error('❌ Failed to load colors:', error);
-        setColors([]);
-      }
-    })();
-
     // Fetch dealers from API
     (async () => {
       try {
@@ -726,7 +739,7 @@ const AdminPage: React.FC = () => {
         console.log('💰 Fetching discount policies from API...');
         const response = await fetchDiscountPolicies();
         console.log('📦 Raw discount response:', response);
-        
+
         // Handle response - might be array or object with data property
         let discountList: DiscountPolicy[] = [];
         if (Array.isArray(response)) {
@@ -734,7 +747,7 @@ const AdminPage: React.FC = () => {
         } else if (response && typeof response === 'object' && 'data' in response) {
           discountList = Array.isArray((response as any).data) ? (response as any).data : [];
         }
-        
+
         setDiscounts(discountList);
         console.log('✅ Loaded discount policies:', discountList);
       } catch (error) {
@@ -846,6 +859,206 @@ const AdminPage: React.FC = () => {
       setShowOrderDetail(false);
     } finally {
       setLoadingOrderDetail(false);
+    }
+  };
+
+  // Handle contract action - smart: download if exists, create if not
+  const handleContractAction = async (orderId: number | string) => {
+    try {
+      console.log('📄 Order:', orderId, '→ Checking contract...');
+
+      // Use optimized O(1) lookup to get contractId directly
+      const contractId = getContractId(String(orderId));
+
+      console.log('🎯 Contract mapping:', orderId, '→', contractId || 'NOT FOUND');
+
+      if (contractId) {
+        // Contract exists -> Download PDF directly using contractId
+        console.log('✅ Contract ID found:', contractId, '- Downloading PDF...');
+
+        setNotification({
+          isVisible: true,
+          message: '⏳ Đang tải hợp đồng...',
+          type: 'info'
+        });
+
+        // Download PDF directly with contractId (optimized!)
+        const pdfBlob = await downloadContractPdf(contractId);
+
+        // Auto-download file
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `Hop-dong-${contractId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+
+        setNotification({
+          isVisible: true,
+          message: `✅ Đã tải hợp đồng #${contractId} thành công!`,
+          type: 'success'
+        });
+
+        console.log('💾 PDF downloaded for contract:', contractId);
+      } else {
+        // Contract doesn't exist -> Navigate to create page
+        console.log('⚠️ No contract found for order:', orderId, '- Navigating to create page...');
+        window.location.href = `/admin/contracts/new?orderId=${orderId}`;
+      }
+    } catch (error: any) {
+      console.error('❌ Error handling contract:', error);
+      setNotification({
+        isVisible: true,
+        message: `❌ ${error.message || 'Không thể xử lý hợp đồng'}`,
+        type: 'error'
+      });
+    }
+  };
+
+  // Handle view bill preview
+  const handleViewBill = async (orderId: number | string) => {
+    try {
+      console.log('📄 Viewing bill for order:', orderId);
+
+      setNotification({
+        isVisible: true,
+        message: '⏳ Đang tải hóa đơn...',
+        type: 'info'
+      });
+
+      // Fetch bill preview
+      const billBlob = await getBillPreview(orderId);
+
+      // Open bill in new tab
+      const blobUrl = URL.createObjectURL(billBlob);
+      window.open(blobUrl, '_blank');
+
+      // Cleanup after 1 minute
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã mở hóa đơn!',
+        type: 'success'
+      });
+
+      console.log('✅ Bill opened successfully');
+    } catch (error: any) {
+      console.error('❌ Error viewing bill:', error);
+
+      let errorMessage = 'Không thể tải hóa đơn';
+
+      if (error.code === 'BILL_NOT_FOUND') {
+        errorMessage = 'Đơn hàng này chưa có hóa đơn';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setNotification({
+        isVisible: true,
+        message: `❌ ${errorMessage}`,
+        type: 'error'
+      });
+    }
+  };
+
+  // Handle update order status
+  const handleUpdateOrderStatus = async (
+    orderId: number | string,
+    newStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+  ) => {
+    try {
+      console.log('📦 Updating order status:', orderId, '→', newStatus);
+
+      setNotification({
+        isVisible: true,
+        message: '⏳ Đang cập nhật trạng thái đơn hàng...',
+        type: 'info'
+      });
+
+      await updateOrderStatus(orderId, newStatus);
+
+      // Update local state
+      setBookings(prev => prev.map(booking =>
+        booking.id === orderId
+          ? { ...booking, status: newStatus.toLowerCase() as any }
+          : booking
+      ));
+
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã cập nhật trạng thái đơn hàng!',
+        type: 'success'
+      });
+
+      console.log('✅ Order status updated successfully');
+    } catch (error: any) {
+      console.error('❌ Error updating order status:', error);
+
+      let errorMessage = 'Không thể cập nhật trạng thái đơn hàng';
+
+      if (error.code === 'FORBIDDEN') {
+        errorMessage = 'Bạn không có quyền cập nhật đơn hàng này';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setNotification({
+        isVisible: true,
+        message: `❌ ${errorMessage}`,
+        type: 'error'
+      });
+    }
+  };
+
+  // Handle update payment status
+  const handleUpdatePaymentStatus = async (
+    orderId: number | string,
+    newStatus: 'PENDING' | 'PAID' | 'CANCELLED'
+  ) => {
+    try {
+      console.log('💳 Updating payment status:', orderId, '→', newStatus);
+
+      setNotification({
+        isVisible: true,
+        message: '⏳ Đang cập nhật trạng thái thanh toán...',
+        type: 'info'
+      });
+
+      await updatePaymentStatus(orderId, newStatus);
+
+      // Update local state
+      setBookings(prev => prev.map(booking =>
+        booking.id === orderId
+          ? { ...booking, paymentStatus: newStatus.toLowerCase() as any }
+          : booking
+      ));
+
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã cập nhật trạng thái thanh toán!',
+        type: 'success'
+      });
+
+      console.log('✅ Payment status updated successfully');
+    } catch (error: any) {
+      console.error('❌ Error updating payment status:', error);
+
+      let errorMessage = 'Không thể cập nhật trạng thái thanh toán';
+
+      if (error.code === 'FORBIDDEN') {
+        errorMessage = 'Bạn không có quyền cập nhật đơn hàng này';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setNotification({
+        isVisible: true,
+        message: `❌ ${errorMessage}`,
+        type: 'error'
+      });
     }
   };
 
@@ -1001,8 +1214,8 @@ const AdminPage: React.FC = () => {
       console.log('📦 Variant:', variantName);
 
       // Filter all cars with same mark (modelName) AND model (version) - different colors
-      const colorVariants = cars.filter(c => 
-        c.mark === clickedCar.mark && 
+      const colorVariants = cars.filter(c =>
+        c.mark === clickedCar.mark &&
         c.model === clickedCar.model
       );
       console.log('🎨 Found color variants (local):', colorVariants);
@@ -1014,7 +1227,7 @@ const AdminPage: React.FC = () => {
           try {
             const vehicleDetail = await getVehicleById(variant.id);
             console.log(`✅ Fetched detail for vehicle ${variant.id}:`, vehicleDetail);
-            
+
             // Merge API data with existing car data
             return {
               ...variant,
@@ -1101,6 +1314,7 @@ const AdminPage: React.FC = () => {
         widthMm: vehicleData.widthMm,
         heightMm: vehicleData.heightMm,
         priceRetail: vehicleData.priceRetail,
+        finalPrice: vehicleData.finalPrice || 0,
         status: vehicleData.status as 'AVAILABLE' | 'DISCONTINUED',
         manufactureYear: (vehicleData as any).manufactureYear || new Date().getFullYear()
       });
@@ -1720,14 +1934,14 @@ const AdminPage: React.FC = () => {
                   // Get current selected color index for this group (default to 0)
                   const currentColorIdx = carGroupColorIndex[baseModel] || 0;
                   const currentCar = variants[currentColorIdx] || variants[0];
-                  
+
                   const allColors = variants.map(v => {
                     // Find matching color from colors array by color name
                     const colorName = v.color || 'Unknown';
-                    const colorObj = colors.find(c => 
+                    const colorObj = colors.find(c =>
                       c.colorName.toLowerCase() === colorName.toLowerCase()
                     );
-                    
+
                     return {
                       name: colorName,
                       hex: colorObj?.hexCode || '#' + Math.floor(Math.random()*16777215).toString(16) // Fallback to random if not found
@@ -1745,8 +1959,8 @@ const AdminPage: React.FC = () => {
                         </span>
                       </div>
                       <div className={styles.carImage}>
-                        <img 
-                          src={currentCar.img} 
+                        <img
+                          src={currentCar.img}
                           alt={`${currentCar.name} - ${currentCar.color}`}
                           style={{
                             transition: 'opacity 0.3s ease'
@@ -1755,7 +1969,7 @@ const AdminPage: React.FC = () => {
                       </div>
                       <div className={styles.carInfo}>
                         <h4>{baseModel}</h4>
-                        
+
                         {/* Color Variants Display */}
                         <div style={{
                           display: 'flex',
@@ -1794,8 +2008,8 @@ const AdminPage: React.FC = () => {
                                   height: '22px',
                                   borderRadius: '50%',
                                   backgroundColor: color.hex,
-                                  border: colorIdx === currentColorIdx 
-                                    ? '3px solid #ff4d30' 
+                                  border: colorIdx === currentColorIdx
+                                    ? '3px solid #ff4d30'
                                     : color.hex.toLowerCase() === '#f3f4f6' || color.hex.toLowerCase() === '#ffffff'
                                       ? '2px solid #e5e7eb'
                                       : '2px solid white',
@@ -1874,7 +2088,7 @@ const AdminPage: React.FC = () => {
                     <span>Số loại xe: <strong>{inventorySummary?.vehicles.length || 0}</strong></span>
                   </div>
                 </div>
-                <button 
+                <button
                   className={styles.addButton}
                   onClick={() => {
                     setNewInventory({ vehicleId: 0, quantity: 0 });
@@ -2007,7 +2221,7 @@ const AdminPage: React.FC = () => {
           <div className={styles.usersManagement}>
             <div className={styles.sectionHeader}>
               <h3>Chính sách chiết khấu</h3>
-              <button 
+              <button
                 className={styles.addButton}
                 onClick={() => {
                   setNewDiscount({
@@ -2057,9 +2271,9 @@ const AdminPage: React.FC = () => {
                         </td>
                         <td>
                           <div style={{fontSize: '14px', color: '#555'}}>
-                            {discount.minQuantity === discount.maxQuantity 
-                              ? `${discount.minQuantity} xe` 
-                              : discount.maxQuantity >= 2147483647 
+                            {discount.minQuantity === discount.maxQuantity
+                              ? `${discount.minQuantity} xe`
+                              : discount.maxQuantity >= 2147483647
                                 ? `${discount.minQuantity}+ xe`
                                 : `${discount.minQuantity} - ${discount.maxQuantity} xe`
                             }
@@ -2160,7 +2374,7 @@ const AdminPage: React.FC = () => {
           <div className={styles.usersManagement}>
             <div className={styles.sectionHeader}>
               <h3>Quản lý màu xe</h3>
-              <button 
+              <button
                 className={styles.addButton}
                 onClick={() => {
                   setNewColor({ colorName: '', hexCode: '#000000' });
@@ -2504,21 +2718,28 @@ const AdminPage: React.FC = () => {
                       <td>{booking.endDate}</td>
                       <td>{formatCurrency(booking.totalAmount)}</td>
                       <td>
-                        <span className={`${styles.statusBadge} ${styles[booking.status]}`}>
-                          {booking.status === 'pending' && 'Chờ duyệt'}
-                          {booking.status === 'confirmed' && 'Đã xác nhận'}
-                          {booking.status === 'processing' && 'Đang xử lý'}
-                          {booking.status === 'shipped' && 'Đang giao'}
-                          {booking.status === 'delivered' && 'Đã giao'}
-                          {booking.status === 'cancelled' && 'Đã hủy'}
-                        </span>
+                        <select
+                          className={`${styles.orderStatusDropdown} ${styles[booking.status || 'pending']}`}
+                          value={booking.status?.toUpperCase() || 'PENDING'}
+                          onChange={(e) => handleUpdateOrderStatus(booking.id, e.target.value as any)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="PENDING">Chờ duyệt</option>
+                          <option value="CONFIRMED">Đã xác nhận</option>
+                          <option value="CANCELLED">Hủy đơn hàng</option>
+                        </select>
                       </td>
                       <td>
-                        <span className={`${styles.paymentBadge} ${styles[booking.paymentStatus]}`}>
-                          {booking.paymentStatus === 'pending' && 'Chờ thanh toán'}
-                          {booking.paymentStatus === 'paid' && 'Đã thanh toán'}
-                          {booking.paymentStatus === 'refunded' && 'Đã hoàn tiền'}
-                        </span>
+                        <select
+                          className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
+                          value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
+                          onChange={(e) => handleUpdatePaymentStatus(booking.id, e.target.value as any)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="PENDING">Chờ thanh toán</option>
+                          <option value="PAID">Đã thanh toán</option>
+                          <option value="CANCELLED">Đã hủy</option>
+                        </select>
                       </td>
                       <td>
                         <div className={styles.tableActions}>
@@ -2530,24 +2751,21 @@ const AdminPage: React.FC = () => {
                             <i className="fas fa-eye"></i>
                           </button>
                           <button 
-                            className={styles.deleteButton} 
-                            title="Hủy đơn hàng"
-                            onClick={() => handleCancelOrder(
-                              booking.id, 
-                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
-                            )}
+                            className={styles.contractButton}
+                            title={hasContract(String(booking.id)) ? "📄 Tải PDF hợp đồng" : "📝 Tạo hợp đồng mới"}
+                            onClick={() => handleContractAction(booking.id)}
+                            style={{
+                              backgroundColor: hasContract(String(booking.id)) ? '#10b981' : '#6366f1'
+                            }}
                           >
-                            <i className="fas fa-times"></i>
+                            <i className={hasContract(String(booking.id)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
                           </button>
                           <button 
-                            className={styles.approveButton} 
-                            title="Xác nhận giao hàng"
-                            onClick={() => handleConfirmDelivery(
-                              booking.id, 
-                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
-                            )}
+                            className={styles.billButton}
+                            title="Xem hóa đơn"
+                            onClick={() => handleViewBill(booking.id)}
                           >
-                            <i className="fas fa-check"></i>
+                            <i className="fas fa-file-invoice"></i>
                           </button>
                         </div>
                       </td>
@@ -2997,7 +3215,7 @@ const AdminPage: React.FC = () => {
                                     accentColor: '#ff4d30'
                                   }}
                                 />
-                                
+
                                 {/* Color Dot */}
                                 <div
                                   style={{
@@ -3012,7 +3230,7 @@ const AdminPage: React.FC = () => {
                                     flexShrink: 0
                                   }}
                                 />
-                                
+
                                 {/* Color Name & Hex Code */}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                   <span style={{
@@ -3029,7 +3247,7 @@ const AdminPage: React.FC = () => {
                                     {color.hexCode}
                                   </span>
                                 </div>
-                                
+
                                 {/* Selected Badge */}
                                 {isSelected && (
                                   <div style={{
@@ -3718,7 +3936,7 @@ const AdminPage: React.FC = () => {
                         const imageData = colorImages[colorId];
                         // Priority: URL nhập tay > base64 upload > empty string
                         const imageUrl = imageData?.imageUrl?.trim() || imageData?.imagePreview || '';
-                        
+
                         return {
                           colorId: colorId,
                           imageUrl: imageUrl
@@ -3740,6 +3958,7 @@ const AdminPage: React.FC = () => {
                         widthMm: newCar.widthMm,
                         heightMm: newCar.heightMm,
                         priceRetail: newCar.priceRetail,
+                        finalPrice: newCar.finalPrice,
                         status: newCar.status,
                         manufactureYear: newCar.manufactureYear
                       };
@@ -3755,7 +3974,7 @@ const AdminPage: React.FC = () => {
 
                       // Xử lý response dựa trên type
                       let createdVehicles: any[] = [];
-                      
+
                       if ('data' in apiResponse && Array.isArray(apiResponse.data)) {
                         // Format: CreateVehiclesResponse { statusCode, message, data: [...] }
                         createdVehicles = apiResponse.data;
@@ -3779,20 +3998,20 @@ const AdminPage: React.FC = () => {
                         // Tìm màu tương ứng để lấy thông tin màu
                         const colorName = createdVehicle.color || 'Unknown';
                         const matchingColor = colors.find(c => c.colorName === colorName);
-                        
+
                         // Lấy ảnh từ colorImages dựa trên colorId nếu có
                         let vehicleImage = createdVehicle.imageUrl;
                         if (matchingColor && colorImages[matchingColor.colorId]) {
-                          vehicleImage = colorImages[matchingColor.colorId].imagePreview || 
+                          vehicleImage = colorImages[matchingColor.colorId].imagePreview ||
                                        colorImages[matchingColor.colorId].imageUrl ||
                                        createdVehicle.imageUrl;
                         }
-                        
+
                         // Fallback to default image
                         if (!vehicleImage) {
                           vehicleImage = `/src/images/cars-big/car-${createdVehicle.vehicleId}.jpg`;
                         }
-                        
+
                         return {
                           id: createdVehicle.vehicleId,
                           name: `${createdVehicle.modelName} ${createdVehicle.version}`.trim(),
@@ -3834,6 +4053,7 @@ const AdminPage: React.FC = () => {
                         widthMm: 0,
                         heightMm: 0,
                         priceRetail: 0,
+                        finalPrice: 0,
                         status: 'AVAILABLE',
                         manufactureYear: new Date().getFullYear()
                       });
@@ -3843,7 +4063,7 @@ const AdminPage: React.FC = () => {
                       // Cập nhật stats
                       setStats(prevStats => ({
                         ...prevStats,
-                        totalCars: prevStats.totalCars + newCars.length
+                        totalCars: prevStats.totalCars + 1
                       }));
 
                       // Success - hiển thị success notification
@@ -4056,8 +4276,8 @@ const AdminPage: React.FC = () => {
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                         <i className="fas fa-palette" style={{ color: '#ff4d30' }}></i>
                         <span>Màu xe</span>
-                        <span style={{ 
-                          fontSize: '12px', 
+                        <span style={{
+                          fontSize: '12px',
                           color: '#64748b',
                           fontWeight: 400,
                           marginLeft: '4px'
@@ -4083,8 +4303,8 @@ const AdminPage: React.FC = () => {
                       >
                         <option value="">-- Chọn màu xe --</option>
                         {colors.map((color) => (
-                          <option 
-                            key={color.colorId} 
+                          <option
+                            key={color.colorId}
                             value={color.colorId}
                             selected={editCar.color === color.colorName}
                           >
@@ -4427,6 +4647,30 @@ const AdminPage: React.FC = () => {
                       )}
                     </div>
                     <div className={styles.settingItem}>
+                      <label>Final Price (VND) - Giá sau khuyến mãi</label>
+                      <input
+                        type="text"
+                        className={styles.settingInput}
+                        value={formatPriceInput(editCar.finalPrice)}
+                        onChange={(e) => {
+                          const numericValue = parsePriceInput(e.target.value);
+                          setEditCar({...editCar, finalPrice: numericValue});
+                          const error = validateCarField('finalPrice', numericValue, editCar);
+                          setEditCarErrors(prev => ({ ...prev, finalPrice: error }));
+                        }}
+                        placeholder="Để 0 nếu không có khuyến mãi"
+                        style={editCarErrors.finalPrice ? { borderColor: 'red' } : {}}
+                      />
+                      {editCarErrors.finalPrice && (
+                        <span style={{ color: 'red', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                          ⚠️ {editCarErrors.finalPrice}
+                        </span>
+                      )}
+                      <small style={{ color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                        💡 Nếu để 0, giá hiển thị sẽ là Price. Nếu có giá trị, sẽ hiển thị giá khuyến mãi.
+                      </small>
+                    </div>
+                    <div className={styles.settingItem}>
                       <label>Status</label>
                       <select
                         className={styles.settingInput}
@@ -4540,6 +4784,7 @@ const AdminPage: React.FC = () => {
                         widthMm: editCar.widthMm,
                         heightMm: editCar.heightMm,
                         priceRetail: editCar.priceRetail,
+                        finalPrice: editCar.finalPrice,
                         status: editCar.status,
                         manufactureYear: editCar.manufactureYear
                       };
@@ -4574,6 +4819,7 @@ const AdminPage: React.FC = () => {
                         widthMm: 0,
                         heightMm: 0,
                         priceRetail: 0,
+                        finalPrice: 0,
                         status: 'AVAILABLE',
                         manufactureYear: new Date().getFullYear()
                       });
@@ -4656,17 +4902,17 @@ const AdminPage: React.FC = () => {
 
         {/* View Car Details Modal */}
         {showViewCarModal && selectedCar && (
-          <div 
-            className={styles.modalOverlay} 
-            role="dialog" 
+          <div
+            className={styles.modalOverlay}
+            role="dialog"
             aria-modal="true"
             onClick={() => {
               setShowViewCarModal(false);
               setSelectedCar(null);
             }}
           >
-            <div 
-              className={styles.modal} 
+            <div
+              className={styles.modal}
               style={{ maxWidth: '1400px' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -4732,12 +4978,12 @@ const AdminPage: React.FC = () => {
                           {colorVariants.map((variant: any, idx: number) => {
                             // Find color from colors array (same as card display)
                             const colorName = variant.color || 'Unknown';
-                            const colorObj = colors.find(c => 
+                            const colorObj = colors.find(c =>
                               c.colorName.toLowerCase().trim() === colorName.toLowerCase().trim()
                             );
-                            
+
                             const colorHex = colorObj?.hexCode || '#808080'; // Gray fallback
-                            
+
                             return (
                               <button
                                 key={variant.id}
@@ -4748,15 +4994,15 @@ const AdminPage: React.FC = () => {
                                   height: '40px',
                                   borderRadius: '50%',
                                   backgroundColor: colorHex,
-                                  border: idx === selectedColorIndex 
-                                    ? '4px solid #ff4d30' 
+                                  border: idx === selectedColorIndex
+                                    ? '4px solid #ff4d30'
                                     : colorHex.toLowerCase() === '#f3f4f6' || colorHex.toLowerCase() === '#ffffff'
                                       ? '2px solid #E5E7EB'
                                       : '2px solid #e2e8f0',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease',
-                                  boxShadow: idx === selectedColorIndex 
-                                    ? '0 0 0 4px rgba(255, 77, 48, 0.2)' 
+                                  boxShadow: idx === selectedColorIndex
+                                    ? '0 0 0 4px rgba(255, 77, 48, 0.2)'
                                     : '0 2px 4px rgba(0,0,0,0.1)',
                                   transform: idx === selectedColorIndex ? 'scale(1.1)' : 'scale(1)',
                                   position: 'relative'
@@ -4802,11 +5048,11 @@ const AdminPage: React.FC = () => {
                             <img
                               src={currentVariant.img || currentVariant.imageUrl}
                               alt={`${currentVariant.modelName || currentVariant.mark} ${currentVariant.version || currentVariant.model} - ${currentVariant.color}`}
-                              style={{ 
-                                width: '100%', 
-                                maxWidth: '100%', 
-                                height: '240px', 
-                                objectFit: 'cover', 
+                              style={{
+                                width: '100%',
+                                maxWidth: '100%',
+                                height: '240px',
+                                objectFit: 'cover',
                                 borderRadius: '12px',
                                 transition: 'opacity 0.3s ease'
                               }}
@@ -4950,14 +5196,14 @@ const AdminPage: React.FC = () => {
                               type="text"
                               className={styles.settingInput}
                               value={
-                                currentVariant.status === 'AVAILABLE' || currentVariant.status === 'available' ? 'Có sẵn' : 
+                                currentVariant.status === 'AVAILABLE' || currentVariant.status === 'available' ? 'Có sẵn' :
                                 currentVariant.status === 'DISCONTINUED' || currentVariant.status === 'unavailable' ? 'Ngừng bán' :
                                 currentVariant.status === 'rented' ? 'Đang thuê' :
                                 currentVariant.status === 'maintenance' ? 'Bảo trì' : 'Không khả dụng'
                               }
                               readOnly
                               style={{
-                                color: currentVariant.status === 'AVAILABLE' || currentVariant.status === 'available' ? '#10b981' : 
+                                color: currentVariant.status === 'AVAILABLE' || currentVariant.status === 'available' ? '#10b981' :
                                        currentVariant.status === 'rented' ? '#f59e0b' :
                                        currentVariant.status === 'maintenance' ? '#3b82f6' : '#ef4444',
                                 fontWeight: '600'
@@ -5004,7 +5250,7 @@ const AdminPage: React.FC = () => {
                     // Get the current selected variant to edit
                     const colorVariants = selectedCar.variants;
                     const currentVariant = colorVariants[selectedColorIndex] || colorVariants[0];
-                    
+
                     // Close view modal and open edit modal with current variant
                     setShowViewCarModal(false);
                     handleEditCar(currentVariant.id);
@@ -5423,10 +5669,10 @@ const AdminPage: React.FC = () => {
                     </div>
 
                     <div className={styles.formGroup} style={{ marginTop: '8px' }}>
-                      <label style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '12px', 
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
                         cursor: 'pointer',
                         padding: '14px 16px',
                         background: '#f9fafb',
@@ -5441,15 +5687,15 @@ const AdminPage: React.FC = () => {
                           type="checkbox"
                           checked={editColor.isActive}
                           onChange={(e) => setEditColor({ ...editColor, isActive: e.target.checked })}
-                          style={{ 
-                            width: '20px', 
-                            height: '20px', 
+                          style={{
+                            width: '20px',
+                            height: '20px',
                             cursor: 'pointer',
                             accentColor: '#f093fb'
                           }}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <i className={`fas ${editColor.isActive ? 'fa-check-circle' : 'fa-times-circle'}`} 
+                          <i className={`fas ${editColor.isActive ? 'fa-check-circle' : 'fa-times-circle'}`}
                              style={{ color: editColor.isActive ? '#10b981' : '#9ca3af', fontSize: '18px' }}></i>
                           <span style={{ fontWeight: 600, color: '#374151', fontSize: '14px' }}>
                             {editColor.isActive ? 'Đang sử dụng' : 'Ngừng sử dụng'}
@@ -5582,7 +5828,7 @@ const AdminPage: React.FC = () => {
                     bottom: '-30px',
                     left: '-30px'
                   }}></div>
-                  
+
                   {/* Color Preview */}
                   <div style={{
                     width: '140px',
@@ -5594,7 +5840,7 @@ const AdminPage: React.FC = () => {
                     position: 'relative',
                     zIndex: 1
                   }}></div>
-                  
+
                   {/* Color Info */}
                   <div style={{ textAlign: 'center', color: 'white', position: 'relative', zIndex: 1 }}>
                     <div style={{ fontSize: '28px', fontWeight: 800, marginBottom: '12px', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
@@ -5648,7 +5894,7 @@ const AdminPage: React.FC = () => {
                     </div>
                     <span className={`${styles.statusBadge} ${(selectedColor.inUse ?? selectedColor.isActive) ? styles.active : styles.inactive}`}
                       style={{ padding: '6px 16px', fontSize: '13px', fontWeight: 700 }}>
-                      <i className={`fas ${(selectedColor.inUse ?? selectedColor.isActive) ? 'fa-check-circle' : 'fa-times-circle'}`} 
+                      <i className={`fas ${(selectedColor.inUse ?? selectedColor.isActive) ? 'fa-check-circle' : 'fa-times-circle'}`}
                          style={{ marginRight: '6px' }}></i>
                       {(selectedColor.inUse ?? selectedColor.isActive) ? 'Đang dùng' : 'Ngừng dùng'}
                     </span>
@@ -5669,8 +5915,8 @@ const AdminPage: React.FC = () => {
                         <span style={{ fontWeight: 600, color: '#374151' }}>Ngày tạo:</span>
                       </div>
                       <span style={{ color: '#6b7280', fontSize: '14px', fontWeight: 500 }}>
-                        {new Date(selectedColor.createdAt).toLocaleDateString('vi-VN', { 
-                          year: 'numeric', month: 'long', day: 'numeric' 
+                        {new Date(selectedColor.createdAt).toLocaleDateString('vi-VN', {
+                          year: 'numeric', month: 'long', day: 'numeric'
                         })}
                       </span>
                     </div>
@@ -5691,8 +5937,8 @@ const AdminPage: React.FC = () => {
                         <span style={{ fontWeight: 600, color: '#374151' }}>Cập nhật gần nhất:</span>
                       </div>
                       <span style={{ color: '#6b7280', fontSize: '14px', fontWeight: 500 }}>
-                        {new Date(selectedColor.updatedAt).toLocaleDateString('vi-VN', { 
-                          year: 'numeric', month: 'long', day: 'numeric' 
+                        {new Date(selectedColor.updatedAt).toLocaleDateString('vi-VN', {
+                          year: 'numeric', month: 'long', day: 'numeric'
                         })}
                       </span>
                     </div>
@@ -5783,14 +6029,14 @@ const AdminPage: React.FC = () => {
                       {(() => {
                         // Get list of vehicle IDs already in inventory
                         const existingVehicleIds = inventorySummary?.vehicles.map(v => v.vehicleId) || [];
-                        
+
                         // Filter cars that are NOT in inventory yet
                         const availableCars = cars.filter(car => !existingVehicleIds.includes(car.id));
-                        
+
                         if (availableCars.length === 0) {
                           return <option value="" disabled>Tất cả xe đã có trong kho</option>;
                         }
-                        
+
                         return availableCars.map(car => (
                           <option key={car.id} value={car.id}>
                             #{car.id} - {car.name} {car.color ? `- ${car.color}` : ''}
@@ -6124,7 +6370,7 @@ const AdminPage: React.FC = () => {
                     <div className={styles.detailValue}>
                       <span className={`${styles.statusBadge} ${selectedInventoryItem.quantity > 20 ? styles.active : selectedInventoryItem.quantity > 0 ? styles.warning : styles.inactive}`}
                         style={{ padding: '6px 16px', fontSize: '13px', fontWeight: 700 }}>
-                        <i className={`fas ${selectedInventoryItem.quantity > 20 ? 'fa-check-circle' : selectedInventoryItem.quantity > 0 ? 'fa-exclamation-triangle' : 'fa-times-circle'}`} 
+                        <i className={`fas ${selectedInventoryItem.quantity > 20 ? 'fa-check-circle' : selectedInventoryItem.quantity > 0 ? 'fa-exclamation-triangle' : 'fa-times-circle'}`}
                            style={{ marginRight: '6px' }}></i>
                         {selectedInventoryItem.quantity > 20 ? 'Còn hàng' : selectedInventoryItem.quantity > 0 ? 'Sắp hết' : 'Hết hàng'}
                       </span>
@@ -6437,6 +6683,25 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
+                    // Populate edit form with current vehicle data
+                    setEditCar({
+                      modelName: selectedCar.modelName,
+                      version: selectedCar.version,
+                      color: selectedCar.color,
+                      batteryCapacityKwh: selectedCar.batteryCapacityKwh,
+                      rangeKm: selectedCar.rangeKm,
+                      maxSpeedKmh: selectedCar.maxSpeedKmh,
+                      chargingTimeHours: selectedCar.chargingTimeHours,
+                      seatingCapacity: selectedCar.seatingCapacity,
+                      motorPowerKw: selectedCar.motorPowerKw,
+                      weightKg: selectedCar.weightKg,
+                      lengthMm: selectedCar.lengthMm,
+                      widthMm: selectedCar.widthMm,
+                      heightMm: selectedCar.heightMm,
+                      priceRetail: selectedCar.priceRetail,
+                      finalPrice: (selectedCar as any).finalPrice || 0,
+                      status: selectedCar.status as 'AVAILABLE' | 'DISCONTINUED',
+                      manufactureYear: (selectedCar as any).manufactureYear || new Date().getFullYear()
         {/* Edit Discount Modal */}
         {showEditDiscountModal && editingDiscount && (
           <div className={styles.modalOverlay}>
@@ -6648,24 +6913,24 @@ const AdminPage: React.FC = () => {
                   onClick={async () => {
                     // Validation
                     const errors: Record<string, string> = {};
-                    
+
                     if (!editDiscount.description || !editDiscount.description.trim()) {
                       errors.description = 'Mô tả chính sách không được để trống';
                     }
-                    
+
                     if (editDiscount.minQuantity === undefined || editDiscount.minQuantity < 0) {
                       errors.minQuantity = 'Số lượng tối thiểu phải lớn hơn hoặc bằng 0';
                     }
-                    
+
                     if (editDiscount.maxQuantity === undefined || editDiscount.maxQuantity < 0) {
                       errors.maxQuantity = 'Số lượng tối đa phải lớn hơn hoặc bằng 0';
                     }
-                    
-                    if (editDiscount.minQuantity !== undefined && editDiscount.maxQuantity !== undefined && 
+
+                    if (editDiscount.minQuantity !== undefined && editDiscount.maxQuantity !== undefined &&
                         editDiscount.minQuantity > editDiscount.maxQuantity) {
                       errors.maxQuantity = 'Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu';
                     }
-                    
+
                     if (!editDiscount.discountRate || editDiscount.discountRate <= 0 || editDiscount.discountRate > 1) {
                       errors.discountRate = 'Tỷ lệ giảm giá phải từ 0-100%';
                     }
@@ -6786,8 +7051,8 @@ const AdminPage: React.FC = () => {
                       Số lượng tối đa
                     </div>
                     <div className={styles.detailValue} style={{fontWeight: 'bold'}}>
-                      {selectedDiscount.maxQuantity >= 2147483647 
-                        ? 'Không giới hạn' 
+                      {selectedDiscount.maxQuantity >= 2147483647
+                        ? 'Không giới hạn'
                         : `${selectedDiscount.maxQuantity} xe`
                       }
                     </div>
@@ -6819,7 +7084,7 @@ const AdminPage: React.FC = () => {
                     <div className={styles.detailValue}>
                       <span className={`${styles.statusBadge} ${selectedDiscount.isActive ? styles.active : styles.inactive}`}
                         style={{ padding: '6px 16px', fontSize: '13px', fontWeight: 700 }}>
-                        <i className={`fas ${selectedDiscount.isActive ? 'fa-check-circle' : 'fa-times-circle'}`} 
+                        <i className={`fas ${selectedDiscount.isActive ? 'fa-check-circle' : 'fa-times-circle'}`}
                            style={{ marginRight: '6px' }}></i>
                         {selectedDiscount.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
                       </span>
