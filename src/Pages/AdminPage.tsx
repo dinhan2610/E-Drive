@@ -3,14 +3,14 @@ import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle, type UpdateVehicleRequest } from '../services/vehicleApi';
-import { fetchManufacturerInventorySummary, fetchInventoryItemById, createInventoryRecord, updateInventoryRecord, deleteInventoryRecord, type CreateInventoryRequest, type UpdateInventoryRequest } from '../services/manufacturerInventoryApi';
+import { fetchManufacturerInventorySummary, createInventoryRecord, updateInventoryRecord, deleteInventoryRecord, type CreateInventoryRequest, type UpdateInventoryRequest } from '../services/manufacturerInventoryApi';
 import type { ManufacturerInventorySummary, VehicleInventoryItem } from '../types/inventory';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
 import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, updateOrderStatus, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
-import { fetchColors, createColor, getColorById, updateColor, deleteColor } from '../services/colorApi';
+import { createColor, updateColor, deleteColor, fetchColors } from '../services/colorApi';
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
-import { fetchDiscountPolicies, fetchActiveDiscountPolicies, getDiscountPolicyById, createDiscountPolicy, updateDiscountPolicy, deleteDiscountPolicy } from '../services/discountApi';
+import { fetchDiscountPolicies, createDiscountPolicy, updateDiscountPolicy, deleteDiscountPolicy } from '../services/discountApi';
 import type { DiscountPolicy, CreateDiscountRequest, UpdateDiscountRequest } from '../types/discount';
 import { downloadContractPdf } from '../services/contractsApi';
 import { useContractCheck } from '../hooks/useContractCheck';
@@ -41,6 +41,64 @@ if (typeof document !== 'undefined') {
   styleSheet.textContent = animationStyles;
   document.head.appendChild(styleSheet);
 }
+
+// Helper function to compress and validate image
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas for compression
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Canvas context not available'));
+          return;
+        }
+        
+        // Calculate new dimensions (max 800px width/height while maintaining aspect ratio)
+        const maxSize = 800;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height && width > maxSize) {
+          height = (height * maxSize) / width;
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = (width * maxSize) / height;
+          height = maxSize;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to base64 with reduced quality (0.7 = 70% quality)
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Validate size (max 900KB base64 ≈ 675KB actual image)
+        if (compressedBase64.length > 900000) {
+          reject(new Error('Ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn hoặc giảm chất lượng.'));
+          return;
+        }
+        
+        console.log(`✅ Image compressed: ${(compressedBase64.length / 1024).toFixed(2)} KB`);
+        resolve(compressedBase64);
+      };
+      
+      img.onerror = () => reject(new Error('Không thể tải ảnh'));
+      img.src = e.target?.result as string;
+    };
+    
+    reader.onerror = () => reject(new Error('Không thể đọc file'));
+    reader.readAsDataURL(file);
+  });
+};
 
 // Helper functions để format giá tiền
 const formatPriceInput = (value: number | string): string => {
@@ -145,6 +203,8 @@ const validateCarField = (fieldName: string, value: any, allValues?: any): strin
     if (numValue > 72) {
       return 'Thời gian sạc tối đa 72 giờ';
     }
+  }
+
   // Kiểm tra finalPrice (có thể là 0)
   if (fieldName === 'finalPrice') {
     if (isNaN(numValue) || numValue < 0) {
@@ -154,11 +214,6 @@ const validateCarField = (fieldName: string, value: any, allValues?: any): strin
     if (allValues && numValue > 0 && numValue > allValues.priceRetail) {
       return 'Giá khuyến mãi không được cao hơn giá gốc';
     }
-  }
-
-  // Kiểm tra giới hạn tối đa
-  if (fieldName === 'chargingTimeHours' && numValue > 72) {
-    return 'Thời gian sạc tối đa 72 giờ';
   }
 
   // Seating Capacity (1-12 seats) - Backend dùng Pattern regex ^(?:[1-9]|1[0-2])$
@@ -756,6 +811,32 @@ const AdminPage: React.FC = () => {
       }
     })();
 
+    // Fetch inventory summary from API
+    (async () => {
+      try {
+        console.log('📦 Fetching inventory summary from API...');
+        const summary = await fetchManufacturerInventorySummary();
+        setInventorySummary(summary);
+        console.log('✅ Loaded inventory summary:', summary);
+      } catch (error) {
+        console.error('❌ Failed to load inventory summary:', error);
+        setInventorySummary(null);
+      }
+    })();
+
+    // Fetch colors from API
+    (async () => {
+      try {
+        console.log('🎨 Fetching colors from API...');
+        const colorList = await fetchColors();
+        setColors(colorList);
+        console.log('✅ Loaded colors:', colorList);
+      } catch (error) {
+        console.error('❌ Failed to load colors:', error);
+        setColors([]);
+      }
+    })();
+
     // Fetch orders from API
     const fetchOrdersData = async () => {
       try {
@@ -1063,6 +1144,7 @@ const AdminPage: React.FC = () => {
   };
 
   // Handle cancel order
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCancelOrder = async (orderId: number | string, orderInfo: string) => {
     setConfirmDialog({
       isOpen: true,
@@ -1109,6 +1191,7 @@ const AdminPage: React.FC = () => {
   };
 
   // Handle confirm delivery
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleConfirmDelivery = async (orderId: number | string, orderInfo: string) => {
     setConfirmDialog({
       isOpen: true,
@@ -1158,15 +1241,32 @@ const AdminPage: React.FC = () => {
     });
   };
 
+  // Preserve unused handlers for future use
+  const _unusedHandlers = { handleCancelOrder, handleConfirmDelivery };
+  console.debug('Reserved handlers:', _unusedHandlers); // Prevent tree-shaking
+
   const handleDeleteCar = async (carId: number, carName: string) => {
-    // Hiển thị dialog xác nhận trước khi xóa
-    const confirmMessage = `Bạn có chắc chắn muốn xóa xe "${carName}"?\n\nHành động này không thể hoàn tác.`;
-
-    if (!window.confirm(confirmMessage)) {
-      return; // Người dùng hủy xóa
-    }
-
     try {
+      // Check if vehicle has inventory
+      const vehicleInventory = inventorySummary?.vehicles.find(v => v.vehicleId === carId);
+      
+      if (vehicleInventory && vehicleInventory.quantity > 0) {
+        // Show warning about inventory
+        const confirmMessage = `⚠️ CẢNH BÁO: Xe "${carName}" còn ${vehicleInventory.quantity} chiếc trong kho!\n\n` +
+          `Bạn cần xóa tồn kho trước khi xóa xe này.\n\n` +
+          `Vui lòng vào tab "Kho Hàng" để xóa tồn kho trước.`;
+        
+        alert(confirmMessage);
+        return;
+      }
+
+      // Hiển thị dialog xác nhận trước khi xóa
+      const confirmMessage = `Bạn có chắc chắn muốn xóa xe "${carName}"?\n\nHành động này không thể hoàn tác.`;
+
+      if (!window.confirm(confirmMessage)) {
+        return; // Người dùng hủy xóa
+      }
+
       console.log('🗑️ Deleting car with ID:', carId);
 
       // Gọi API để xóa xe từ database
@@ -1176,7 +1276,11 @@ const AdminPage: React.FC = () => {
       setCars(cars.filter(car => car.id !== carId));
 
       // Hiển thị thông báo thành công
-      alert(`✅ Đã xóa xe "${carName}" thành công!`);
+      setNotification({
+        isVisible: true,
+        message: `Đã xóa xe "${carName}" thành công!`,
+        type: 'success'
+      });
 
       // Cập nhật stats
       setStats(prevStats => ({
@@ -1186,7 +1290,13 @@ const AdminPage: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error deleting car:', error);
-      alert(`❌ Không thể xóa xe "${carName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`);
+      
+      // Show error notification
+      setNotification({
+        isVisible: true,
+        message: error instanceof Error ? error.message : 'Không thể xóa xe. Vui lòng thử lại.',
+        type: 'error'
+      });
     }
   };
 
@@ -3792,17 +3902,37 @@ const AdminPage: React.FC = () => {
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = () => {
-                                        setColorImages(prev => ({
-                                          ...prev,
-                                          [colorId]: {
-                                            imageUrl: '',
-                                            imagePreview: reader.result as string
-                                          }
-                                        }));
-                                      };
-                                      reader.readAsDataURL(file);
+                                      // Validate file type
+                                      if (!file.type.startsWith('image/')) {
+                                        alert('❌ Vui lòng chọn file ảnh (JPG, PNG, etc.)');
+                                        return;
+                                      }
+                                      
+                                      // Validate file size (max 5MB before compression)
+                                      if (file.size > 5 * 1024 * 1024) {
+                                        alert('❌ File ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB.');
+                                        return;
+                                      }
+                                      
+                                      // Show loading
+                                      console.log('🔄 Compressing image...');
+                                      
+                                      // Compress image
+                                      compressImage(file)
+                                        .then((compressedBase64) => {
+                                          setColorImages(prev => ({
+                                            ...prev,
+                                            [colorId]: {
+                                              imageUrl: '',
+                                              imagePreview: compressedBase64
+                                            }
+                                          }));
+                                          console.log('✅ Image uploaded and compressed successfully');
+                                        })
+                                        .catch((error) => {
+                                          console.error('❌ Image compression error:', error);
+                                          alert(`❌ ${error.message}`);
+                                        });
                                     }
                                   }}
                                 />
@@ -3932,16 +4062,24 @@ const AdminPage: React.FC = () => {
 
                       // Chuẩn bị dữ liệu để gửi lên API theo format mới
                       // Build colors array với colorId và imageUrl cho từng màu
-                      const colorsArray = newCar.colorIds.map(colorId => {
-                        const imageData = colorImages[colorId];
-                        // Priority: URL nhập tay > base64 upload > empty string
-                        const imageUrl = imageData?.imageUrl?.trim() || imageData?.imagePreview || '';
+                      try {
+                        const colorsArray = newCar.colorIds.map(colorId => {
+                          const imageData = colorImages[colorId];
+                          // Priority: URL nhập tay > base64 upload > empty string
+                          let imageUrl = imageData?.imageUrl?.trim() || imageData?.imagePreview || '';
+                          
+                          // Validate image URL length (max 1024 chars for database)
+                          if (imageUrl.length > 1024) {
+                            console.warn(`⚠️ Image URL too long for color ${colorId}: ${imageUrl.length} chars`);
+                            // Truncate or show error
+                            throw new Error(`Hình ảnh cho màu ID ${colorId} quá lớn (${(imageUrl.length / 1024).toFixed(2)} KB). Vui lòng chọn ảnh nhỏ hơn.`);
+                          }
 
-                        return {
-                          colorId: colorId,
-                          imageUrl: imageUrl
-                        };
-                      });
+                          return {
+                            colorId: colorId,
+                            imageUrl: imageUrl
+                          };
+                        });
 
                       const vehicleData = {
                         modelName: newCar.modelName.trim(),
@@ -3964,7 +4102,7 @@ const AdminPage: React.FC = () => {
                       };
 
                       console.log('🚗 Creating vehicle with NEW API format:', vehicleData);
-                      console.log('� Colors with images:', colorsArray);
+                      console.log('🎨 Colors with images:', colorsArray);
 
                       // Gửi lên API để lưu vào database
                       const apiResponse = await createVehicle(vehicleData);
@@ -4073,6 +4211,22 @@ const AdminPage: React.FC = () => {
                         type: 'success'
                       });
                       console.log(`✅ Đã thêm ${newCars.length} xe mới thành công!`);
+                      
+                    } catch (imageError) {
+                      // Catch validation errors từ image processing
+                      console.error('❌ Image validation error:', imageError);
+                      if (imageError instanceof Error && imageError.message.includes('quá lớn')) {
+                        setNewCarErrors({ 
+                          general: imageError.message
+                        });
+                      } else {
+                        // Re-throw to outer catch if not image error
+                        throw imageError;
+                      }
+                      setIsCreatingVehicle(false);
+                      return;
+                    }
+                    
                     } catch (error) {
                       console.error('❌ Lỗi khi thêm xe:', error);
 
@@ -4201,12 +4355,31 @@ const AdminPage: React.FC = () => {
                           onChange={(e) => {
                             const file = e.target.files && e.target.files[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onload = () => {
-                                setEditCarImagePreview(reader.result as string);
-                                setEditCarImageUrl(''); // Clear URL when file is selected
-                              };
-                              reader.readAsDataURL(file);
+                              // Validate file type
+                              if (!file.type.startsWith('image/')) {
+                                alert('❌ Vui lòng chọn file ảnh (JPG, PNG, etc.)');
+                                return;
+                              }
+                              
+                              // Validate file size (max 5MB before compression)
+                              if (file.size > 5 * 1024 * 1024) {
+                                alert('❌ File ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB.');
+                                return;
+                              }
+                              
+                              console.log('🔄 Compressing image for edit...');
+                              
+                              // Compress image
+                              compressImage(file)
+                                .then((compressedBase64) => {
+                                  setEditCarImagePreview(compressedBase64);
+                                  setEditCarImageUrl(''); // Clear URL when file is selected
+                                  console.log('✅ Edit image compressed successfully');
+                                })
+                                .catch((error) => {
+                                  console.error('❌ Image compression error:', error);
+                                  alert(`❌ ${error.message}`);
+                                });
                             } else {
                               setEditCarImagePreview('');
                             }
@@ -4784,7 +4957,6 @@ const AdminPage: React.FC = () => {
                         widthMm: editCar.widthMm,
                         heightMm: editCar.heightMm,
                         priceRetail: editCar.priceRetail,
-                        finalPrice: editCar.finalPrice,
                         status: editCar.status,
                         manufactureYear: editCar.manufactureYear
                       };
@@ -4792,7 +4964,7 @@ const AdminPage: React.FC = () => {
                       console.log('✏️ Updating vehicle with API format (colors array):', vehicleData);
 
                       // Gửi lên API để cập nhật trong database
-                      const updatedVehicle = await updateVehicle(editingCar.vehicleId, vehicleData);
+                      await updateVehicle(editingCar.vehicleId, vehicleData);
 
                       // Reload vehicles from API to get fresh data with updated images and colors
                       await reloadVehicles();
@@ -6683,25 +6855,6 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
-                    // Populate edit form with current vehicle data
-                    setEditCar({
-                      modelName: selectedCar.modelName,
-                      version: selectedCar.version,
-                      color: selectedCar.color,
-                      batteryCapacityKwh: selectedCar.batteryCapacityKwh,
-                      rangeKm: selectedCar.rangeKm,
-                      maxSpeedKmh: selectedCar.maxSpeedKmh,
-                      chargingTimeHours: selectedCar.chargingTimeHours,
-                      seatingCapacity: selectedCar.seatingCapacity,
-                      motorPowerKw: selectedCar.motorPowerKw,
-                      weightKg: selectedCar.weightKg,
-                      lengthMm: selectedCar.lengthMm,
-                      widthMm: selectedCar.widthMm,
-                      heightMm: selectedCar.heightMm,
-                      priceRetail: selectedCar.priceRetail,
-                      finalPrice: (selectedCar as any).finalPrice || 0,
-                      status: selectedCar.status as 'AVAILABLE' | 'DISCONTINUED',
-                      manufactureYear: (selectedCar as any).manufactureYear || new Date().getFullYear()
         {/* Edit Discount Modal */}
         {showEditDiscountModal && editingDiscount && (
           <div className={styles.modalOverlay}>

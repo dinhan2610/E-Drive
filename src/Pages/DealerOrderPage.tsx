@@ -5,6 +5,8 @@ import { getProfile } from '../services/profileApi';
 import { createOrder, getOrdersByDealer, type CreateOrderRequest, type Order } from '../services/orderApi';
 import { confirmDelivery, DeliveryApiError } from '../services/deliveryApi';
 import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
+import { fetchActiveDiscountPolicies } from '../services/discountApi';
+import type { DiscountPolicy } from '../types/discount';
 import { SuccessModal } from '../components/SuccessModal';
 import styles from '../styles/OrderStyles/DealerOrderPage.module.scss';
 
@@ -64,6 +66,10 @@ const DealerOrderPage: React.FC = () => {
   const [availableVehicles, setAvailableVehicles] = useState<Product[]>([]);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
+  
+  // Discount policies state
+  const [discountPolicies, setDiscountPolicies] = useState<DiscountPolicy[]>([]);
+  const [isLoadingDiscounts, setIsLoadingDiscounts] = useState(true);
   
   // Tab management
   const [activeTab, setActiveTab] = useState<'create' | 'list'>(initialTab);
@@ -149,6 +155,27 @@ const DealerOrderPage: React.FC = () => {
     };
 
     loadDealerProfile();
+  }, []);
+
+  // Load discount policies on mount
+  useEffect(() => {
+    const loadDiscountPolicies = async () => {
+      setIsLoadingDiscounts(true);
+      try {
+        console.log('💰 Loading active discount policies...');
+        const policies = await fetchActiveDiscountPolicies();
+        setDiscountPolicies(policies);
+        console.log('✅ Discount policies loaded:', policies);
+      } catch (error: any) {
+        console.error('❌ Error loading discount policies:', error);
+        // Fallback to empty array if error
+        setDiscountPolicies([]);
+      } finally {
+        setIsLoadingDiscounts(false);
+      }
+    };
+    
+    loadDiscountPolicies();
   }, []);
 
   // Load orders when switching to list tab
@@ -324,13 +351,41 @@ const DealerOrderPage: React.FC = () => {
       (sum, product) => sum + (product.unitPrice * product.quantity),
       0
     );
-    const discount = subtotal * 0.05; // 5% dealer discount
+    
+    // Calculate total quantity of all products
+    const totalQuantity = formData.selectedProducts.reduce(
+      (sum, product) => sum + product.quantity,
+      0
+    );
+    
+    // Find applicable discount policy based on total quantity
+    let discountRate = 0;
+    let appliedDiscountPolicy: DiscountPolicy | null = null;
+    
+    if (discountPolicies.length > 0) {
+      // Sort policies by minQuantity descending to get the best applicable discount
+      const sortedPolicies = [...discountPolicies].sort((a, b) => b.minQuantity - a.minQuantity);
+      
+      for (const policy of sortedPolicies) {
+        if (totalQuantity >= policy.minQuantity && totalQuantity <= policy.maxQuantity) {
+          discountRate = policy.discountRate;
+          appliedDiscountPolicy = policy;
+          console.log(`✅ Applied discount: ${discountRate}% for ${totalQuantity} vehicles (${policy.description})`);
+          break;
+        }
+      }
+    }
+    
+    const discount = subtotal * discountRate; // Dynamic discount based on quantity
     const vat = (subtotal - discount) * 0.1; // 10% VAT
     const total = subtotal - discount + vat;
 
     return {
       subtotal,
       discount,
+      discountRate,
+      totalQuantity,
+      appliedDiscountPolicy,
       vat,
       total,
     };
@@ -618,9 +673,24 @@ const DealerOrderPage: React.FC = () => {
                         </div>
                         
                         <div className={styles.priceRow}>
-                          <span>Chiết khấu đại lý (5%):</span>
+                          <span>
+                            Chiết khấu
+                            {isLoadingDiscounts && <small> (đang tải...)</small>}
+                            {pricing.discountRate > 0 && ` (${pricing.discountRate*100}%)`}
+                            {pricing.appliedDiscountPolicy && (
+                              <small style={{ display: 'block', fontSize: '0.85em', color: '#666' }}>
+                                {pricing.appliedDiscountPolicy.description}
+                              </small>
+                            )}
+                            {!isLoadingDiscounts && pricing.discountRate === 0 && pricing.totalQuantity > 0 && (
+                              <small style={{ display: 'block', fontSize: '0.85em', color: '#999' }}>
+                                Không có chính sách chiết khấu phù hợp
+                              </small>
+                            )}
+                            :
+                          </span>
                           <strong className={styles.discount}>
-                            -{formatPrice(pricing.discount)}
+                            {pricing.discount > 0 ? `-${formatPrice(pricing.discount)}` : formatPrice(0)}
                           </strong>
                         </div>
 

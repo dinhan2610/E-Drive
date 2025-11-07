@@ -11,30 +11,57 @@ export async function fetchManufacturerInventorySummary(): Promise<ManufacturerI
 
   try {
     const response = await api.get<any>('/api/manufacturer-inventory/summary');
-    console.log('✅ API Response:', response.data);
+    console.log('✅ Raw API Response:', response.data);
 
     // Check if API returns an array (take first item) or direct object
     let summary: ManufacturerInventorySummary;
     
+    // Format 1: Array response
     if (Array.isArray(response.data) && response.data.length > 0) {
       console.log('📦 API returned array, using first item');
       summary = response.data[0];
-    } else if (response.data && typeof response.data === 'object' && 'vehicles' in response.data) {
+    } 
+    // Format 2: Wrapped in data property { statusCode, message, data: {...} }
+    else if (response.data?.data && typeof response.data.data === 'object' && 'vehicles' in response.data.data) {
+      console.log('📦 API returned wrapped object with data property');
+      summary = response.data.data;
+    }
+    // Format 3: Direct object
+    else if (response.data && typeof response.data === 'object' && 'vehicles' in response.data) {
       console.log('📦 API returned direct object');
       summary = response.data;
-    } else {
-      console.warn('⚠️ Unexpected response format', response.data);
+    } 
+    // Format 4: Empty or unexpected
+    else {
+      console.warn('⚠️ Unexpected response format:', response.data);
       return {
-        manufacturerName: 'Unknown',
+        manufacturerName: 'EDrive',
         totalQuantity: 0,
         vehicles: []
       };
     }
 
+    // Ensure vehicles is an array
+    if (!Array.isArray(summary.vehicles)) {
+      console.warn('⚠️ vehicles is not an array, converting to empty array');
+      summary.vehicles = [];
+    }
+
     console.log('✅ Manufacturer inventory summary:', summary);
     return summary;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ fetchManufacturerInventorySummary error:', error);
+    
+    // Return empty summary instead of throwing error
+    if (error.response?.status === 404 || error.response?.status === 500) {
+      console.log('ℹ️ Returning empty inventory summary');
+      return {
+        manufacturerName: 'EDrive',
+        totalQuantity: 0,
+        vehicles: []
+      };
+    }
+    
     throw error;
   }
 }

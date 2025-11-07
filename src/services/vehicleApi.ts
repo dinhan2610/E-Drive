@@ -13,11 +13,6 @@ export function convertVehicleToProduct(vehicle: VehicleApiResponse): Product {
     name: `${vehicle.modelName} ${vehicle.version}`,
     variant: vehicle.version,
     slug: `${vehicle.modelName.toLowerCase().replace(/\s+/g, '-')}-${vehicle.version.toLowerCase()}`,
-    price: vehicle.priceRetail,
-    originalPrice: vehicle.priceRetail,
-  // Prefer remote imageUrl from backend if available, otherwise fallback to local asset
-  image: (vehicle as any).imageUrl || `/src/images/cars-big/car-${vehicle.vehicleId}.jpg`, // Absolute path from root
-  images: [ (vehicle as any).imageUrl || `/src/images/cars-big/car-${vehicle.vehicleId}.jpg` ],
     price: vehicle.finalPrice > 0 ? vehicle.finalPrice : vehicle.priceRetail,
     originalPrice: hasDiscount ? vehicle.priceRetail : undefined,
     image: imageUrl,
@@ -223,6 +218,15 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
     Object.entries(vehicleData).filter(([_, value]) => value !== undefined && value !== null)
   );
   
+  // Get authentication token
+  const accessToken = localStorage.getItem('accessToken');
+  const legacyToken = localStorage.getItem('token');
+  const token = accessToken || legacyToken;
+
+  if (!token) {
+    throw new Error('Vui lòng đăng nhập để tạo xe mới');
+  }
+  
   console.log('🚗 Creating vehicle at:', url);
   console.log('📤 Request body:', JSON.stringify(cleanedData, null, 2));
 
@@ -232,6 +236,7 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(cleanedData),
     });
@@ -366,6 +371,15 @@ export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicl
     Object.entries(vehicleData).filter(([_, value]) => value !== undefined && value !== null)
   );
 
+  // Get authentication token
+  const accessToken = localStorage.getItem('accessToken');
+  const legacyToken = localStorage.getItem('token');
+  const token = accessToken || legacyToken;
+
+  if (!token) {
+    throw new Error('Vui lòng đăng nhập để cập nhật xe');
+  }
+
   console.log('✏️ Updating vehicle at:', url);
   console.log('📤 Update request body:', JSON.stringify(cleanedData, null, 2));
 
@@ -375,6 +389,7 @@ export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicl
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(cleanedData),
     });
@@ -438,20 +453,52 @@ export async function deleteVehicle(vehicleId: number): Promise<void> {
   const url = `${API_BASE_URL}/vehicles/${vehicleId}`;
   console.log('🗑️ Deleting vehicle:', url);
 
+  // Get authentication token
+  const accessToken = localStorage.getItem('accessToken');
+  const legacyToken = localStorage.getItem('token');
+  const token = accessToken || legacyToken;
+
+  if (!token) {
+    throw new Error('Vui lòng đăng nhập để xóa xe');
+  }
+
   try {
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
         'Accept': '*/*',
+        'Authorization': `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
+      // Try to parse error response
+      let errorMessage = 'Yêu cầu không hợp lệ';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+        
+        // Check for foreign key constraint violation
+        if (errorMessage.includes('foreign key constraint') || 
+            errorMessage.includes('manufacturer_inventory') ||
+            errorMessage.includes('is still referenced')) {
+          throw new Error('Không thể xóa xe này vì còn tồn kho. Vui lòng xóa tồn kho trước khi xóa xe.');
+        }
+      } catch (e) {
+        // If it's already our custom error, re-throw it
+        if (e instanceof Error && e.message.includes('tồn kho')) {
+          throw e;
+        }
+        // Otherwise ignore JSON parse error
+      }
+
       // Handle specific error cases
       if (response.status === 404) {
         throw new Error(`Xe không tồn tại với ID: ${vehicleId}`);
       } else if (response.status === 400) {
-        throw new Error('Yêu cầu không hợp lệ');
+        throw new Error(errorMessage);
+      } else if (response.status === 403) {
+        throw new Error('Không có quyền xóa xe này');
       } else if (response.status === 500) {
         throw new Error('Lỗi máy chủ, vui lòng thử lại sau');
       } else {

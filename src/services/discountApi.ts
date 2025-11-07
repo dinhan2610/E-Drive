@@ -18,11 +18,25 @@ export async function fetchDiscountPolicies(): Promise<DiscountPolicy[]> {
 /**
  * Fetch active discount policies only
  * GET /api/admin/discount-policies/active
+ * Response format: { statusCode: 200, message: "...", data: [...] }
  */
 export async function fetchActiveDiscountPolicies(): Promise<DiscountPolicy[]> {
   try {
-    const response = await api.get<DiscountPolicy[]>('/api/admin/discount-policies/active');
-    return response.data;
+    const response = await api.get<any>('/api/admin/discount-policies/active');
+    console.log('✅ Active discount policies response:', response.data);
+    
+    // Handle response format: { statusCode, message, data: [...] }
+    if (response.data && Array.isArray(response.data.data)) {
+      console.log('✅ Active discount policies:', response.data.data);
+      return response.data.data;
+    }
+    // Fallback: direct array
+    else if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    console.warn('⚠️ Unexpected response format:', response.data);
+    return [];
   } catch (error: any) {
     console.error('❌ fetchActiveDiscountPolicies error:', error.response?.data || error.message);
     throw error;
