@@ -20,7 +20,6 @@ export interface VehicleApiResponse {
   finalPrice: number; // Giá cuối cùng sau khuyến mãi
   status: 'AVAILABLE' | 'DISCONTINUED';
   manufactureYear?: number; // Optional field
-  imageUrl?: string; // URL hình ảnh từ API
 }
 
 export interface ApiListResponse {
