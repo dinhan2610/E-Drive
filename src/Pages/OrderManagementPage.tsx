@@ -601,6 +601,12 @@ const OrderManagementPage: React.FC = () => {
                               </div>
                               <div className={styles.itemInfo}>
                                 <strong className={styles.itemName}>{item.vehicleName}</strong>
+                                {item.color && (
+                                  <div className={styles.itemColor}>
+                                    <i className="fas fa-palette"></i>
+                                    {item.color}
+                                  </div>
+                                )}
                                 <span className={styles.itemQuantity}>
                                   <i className="fas fa-box"></i>
                                   {item.quantity} xe × {formatPrice(item.unitPrice)}

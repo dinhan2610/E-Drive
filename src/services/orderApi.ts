@@ -10,6 +10,7 @@ export interface CreateOrderRequest {
   orderItems?: Array<{ // New: support multiple items
     vehicleId: number;
     quantity: number;
+    color?: string;
   }>;
   desiredDeliveryDate: string; // Format: YYYY-MM-DD
   deliveryNote: string;
@@ -25,6 +26,7 @@ export interface OrderItem {
   itemSubtotal: number;
   itemDiscount: number;
   itemTotal: number;
+  color?: string;
 }
 
 export interface Order {
@@ -124,7 +126,8 @@ export const getOrders = async (): Promise<Order[]> => {
         unitPrice: item.unitPrice || 0,
         itemSubtotal: item.itemSubtotal || 0,
         itemDiscount: item.itemDiscount || 0,
-        itemTotal: item.itemTotal || 0
+        itemTotal: item.itemTotal || 0,
+        color: item.color
       })) : []
     }));
 
@@ -197,7 +200,8 @@ export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
         unitPrice: Number(item.unitPrice || 0),
         itemSubtotal: Number(item.itemSubtotal || 0),
         itemDiscount: Number(item.itemDiscount || 0),
-        itemTotal: Number(item.itemTotal || 0)
+        itemTotal: Number(item.itemTotal || 0),
+        color: item.color
       })) || []
     }));
 
@@ -262,7 +266,8 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
         unitPrice: item.unitPrice || 0,
         itemSubtotal: item.itemSubtotal || 0,
         itemDiscount: item.itemDiscount || 0,
-        itemTotal: item.itemTotal || 0
+        itemTotal: item.itemTotal || 0,
+        color: item.color
       })) : []
     };
 

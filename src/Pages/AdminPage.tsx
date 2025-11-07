@@ -371,6 +371,7 @@ interface Booking {
   deliveryAddress: string;
   orderItems: Array<{
     vehicleName: string;
+    color?: string;
     quantity: number;
     unitPrice: number;
   }>;
@@ -2969,7 +2970,13 @@ const AdminPage: React.FC = () => {
                           <tbody>
                             {selectedOrder.orderItems.map((item, index) => (
                               <tr key={index}>
-                                <td>{item.vehicleName}</td>
+                                <td>
+                                  {item.vehicleName}
+                                  {item.color && <div style={{ fontSize: '0.9em', color: '#8b5cf6', marginTop: '4px' }}>
+                                    <i className="fas fa-palette" style={{ marginRight: '6px' }}></i>
+                                    Màu: {item.color}
+                                  </div>}
+                                </td>
                                 <td>{item.quantity}</td>
                                 <td>{formatCurrency(item.unitPrice)}</td>
                                 <td>{formatCurrency(item.itemSubtotal)}</td>
