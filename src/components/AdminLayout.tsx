@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import NotificationDropdown from './NotificationDropdown';
 import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
 
 interface AdminLayoutProps {
@@ -236,11 +235,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
               <i className="fas fa-search"></i>
               <input type="text" placeholder="Tìm kiếm..." />
             </div>
-            <NotificationDropdown />
-            <button className={styles.iconBtn}>
-              <i className="fas fa-envelope"></i>
-              <span className={styles.badge}>5</span>
-            </button>
           </div>
         </div>
 

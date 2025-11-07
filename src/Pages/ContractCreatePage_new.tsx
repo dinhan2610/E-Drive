@@ -290,9 +290,9 @@ const ContractCreatePage: React.FC = () => {
     pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST'); // Use FAST compression
     heightLeft -= pageHeight;
 
-    // Add additional pages if content is longer
+    // Add additional pages if content is longer - Fix: use correct position calculation
     while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
+      position = heightLeft - imgHeight; // Calculate correct negative position
       pdf.addPage();
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
@@ -335,11 +335,13 @@ const ContractCreatePage: React.FC = () => {
       let position = 0;
       let pageCount = 1;
 
+      // Add first page
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pdfHeight;
 
+      // Add subsequent pages without cutting content
       while (heightLeft > 0) {
-        position -= pdfHeight;
+        position = heightLeft - imgHeight; // Fix: Calculate correct negative position
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pdfHeight;
