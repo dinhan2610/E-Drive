@@ -8,11 +8,12 @@ import styles from './PromoForm.module.scss';
 
 interface PromoFormProps {
   promotion: Promotion | null;
+  dealerId: number;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const PromoForm: React.FC<PromoFormProps> = ({ promotion, onClose, onSuccess }) => {
+const PromoForm: React.FC<PromoFormProps> = ({ promotion, dealerId, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -112,9 +113,9 @@ const PromoForm: React.FC<PromoFormProps> = ({ promotion, onClose, onSuccess }) 
     setLoading(true);
     try {
       if (promotion) {
-        await updatePromotion(promotion.promoId, formData);
+        await updatePromotion(dealerId, promotion.promoId, formData);
       } else {
-        await createPromotion(formData);
+        await createPromotion(dealerId, formData);
       }
       onSuccess();
       onClose();

@@ -1816,7 +1816,7 @@ const AdminPage: React.FC = () => {
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification(prev => ({ ...prev, isVisible: false }))}
-        duration={5000}
+        duration={notification.type === 'error' ? 8000 : 5000}
       />
 
       {/* Dashboard Content */}

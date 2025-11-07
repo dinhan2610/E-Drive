@@ -8,11 +8,12 @@ import styles from './PromoTable.module.scss';
 interface PromoTableProps {
   promotions: Promotion[];
   loading: boolean;
+  dealerId: number;
   onEdit: (promo: Promotion) => void;
   onRefresh: () => void;
 }
 
-const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, onEdit, onRefresh }) => {
+const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, dealerId, onEdit, onRefresh }) => {
   const [confirmDialog, setConfirmDialog] = useState<{
     show: boolean;
     title: string;
@@ -70,8 +71,8 @@ const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, onEdit, on
 
   const handleDuplicate = async (promo: Promotion) => {
     try {
-      const { promoId, dealerId, ...rest } = promo;
-      await createPromotion({ ...rest, title: `${promo.title} (Copy)` });
+      const { promoId, dealerId: _, ...rest } = promo;
+      await createPromotion(dealerId, { ...rest, title: `${promo.title} (Copy)` });
       onRefresh();
     } catch (error) {
       alert('Không thể nhân bản khuyến mãi');
@@ -85,7 +86,7 @@ const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, onEdit, on
       message: `Bạn có chắc muốn xóa "${promo.title}"? Hành động này không thể hoàn tác.`,
       onConfirm: async () => {
         try {
-          await removePromotion(promo.promoId);
+          await removePromotion(dealerId, promo.promoId);
           onRefresh();
         } catch (error) {
           alert('Không thể xóa khuyến mãi');

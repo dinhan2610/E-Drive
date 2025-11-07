@@ -39,6 +39,28 @@
     margin: 0;
     font-size: 1.5rem;
     color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+}
+
+.dealerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #ff4d30 0%, #fa4226 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-left: 1rem;
+  box-shadow: 0 2px 8px rgba(255, 77, 48, 0.25);
+
+  i {
+    font-size: 1.2rem;
   }
 }
 

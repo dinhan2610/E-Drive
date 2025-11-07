@@ -185,9 +185,42 @@ export async function deleteDealer(dealerId: number): Promise<{ success: boolean
     };
   } catch (error: any) {
     console.error('❌ Delete Dealer Error:', error);
+    
+    // Check for foreign key constraint violation
+    const errorMessage = error.response?.data?.message || error.message || '';
+    
+    if (errorMessage.includes('foreign key constraint') || 
+        errorMessage.includes('violates foreign key') ||
+        errorMessage.includes('still referenced')) {
+      
+      // Extract table name from error message
+      let detailMessage = 'Không thể xóa đại lý này vì còn dữ liệu liên quan.';
+      
+      if (errorMessage.includes('users')) {
+        detailMessage = '❌ Không thể xóa đại lý này vì còn tài khoản người dùng (users) liên kết.\n\n' +
+                       '📋 Hướng dẫn:\n' +
+                       '1. Xóa hoặc chuyển tất cả users của đại lý này sang đại lý khác\n' +
+                       '2. Sau đó mới có thể xóa đại lý';
+      } else if (errorMessage.includes('customers')) {
+        detailMessage = '❌ Không thể xóa đại lý này vì còn khách hàng (customers) liên kết.\n\n' +
+                       '📋 Hướng dẫn: Xóa hoặc chuyển tất cả khách hàng sang đại lý khác trước';
+      } else if (errorMessage.includes('feedback')) {
+        detailMessage = '❌ Không thể xóa đại lý này vì còn phản hồi (feedback) liên kết.\n\n' +
+                       '📋 Hướng dẫn: Xóa tất cả phản hồi của đại lý này trước';
+      } else if (errorMessage.includes('test_drives')) {
+        detailMessage = '❌ Không thể xóa đại lý này vì còn lịch lái thử (test drives) liên kết.\n\n' +
+                       '📋 Hướng dẫn: Xóa tất cả lịch lái thử của đại lý này trước';
+      }
+      
+      return {
+        success: false,
+        message: detailMessage
+      };
+    }
+    
     return {
       success: false,
-      message: error.response?.data?.message || error.message || 'Đã xảy ra lỗi khi xóa đại lý'
+      message: errorMessage || 'Đã xảy ra lỗi khi xóa đại lý'
     };
   }
 }

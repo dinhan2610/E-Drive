@@ -114,8 +114,6 @@ export const authApi = {
   // Login API
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      console.log('🔐 Đang gửi yêu cầu đăng nhập...', { username: credentials.username });
-      
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: {
@@ -125,11 +123,8 @@ export const authApi = {
         body: JSON.stringify(credentials),
       });
 
-      console.log('📡 Response status:', response.status);
-
       // Parse JSON response
       const apiResponse: ApiResponse<LoginResponseData> = await response.json();
-      console.log('📦 API Response:', apiResponse);
 
       // Kiểm tra response status
       if (response.status !== 200 || apiResponse.statusCode !== 200) {
@@ -144,28 +139,12 @@ export const authApi = {
       }
 
       // Lưu tokens vào localStorage
-      console.log('💾 Lưu tokens...');
-      console.log('🔑 Token từ backend:', {
-        token: token ? `${token.substring(0, 30)}... (length: ${token.length})` : 'NULL',
-        refreshToken: refreshToken ? `${refreshToken.substring(0, 30)}... (length: ${refreshToken.length})` : 'NULL'
-      });
-      
       tokenManager.setTokens(token, refreshToken || '');
-      
-      // Verify after saving
-      const savedAccessToken = localStorage.getItem('accessToken');
-      const savedRefreshToken = localStorage.getItem('refreshToken');
-      console.log('✅ Tokens đã lưu vào localStorage:', {
-        accessToken: savedAccessToken ? `${savedAccessToken.substring(0, 30)}... (length: ${savedAccessToken.length})` : 'NULL',
-        refreshToken: savedRefreshToken ? `${savedRefreshToken.substring(0, 30)}... (length: ${savedRefreshToken.length})` : 'NULL'
-      });
 
       // Decode JWT để lấy thông tin user (bao gồm role)
-      // Token format: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PAYLOAD.SIGNATURE
       let user: any = { username: credentials.username };
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('🔍 JWT Payload:', payload);
         
         // Parse role từ JWT - có thể là 'role', 'roles', hoặc 'authorities'
         let role = payload.role || payload.roles?.[0] || payload.authorities?.[0] || 'dealer';
@@ -181,13 +160,9 @@ export const authApi = {
           fullName: payload.fullName || payload.name || credentials.username,
           role: role
         };
-        console.log('👤 User info từ token (bao gồm role):', user);
-        console.log('🎯 Normalized role:', role);
       } catch (e) {
         console.warn('Không thể decode token, sử dụng thông tin mặc định');
       }
-
-      console.log('✅ Đăng nhập thành công!');
 
       return {
         success: true,

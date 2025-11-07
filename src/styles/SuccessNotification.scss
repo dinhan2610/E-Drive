@@ -69,7 +69,9 @@
   font-size: 15px;
   font-weight: 500;
   color: #1e293b;
-  line-height: 1.5;
+  line-height: 1.6;
+  white-space: pre-line;
+  word-wrap: break-word;
 }
 
 .notification-close {

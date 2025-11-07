@@ -64,14 +64,11 @@ const getAuthHeaders = (): HeadersInit => {
  * Handle response and errors
  */
 const handleResponse = async <T>(response: Response): Promise<T> => {
-  console.log('🔍 handleResponse - status:', response.status, 'ok:', response.ok);
-  
   if (!response.ok) {
     let errorMessage = 'Đã xảy ra lỗi';
     
     try {
       const errorData = await response.json();
-      console.log('❌ Error data:', errorData);
       errorMessage = errorData.message || errorMessage;
     } catch {
       errorMessage = response.statusText || errorMessage;
@@ -79,7 +76,6 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 
     switch (response.status) {
       case 401:
-        // Remove expired tokens (both keys)
         localStorage.removeItem('token');
         localStorage.removeItem('accessToken');
         throw new TestDriveApiError(
@@ -100,15 +96,13 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
     }
   }
 
-  const jsonData = await response.json();
-  console.log('✅ Success response data:', jsonData);
-  return jsonData;
+  return await response.json();
 };
 
 // ===== API FUNCTIONS =====
 
 /**
- * GET /api/testdrives - Get all test drive bookings (Authentication required)
+ * GET /api/testdrives - Get all test drive bookings
  */
 export const getTestDriveBookings = async (): Promise<TestDrive[]> => {
   try {
@@ -119,9 +113,6 @@ export const getTestDriveBookings = async (): Promise<TestDrive[]> => {
 
     const result = await handleResponse<any>(response);
     
-    console.log('API Response:', result);
-    
-    // Xử lý cả 2 format: array trực tiếp hoặc {statusCode, message, data}
     if (Array.isArray(result)) {
       return result;
     }
@@ -140,7 +131,8 @@ export const getTestDriveBookings = async (): Promise<TestDrive[]> => {
 };
 
 /**
- * GET /api/testdrives/dealer/{dealerId} - Get test drive bookings by dealer (Authentication required)
+ * GET /api/testdrives/dealer/{dealerId} - Get test drive bookings by dealer
+ * Includes strict filtering to ensure only correct dealer test drives are returned
  */
 export const getTestDrivesByDealer = async (dealerId: number): Promise<TestDrive[]> => {
   try {
@@ -151,19 +143,29 @@ export const getTestDrivesByDealer = async (dealerId: number): Promise<TestDrive
 
     const result = await handleResponse<any>(response);
     
-    console.log('API Response for dealer:', result);
-    
-    // Xử lý cả 2 format: array trực tiếp hoặc {statusCode, message, data}
-    if (Array.isArray(result)) {
-      return result;
+    // Extract test drives array from response
+    const rawTestDrives: any[] = Array.isArray(result) 
+      ? result 
+      : (result?.data || result?.content || []);
+
+    if (!Array.isArray(rawTestDrives)) {
+      console.error('Invalid response format');
+      return [];
     }
+
+    // CRITICAL: Filter to ensure ONLY test drives for this dealer
+    const filteredTestDrives = rawTestDrives.filter(td => {
+      const testDriveDealerId = Number(td.dealerId);
+      const isMatch = testDriveDealerId === Number(dealerId);
+      
+      if (!isMatch) {
+        console.warn(`⚠️ Filtered out test drive ${td.testdriveId} - belongs to dealer ${testDriveDealerId}, not ${dealerId}`);
+      }
+      
+      return isMatch;
+    });
     
-    if (result && Array.isArray(result.data)) {
-      return result.data;
-    }
-    
-    console.error('Unexpected response format:', result);
-    return [];
+    return filteredTestDrives;
     
   } catch (error) {
     if (error instanceof TestDriveApiError) throw error;
@@ -189,15 +191,10 @@ export const getTestDriveById = async (id: number): Promise<TestDrive> => {
 };
 
 /**
- * POST /api/testdrives - Create new test drive booking (Authentication required)
- * Note: If 403 error occurs, backend may require different endpoint for DEALER role
+ * POST /api/testdrives - Create new test drive booking
  */
 export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive> => {
   try {
-    console.log('📤 Creating test drive with data:', data);
-    console.log('🔑 Using token:', localStorage.getItem('accessToken') ? 'EXISTS' : 'MISSING');
-    
-    // Try main endpoint first
     const response = await fetch(`${API_BASE_URL}/api/testdrives`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -206,14 +203,9 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
         status: data.status || 'PENDING'
       }),
     });
-
-    console.log('📥 Response status:', response.status);
     
     // If 403 and we have dealerId, try dealer-specific endpoint
     if (response.status === 403 && data.dealerId) {
-      console.log('⚠️ Got 403, trying dealer-specific endpoint...');
-      console.log('🔄 Trying: POST /api/testdrives/dealer/' + data.dealerId);
-      
       const dealerResponse = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${data.dealerId}`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -223,7 +215,6 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
         }),
       });
       
-      console.log('📥 Dealer endpoint response status:', dealerResponse.status);
       return handleResponse<TestDrive>(dealerResponse);
     }
 
@@ -235,41 +226,28 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
 };
 
 /**
- * PUT /api/testdrives/{id} - Update test drive booking (Authentication required)
- * Supports fallback to dealer-specific endpoint if main endpoint returns 403
+ * PUT /api/testdrives/{id} - Update test drive booking
  */
 export const updateTestDrive = async (
   id: number,
   data: TestDriveRequest
 ): Promise<TestDrive> => {
   try {
-    console.log('📝 Updating test drive #' + id + ' with data:', data);
-    console.log('🔑 Using token:', localStorage.getItem('accessToken') ? 'EXISTS' : 'MISSING');
-    
-    // Try main endpoint first
     const response = await fetch(`${API_BASE_URL}/api/testdrives/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-
-    console.log('📥 Update response status:', response.status);
     
     // If 403 and we have dealerId, try dealer-specific endpoint
     if (response.status === 403 && data.dealerId) {
-      console.log('⚠️ Got 403, trying dealer-specific update endpoint...');
-      console.log('🔄 Trying: PUT /api/testdrives/dealer/' + data.dealerId + '/' + id);
-      
       const dealerResponse = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${data.dealerId}/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
       
-      console.log('📥 Dealer endpoint response status:', dealerResponse.status);
       const result = await handleResponse<any>(dealerResponse);
-      
-      // Handle both direct object and wrapped response
       if (result.data && typeof result.data === 'object') {
         return result.data;
       }
@@ -277,48 +255,34 @@ export const updateTestDrive = async (
     }
 
     const result = await handleResponse<any>(response);
-    
-    // Handle both direct object and wrapped response
     if (result.data && typeof result.data === 'object') {
       return result.data;
     }
     return result;
     
   } catch (error) {
-    console.error('❌ Update test drive error:', error);
+    console.error('Update test drive error:', error);
     if (error instanceof TestDriveApiError) throw error;
     throw new TestDriveApiError('Khong the cap nhat lich lai thu', 'NETWORK_ERROR', error);
   }
 };
 
 /**
- * DELETE /api/testdrives/{id} - Delete test drive booking (Authentication required)
- * Supports fallback to dealer-specific endpoint if main endpoint returns 403
+ * DELETE /api/testdrives/{id} - Delete test drive booking
  */
 export const deleteTestDrive = async (id: number, dealerId?: number): Promise<void> => {
   try {
-    console.log('🗑️ Deleting test drive #' + id);
-    console.log('🔑 Using token:', localStorage.getItem('accessToken') ? 'EXISTS' : 'MISSING');
-    
-    // Try main endpoint first
     const response = await fetch(`${API_BASE_URL}/api/testdrives/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
 
-    console.log('📥 Delete response status:', response.status);
-
     // If 403 and we have dealerId, try dealer-specific endpoint
     if (response.status === 403 && dealerId) {
-      console.log('⚠️ Got 403, trying dealer-specific delete endpoint...');
-      console.log('🔄 Trying: DELETE /api/testdrives/dealer/' + dealerId + '/' + id);
-      
       const dealerResponse = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${dealerId}/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
-      
-      console.log('📥 Dealer endpoint response status:', dealerResponse.status);
       
       if (!dealerResponse.ok) {
         let errorMessage = 'Khong the xoa lich lai thu';
@@ -330,8 +294,6 @@ export const deleteTestDrive = async (id: number, dealerId?: number): Promise<vo
         }
         throw new TestDriveApiError(errorMessage, 'API_ERROR');
       }
-      
-      console.log('✅ Test drive deleted successfully via dealer endpoint');
       return;
     }
 
@@ -339,18 +301,14 @@ export const deleteTestDrive = async (id: number, dealerId?: number): Promise<vo
       let errorMessage = 'Khong the xoa lich lai thu';
       try {
         const errorData = await response.json();
-        console.log('❌ Delete error data:', errorData);
         errorMessage = errorData.message || errorMessage;
       } catch {
         errorMessage = response.statusText || errorMessage;
       }
-      
       throw new TestDriveApiError(errorMessage, 'API_ERROR');
     }
-    
-    console.log('✅ Test drive deleted successfully');
   } catch (error) {
-    console.error('❌ Delete test drive error:', error);
+    console.error('Delete test drive error:', error);
     if (error instanceof TestDriveApiError) throw error;
     throw new TestDriveApiError('Khong the xoa lich lai thu', 'NETWORK_ERROR', error);
   }

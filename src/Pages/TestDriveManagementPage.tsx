@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getTestDrivesByDealer, deleteTestDrive, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
+import { getProfile } from '../services/profileApi';
 import TestDriveDetailModal from '../components/testDrive/TestDriveDetailModal';
 import TestDriveEditModal from '../components/testDrive/TestDriveEditModal';
 import styles from '../styles/TestDriveStyles/TestDriveManagement.module.scss';
@@ -40,48 +41,56 @@ const TestDriveManagementPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
 
+  // Get dealer info from profile API
   useEffect(() => {
-    // Helper function to set token from console
-    (window as any).setTestToken = (token: string) => {
-      localStorage.setItem('accessToken', token);
-      localStorage.setItem('token', token);
-      console.log('✅ Token set successfully! Reload to test API.');
-      console.log('Token:', token.substring(0, 30) + '...');
-    };
-    
-    // Log current token status
-    const currentToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
-    if (currentToken) {
-      console.log('🔑 Current token:', currentToken.substring(0, 30) + '...');
-    } else {
-      console.log('⚠️ No token found. Use: setTestToken("your-token-here")');
-    }
-    
-    loadTestDrives();
-  }, []);
-
-  const loadTestDrives = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Lấy dealerId từ localStorage
-      const userData = localStorage.getItem('e-drive-user');
-      let dealerId = 1; // Default
-      
-      if (userData) {
-        try {
-          const user = JSON.parse(userData);
-          if (user.dealerId) {
-            dealerId = user.dealerId;
+    const fetchDealerInfo = async () => {
+      try {
+        console.log('🔍 Fetching dealer info from /api/profile/me...');
+        const profile = await getProfile();
+        console.log('✅ Profile data:', profile);
+        console.log('🏢 Dealer ID from profile:', profile.dealerId);
+        
+        setDealerInfo({
+          id: profile.dealerId,
+          name: profile.agencyName || `Đại lý #${profile.dealerId}`
+        });
+      } catch (error) {
+        console.error('❌ Failed to fetch profile:', error);
+        // Fallback to token if profile fails
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const dealerId = payload.dealerId || payload.dealer_id || 1;
+            setDealerInfo({ id: dealerId, name: `Đại lý #${dealerId}` });
+          } catch {
+            setDealerInfo({ id: 1, name: 'Đại lý #1' });
           }
-        } catch (error) {
-          console.error('Failed to parse user data:', error);
+        } else {
+          setDealerInfo({ id: 1, name: 'Đại lý #1' });
         }
       }
-      
-      console.log('Loading test drives for dealer:', dealerId);
-      const data = await getTestDrivesByDealer(dealerId);
+    };
+    
+    fetchDealerInfo();
+  }, []);
+
+  useEffect(() => {
+    if (dealerInfo?.id) {
+      loadTestDrives();
+    }
+  }, [dealerInfo?.id]);
+
+  const loadTestDrives = async () => {
+    if (!dealerInfo?.id) return;
+    
+    try {
+      setIsLoading(true);
+      console.log('🔍 Loading test drives for dealer ID:', dealerInfo.id);
+      const data = await getTestDrivesByDealer(dealerInfo.id);
+      console.log(`✅ Loaded ${data.length} test drives for dealer ${dealerInfo.id}`);
       setTestDrives(data);
     } catch (error: any) {
       console.error('Error loading test drives:', error);
@@ -149,7 +158,16 @@ const TestDriveManagementPage: React.FC = () => {
             </div>
             <div className={styles.headerText}>
               <h1>Quản lý lịch hẹn lái thử</h1>
-              <p>Theo dõi và quản lý toàn bộ yêu cầu đăng ký lái thử xe điện</p>
+              <p>
+                Theo dõi và quản lý toàn bộ yêu cầu đăng ký lái thử xe điện
+                {dealerInfo && (
+                  <span className={styles.dealerBadge}>
+                    <i className="fas fa-store"></i>
+                    Đại lý #{dealerInfo.id}
+                    {dealerInfo.name && ` - ${dealerInfo.name}`}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         </div>
