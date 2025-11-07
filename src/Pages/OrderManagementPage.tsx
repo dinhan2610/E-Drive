@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   getOrders, 
   formatOrderStatus,
   formatPaymentStatus,
+  uploadOrderBill,
   type Order,
   OrderApiError 
 } from '../services/orderApi';
@@ -62,6 +63,11 @@ const OrderManagementPage: React.FC = () => {
   
   // Download state
   const [downloadingContractId, setDownloadingContractId] = useState<number | string | null>(null);
+  const [uploadingBillOrderId, setUploadingBillOrderId] = useState<number | string | null>(null);
+  
+  // File input ref for bill upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedOrderIdForUpload, setSelectedOrderIdForUpload] = useState<number | string | null>(null);
   
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId } = useContractCheck();
@@ -165,13 +171,64 @@ const OrderManagementPage: React.FC = () => {
   };
 
   const handleViewFiles = async (orderId: number | string) => {
+    // Open file picker for bill upload
+    setSelectedOrderIdForUpload(orderId);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedOrderIdForUpload) return;
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      alert('⚠️ Vui lòng chọn file ảnh (PNG, JPG) hoặc PDF');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert('⚠️ Kích thước file không được vượt quá 10MB');
+      return;
+    }
+
     try {
-      console.log('� Viewing files for order:', orderId);
-      // TODO: Implement file viewing API
-      alert(`🚧 Chức năng xem file đính kèm cho đơn hàng #${orderId} sẽ được cập nhật sau.`);
+      setUploadingBillOrderId(selectedOrderIdForUpload);
+      console.log('📤 Uploading bill for order:', selectedOrderIdForUpload, 'File:', file.name);
+
+      await uploadOrderBill(selectedOrderIdForUpload, file);
+
+      alert(`✅ Đã upload hóa đơn "${file.name}" cho đơn hàng #${selectedOrderIdForUpload} thành công!`);
+      console.log('✅ Bill uploaded successfully');
+      
+      // Reload orders to reflect changes
+      await loadOrders();
     } catch (error: any) {
-      console.error('❌ Error viewing files:', error);
-      alert('Không thể xem file đính kèm. Vui lòng thử lại sau.');
+      console.error('❌ Error uploading bill:', error);
+      
+      // Show detailed error message
+      let errorMessage = 'Không thể upload hóa đơn. Vui lòng thử lại.';
+      
+      if (error.code === 'FORBIDDEN') {
+        errorMessage = '🚫 Bạn không có quyền upload hóa đơn cho đơn hàng này.\n\nĐây có thể là đơn hàng của dealer khác.';
+      } else if (error.code === 'INVALID_FILE') {
+        errorMessage = `⚠️ ${error.message}`;
+      } else if (error.code === 'ORDER_NOT_FOUND') {
+        errorMessage = '❌ Không tìm thấy đơn hàng này.';
+      } else if (error.message) {
+        errorMessage = `❌ ${error.message}`;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setUploadingBillOrderId(null);
+      setSelectedOrderIdForUpload(null);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -202,6 +259,15 @@ const OrderManagementPage: React.FC = () => {
 
   return (
     <div className={styles.pageWrapper}>
+      {/* Hidden file input for bill upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,application/pdf"
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
+      />
+      
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
@@ -347,13 +413,18 @@ const OrderManagementPage: React.FC = () => {
                             )}
                           </button>
                           
-                          {/* Xem file đính kèm */}
+                          {/* Upload hóa đơn */}
                           <button
                             className={`${styles.actionButton} ${styles.upload}`}
-                            title="Xem file đính kèm"
+                            title="Upload hóa đơn"
                             onClick={() => handleViewFiles(order.orderId)}
+                            disabled={uploadingBillOrderId === order.orderId}
                           >
-                            <i className="fas fa-paperclip"></i>
+                            {uploadingBillOrderId === order.orderId ? (
+                              <i className="fas fa-spinner fa-spin"></i>
+                            ) : (
+                              <i className="fas fa-paperclip"></i>
+                            )}
                           </button>
                         </div>
                       </td>

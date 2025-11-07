@@ -4,7 +4,7 @@ import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
 import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, deleteVehicle } from '../services/vehicleApi';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
-import { getOrders, getOrderById, cancelOrder, type Order } from '../services/orderApi';
+import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, updateOrderStatus, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
 import { downloadContractPdf } from '../services/contractsApi';
 import { useContractCheck } from '../hooks/useContractCheck';
@@ -603,6 +603,151 @@ const AdminPage: React.FC = () => {
       setNotification({
         isVisible: true,
         message: `❌ ${error.message || 'Không thể xử lý hợp đồng'}`,
+        type: 'error'
+      });
+    }
+  };
+
+  // Handle view bill preview
+  const handleViewBill = async (orderId: number | string) => {
+    try {
+      console.log('📄 Viewing bill for order:', orderId);
+      
+      setNotification({
+        isVisible: true,
+        message: '⏳ Đang tải hóa đơn...',
+        type: 'info'
+      });
+      
+      // Fetch bill preview
+      const billBlob = await getBillPreview(orderId);
+      
+      // Open bill in new tab
+      const blobUrl = URL.createObjectURL(billBlob);
+      window.open(blobUrl, '_blank');
+      
+      // Cleanup after 1 minute
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã mở hóa đơn!',
+        type: 'success'
+      });
+      
+      console.log('✅ Bill opened successfully');
+    } catch (error: any) {
+      console.error('❌ Error viewing bill:', error);
+      
+      let errorMessage = 'Không thể tải hóa đơn';
+      
+      if (error.code === 'BILL_NOT_FOUND') {
+        errorMessage = 'Đơn hàng này chưa có hóa đơn';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setNotification({
+        isVisible: true,
+        message: `❌ ${errorMessage}`,
+        type: 'error'
+      });
+    }
+  };
+
+  // Handle update order status
+  const handleUpdateOrderStatus = async (
+    orderId: number | string, 
+    newStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+  ) => {
+    try {
+      console.log('📦 Updating order status:', orderId, '→', newStatus);
+      
+      setNotification({
+        isVisible: true,
+        message: '⏳ Đang cập nhật trạng thái đơn hàng...',
+        type: 'info'
+      });
+      
+      await updateOrderStatus(orderId, newStatus);
+      
+      // Update local state
+      setBookings(prev => prev.map(booking => 
+        booking.id === orderId 
+          ? { ...booking, status: newStatus.toLowerCase() as any }
+          : booking
+      ));
+      
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã cập nhật trạng thái đơn hàng!',
+        type: 'success'
+      });
+      
+      console.log('✅ Order status updated successfully');
+    } catch (error: any) {
+      console.error('❌ Error updating order status:', error);
+      
+      let errorMessage = 'Không thể cập nhật trạng thái đơn hàng';
+      
+      if (error.code === 'FORBIDDEN') {
+        errorMessage = 'Bạn không có quyền cập nhật đơn hàng này';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setNotification({
+        isVisible: true,
+        message: `❌ ${errorMessage}`,
+        type: 'error'
+      });
+    }
+  };
+
+  // Handle update payment status
+  const handleUpdatePaymentStatus = async (
+    orderId: number | string, 
+    newStatus: 'PENDING' | 'PAID' | 'CANCELLED'
+  ) => {
+    try {
+      console.log('💳 Updating payment status:', orderId, '→', newStatus);
+      
+      setNotification({
+        isVisible: true,
+        message: '⏳ Đang cập nhật trạng thái thanh toán...',
+        type: 'info'
+      });
+      
+      await updatePaymentStatus(orderId, newStatus);
+      
+      // Update local state
+      setBookings(prev => prev.map(booking => 
+        booking.id === orderId 
+          ? { ...booking, paymentStatus: newStatus.toLowerCase() as any }
+          : booking
+      ));
+      
+      setNotification({
+        isVisible: true,
+        message: '✅ Đã cập nhật trạng thái thanh toán!',
+        type: 'success'
+      });
+      
+      console.log('✅ Payment status updated successfully');
+    } catch (error: any) {
+      console.error('❌ Error updating payment status:', error);
+      
+      let errorMessage = 'Không thể cập nhật trạng thái thanh toán';
+      
+      if (error.code === 'FORBIDDEN') {
+        errorMessage = 'Bạn không có quyền cập nhật đơn hàng này';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setNotification({
+        isVisible: true,
+        message: `❌ ${errorMessage}`,
         type: 'error'
       });
     }
@@ -1639,21 +1784,28 @@ const AdminPage: React.FC = () => {
                       <td>{booking.endDate}</td>
                       <td>{formatCurrency(booking.totalAmount)}</td>
                       <td>
-                        <span className={`${styles.statusBadge} ${styles[booking.status]}`}>
-                          {booking.status === 'pending' && 'Chờ duyệt'}
-                          {booking.status === 'confirmed' && 'Đã xác nhận'}
-                          {booking.status === 'processing' && 'Đang xử lý'}
-                          {booking.status === 'shipped' && 'Đang giao'}
-                          {booking.status === 'delivered' && 'Đã giao'}
-                          {booking.status === 'cancelled' && 'Đã hủy'}
-                        </span>
+                        <select 
+                          className={`${styles.orderStatusDropdown} ${styles[booking.status || 'pending']}`}
+                          value={booking.status?.toUpperCase() || 'PENDING'}
+                          onChange={(e) => handleUpdateOrderStatus(booking.id, e.target.value as any)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="PENDING">Chờ duyệt</option>
+                          <option value="CONFIRMED">Đã xác nhận</option>
+                          <option value="CANCELLED">Hủy đơn hàng</option>
+                        </select>
                       </td>
                       <td>
-                        <span className={`${styles.paymentBadge} ${styles[booking.paymentStatus]}`}>
-                          {booking.paymentStatus === 'pending' && 'Chờ thanh toán'}
-                          {booking.paymentStatus === 'paid' && 'Đã thanh toán'}
-                          {booking.paymentStatus === 'refunded' && 'Đã hoàn tiền'}
-                        </span>
+                        <select 
+                          className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
+                          value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
+                          onChange={(e) => handleUpdatePaymentStatus(booking.id, e.target.value as any)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="PENDING">Chờ thanh toán</option>
+                          <option value="PAID">Đã thanh toán</option>
+                          <option value="CANCELLED">Đã hủy</option>
+                        </select>
                       </td>
                       <td>
                         <div className={styles.tableActions}>
@@ -1675,24 +1827,11 @@ const AdminPage: React.FC = () => {
                             <i className={hasContract(String(booking.id)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
                           </button>
                           <button 
-                            className={styles.approveButton} 
-                            title="Xác nhận giao hàng"
-                            onClick={() => handleConfirmDelivery(
-                              booking.id, 
-                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
-                            )}
+                            className={styles.billButton} 
+                            title="Xem hóa đơn"
+                            onClick={() => handleViewBill(booking.id)}
                           >
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button 
-                            className={styles.deleteButton} 
-                            title="Hủy đơn hàng"
-                            onClick={() => handleCancelOrder(
-                              booking.id, 
-                              `#${typeof booking.id === 'string' ? booking.id.substring(0, 8) : booking.id}`
-                            )}
-                          >
-                            <i className="fas fa-times"></i>
+                            <i className="fas fa-file-invoice"></i>
                           </button>
                         </div>
                       </td>
