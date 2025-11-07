@@ -199,7 +199,7 @@
   color: white;
   border: none;
   border-radius: 50px;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -217,12 +217,12 @@
   }
 
   i {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   @media (max-width: 768px) {
     padding: 12px 24px;
-    font-size: 0.938rem;
+    font-size: 1rem;
     gap: 8px;
     margin-left: 0;
     width: 100%;
@@ -343,7 +343,7 @@
   padding: 12px 40px 12px 44px;
   border: 2px solid #e5e7eb;
   border-radius: 10px;
-  font-size: 0.938rem;
+  font-size: 1.0625rem;
   transition: all 0.2s ease;
   background: #f9fafb;
 

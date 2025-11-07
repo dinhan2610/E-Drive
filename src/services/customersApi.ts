@@ -98,9 +98,24 @@ export async function updateCustomer(id: number, payload: UpdateCustomerPayload)
 export async function deleteCustomer(id: number): Promise<void> {
   try {
     const dealerId = getDealerId();
+    console.log(`🗑️ Attempting to delete customer ${id} for dealer ${dealerId}`);
     await api.delete(`/api/dealer/${dealerId}/customers/${id}`);
-  } catch (error) {
-    console.error(`Failed to delete customer ${id}:`, error);
+    console.log(`✅ Successfully deleted customer ${id}`);
+  } catch (error: any) {
+    console.error(`❌ Failed to delete customer ${id}:`, error);
+    
+    // Log chi tiết lỗi từ backend
+    if (error.response) {
+      console.error('Backend response:', {
+        status: error.response.status,
+        data: error.response.data,
+        message: error.response.data?.message || error.message
+      });
+      
+      // Throw error message từ backend nếu có
+      const backendMessage = error.response.data?.message || error.response.data?.error || error.message;
+      throw new Error(backendMessage);
+    }
     throw error;
   }
 }

@@ -3,7 +3,6 @@ import Contact from "./Pages/Contact";
 import Compare from "./Pages/Compare";
 import ProductsPage from "./Pages/ProductsPage";
 import ProductDetailPage from "./Pages/ProductDetailPage";
-import QuotePage from "./Pages/QuotePage";
 import QuoteListPage from "./Pages/QuoteListPage";
 import DealerOrderPage from "./Pages/DealerOrderPage";
 import ProfilePage from "./Pages/ProfilePage";
@@ -84,11 +83,6 @@ function App() {
         <Route path="/installment" element={
           <ProtectedRoute requiredRole="dealer">
             <FinancingPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/quote" element={
-          <ProtectedRoute requiredRole="dealer">
-            <QuotePage />
           </ProtectedRoute>
         } />
         <Route path="/quotes" element={

@@ -200,20 +200,14 @@ const TicketsPage: React.FC = () => {
           <div className={styles.modalOverlay} onClick={() => setShowDetailModal(false)}>
             <div className={styles.modal} onClick={e => e.stopPropagation()}>
               <div className={styles.modalHeader}>
-                <h2>
-                  <i className="fas fa-star"></i>
-                  Chi tiết phản hồi #{selectedFeedback.feedbackId}
-                </h2>
+                <h2>Chi tiết phản hồi #{selectedFeedback.feedbackId}</h2>
                 <button className={styles.closeButton} onClick={() => setShowDetailModal(false)}>
                   <i className="fas fa-times"></i>
                 </button>
               </div>
               <div className={styles.modalBody}>
                 <div className={styles.detailRow}>
-                  <label>
-                    <i className="fas fa-star-half-alt"></i>
-                    Đánh giá
-                  </label>
+                  <label>Đánh giá:</label>
                   <div className={styles.ratingDetail}>
                     <div className={styles.stars}>
                       {'⭐'.repeat(selectedFeedback.rating)}
@@ -222,54 +216,36 @@ const TicketsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className={styles.detailRow}>
-                  <label>
-                    <i className="fas fa-comment-dots"></i>
-                    Nội dung phản hồi
-                  </label>
+                  <label>Nội dung:</label>
                   <div className={styles.contentDetail}>{selectedFeedback.content}</div>
                 </div>
                 <div className={styles.detailRow}>
-                  <label>
-                    <i className="fas fa-user"></i>
-                    Thông tin khách hàng
-                  </label>
+                  <label>Khách hàng:</label>
                   <div>
                     ID: #{selectedFeedback.customerId}
                     {selectedFeedback.customerName && ` - ${selectedFeedback.customerName}`}
                   </div>
                 </div>
                 <div className={styles.detailRow}>
-                  <label>
-                    <i className="fas fa-store"></i>
-                    Thông tin đại lý
-                  </label>
+                  <label>Đại lý:</label>
                   <div>
                     ID: #{selectedFeedback.dealerId}
                     {selectedFeedback.dealerName && ` - ${selectedFeedback.dealerName}`}
                   </div>
                 </div>
                 <div className={styles.detailRow}>
-                  <label>
-                    <i className="fas fa-calendar-alt"></i>
-                    Ngày tạo
-                  </label>
+                  <label>Ngày tạo:</label>
                   <div>{formatDate(selectedFeedback.createdAt)}</div>
                 </div>
                 {selectedFeedback.response && (
                   <>
                     <div className={styles.detailRow}>
-                      <label>
-                        <i className="fas fa-reply"></i>
-                        Phản hồi từ đại lý
-                      </label>
+                      <label>Phản hồi:</label>
                       <div className={styles.responseDetail}>{selectedFeedback.response}</div>
                     </div>
                     {selectedFeedback.respondedAt && (
                       <div className={styles.detailRow}>
-                        <label>
-                          <i className="fas fa-clock"></i>
-                          Ngày phản hồi
-                        </label>
+                        <label>Ngày phản hồi:</label>
                         <div>{formatDate(selectedFeedback.respondedAt)}</div>
                       </div>
                     )}

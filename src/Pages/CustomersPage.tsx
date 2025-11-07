@@ -129,8 +129,15 @@ const CustomersPage: React.FC = () => {
         setIsDetailOpen(false);
         setSelectedCustomer(null);
       }
-    } catch (error) {
+      
+      // Show success message
+      alert(`✅ Đã xóa khách hàng ID ${customerToDelete.customerId} thành công!`);
+    } catch (error: any) {
       console.error('Failed to delete customer:', error);
+      
+      // Show error message to user
+      const errorMessage = error.message || 'Không thể xóa khách hàng. Vui lòng thử lại.';
+      alert(`❌ Lỗi: ${errorMessage}`);
     } finally {
       setDeleteLoading(false);
     }

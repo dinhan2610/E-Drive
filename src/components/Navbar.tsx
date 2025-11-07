@@ -109,10 +109,9 @@ const Navbar: React.FC = () => {
       className: "customers-link dropdown-parent",
       dropdown: [
         { to: "/customers", label: "Khách hàng", icon: "fa-users" },
-        { to: "/quote", label: "Tạo báo giá", icon: "fa-file-invoice-dollar" },
         { to: "/drive", label: "Quản lý lái thử", icon: "fa-car-side" },
         { to: "/promotions", label: "Khuyến mãi", icon: "fa-tags" },
-        { to: "/delivery-status", label: "Tình trạng giao xe", icon: "fa-truck" },
+        { to: "/delivery-status", label: "Đơn hàng", icon: "fa-truck" },
         { to: "/installment", label: "Trả góp", icon: "fa-credit-card" },
         { to: "/feedback", label: "Phản hồi và xử lý khiếu nại", icon: "fa-comments" }
       ]
