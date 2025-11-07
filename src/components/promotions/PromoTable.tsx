@@ -1,6 +1,6 @@
 // src/components/promotions/PromoTable.tsx
 import React, { useState } from 'react';
-import { removePromotion, createPromotion } from '../../services/promotionsApi';
+import { removePromotion } from '../../services/promotionsApi';
 import type { Promotion, PromoStatus } from '../../types/promotion';
 import ConfirmDialog from '../common/ConfirmDialog';
 import styles from './PromoTable.module.scss';
@@ -10,10 +10,11 @@ interface PromoTableProps {
   loading: boolean;
   dealerId: number;
   onEdit: (promo: Promotion) => void;
+  onView: (promo: Promotion) => void;
   onRefresh: () => void;
 }
 
-const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, dealerId, onEdit, onRefresh }) => {
+const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, dealerId, onEdit, onView, onRefresh }) => {
   const [confirmDialog, setConfirmDialog] = useState<{
     show: boolean;
     title: string;
@@ -67,16 +68,6 @@ const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, dealerId, 
   const formatDate = (date: string) => {
     if (!date) return '—';
     return new Date(date).toLocaleDateString('vi-VN');
-  };
-
-  const handleDuplicate = async (promo: Promotion) => {
-    try {
-      const { promoId, dealerId: _, ...rest } = promo;
-      await createPromotion(dealerId, { ...rest, title: `${promo.title} (Copy)` });
-      onRefresh();
-    } catch (error) {
-      alert('Không thể nhân bản khuyến mãi');
-    }
   };
 
   const handleDelete = (promo: Promotion) => {
@@ -158,18 +149,18 @@ const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, dealerId, 
             <div className={styles.actions}>
               <button
                 className={styles.actionBtn}
-                onClick={() => onEdit(promo)}
-                title="Chỉnh sửa"
+                onClick={() => onView(promo)}
+                title="Xem chi tiết"
               >
-                <i className="fas fa-edit"></i>
+                <i className="fas fa-eye"></i>
               </button>
 
               <button
                 className={styles.actionBtn}
-                onClick={() => handleDuplicate(promo)}
-                title="Nhân bản"
+                onClick={() => onEdit(promo)}
+                title="Chỉnh sửa"
               >
-                <i className="fas fa-copy"></i>
+                <i className="fas fa-edit"></i>
               </button>
 
               <button

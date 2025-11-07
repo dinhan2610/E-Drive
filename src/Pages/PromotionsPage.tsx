@@ -7,6 +7,7 @@ import type { Promotion } from '../types/promotion';
 import PromoTable from '../components/promotions/PromoTable';
 // @ts-ignore
 import PromoForm from '../components/promotions/PromoForm';
+import PromoDetail from '../components/promotions/PromoDetail';
 import styles from '../styles/PromotionsStyles/PromotionsPage.module.scss';
 
 const PromotionsPage: React.FC = () => {
@@ -15,7 +16,9 @@ const PromotionsPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null);
+  const [viewingPromo, setViewingPromo] = useState<Promotion | null>(null);
   const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
 
   // Filters from URL
@@ -106,9 +109,19 @@ const PromotionsPage: React.FC = () => {
     setShowForm(true);
   };
 
+  const handleView = (promo: Promotion) => {
+    setViewingPromo(promo);
+    setShowDetail(true);
+  };
+
   const handleFormClose = () => {
     setShowForm(false);
     setEditingPromo(null);
+  };
+
+  const handleDetailClose = () => {
+    setShowDetail(false);
+    setViewingPromo(null);
   };
 
   const handleFormSuccess = () => {
@@ -163,6 +176,7 @@ const PromotionsPage: React.FC = () => {
           loading={loading}
           dealerId={dealerInfo?.id || 1}
           onEdit={handleEdit}
+          onView={handleView}
           onRefresh={loadPromotions}
         />
 
@@ -195,6 +209,14 @@ const PromotionsPage: React.FC = () => {
           dealerId={dealerInfo.id}
           onClose={handleFormClose}
           onSuccess={handleFormSuccess}
+        />
+      )}
+
+      {/* Detail Modal */}
+      {showDetail && viewingPromo && (
+        <PromoDetail
+          promotion={viewingPromo}
+          onClose={handleDetailClose}
         />
       )}
     </div>
