@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
@@ -6,6 +6,8 @@ import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, del
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
 import { getOrders, getOrderById, cancelOrder, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
+import { downloadContractPdf } from '../services/contractsApi';
+import { useContractCheck } from '../hooks/useContractCheck';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
 import modalStyles from '../styles/AdminStyles/OrderDetailModal.module.scss';
@@ -48,7 +50,7 @@ const parsePriceInput = (value: string): number => {
 };
 
 // Validation helper function
-const validateCarField = (fieldName: string, value: any): string => {
+const validateCarField = (fieldName: string, value: any, allValues?: any): string => {
   // Kiểm tra các field text
   if (fieldName === 'modelName' && !value.trim()) {
     return 'Vui lòng nhập tên model xe';
@@ -78,6 +80,17 @@ const validateCarField = (fieldName: string, value: any): string => {
     };
     if (fieldLabels[fieldName]) {
       return `${fieldLabels[fieldName]} phải lớn hơn 0`;
+    }
+  }
+
+  // Kiểm tra finalPrice (có thể là 0)
+  if (fieldName === 'finalPrice') {
+    if (isNaN(numValue) || numValue < 0) {
+      return 'Giá cuối cùng không được là số âm';
+    }
+    // Nếu finalPrice > 0, phải nhỏ hơn hoặc bằng priceRetail
+    if (allValues && numValue > 0 && numValue > allValues.priceRetail) {
+      return 'Giá khuyến mãi không được cao hơn giá gốc';
     }
   }
 
@@ -248,6 +261,7 @@ const AdminPage: React.FC = () => {
     widthMm: 0,
     heightMm: 0,
     priceRetail: 0,
+    finalPrice: 0,
     status: 'AVAILABLE' as 'AVAILABLE' | 'DISCONTINUED',
     manufactureYear: new Date().getFullYear()
   });
@@ -266,6 +280,7 @@ const AdminPage: React.FC = () => {
     widthMm: 0,
     heightMm: 0,
     priceRetail: 0,
+    finalPrice: 0,
     status: 'AVAILABLE' as 'AVAILABLE' | 'DISCONTINUED',
     manufactureYear: new Date().getFullYear()
   });
@@ -329,6 +344,28 @@ const AdminPage: React.FC = () => {
   const [newDealerErrors, setNewDealerErrors] = useState<Record<string, string>>({});
   const [editDealerErrors, setEditDealerErrors] = useState<Record<string, string>>({});
   const [bookings, setBookings] = useState<Booking[]>([]);
+  
+  // Use contract check hook for optimized one-contract-per-order lookup
+  const { hasContract, getContractId, reload: reloadContractMap } = useContractCheck();
+  
+  // Reload contract map when navigating back from contract creation
+  // Use ref to track if we've already reloaded for this timestamp
+  const lastRefreshTimestamp = useRef<number | null>(null);
+  
+  useEffect(() => {
+    const refreshTimestamp = (location.state as any)?.refresh;
+    
+    // Only reload if:
+    // 1. There's a refresh signal
+    // 2. It's a NEW timestamp (not the same as last time)
+    if (refreshTimestamp && refreshTimestamp !== lastRefreshTimestamp.current) {
+      console.log('🔄 Refresh signal detected from ContractCreatePage, reloading contract map...');
+      lastRefreshTimestamp.current = refreshTimestamp;
+      reloadContractMap();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]); // Only depend on location.state, NOT reloadContractMap
+  
   const [stats, setStats] = useState<AdminStats>({
     totalCars: 0,
     totalUsers: 0,
@@ -516,6 +553,61 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  // Handle contract action - smart: download if exists, create if not
+  const handleContractAction = async (orderId: number | string) => {
+    try {
+      console.log('📄 Order:', orderId, '→ Checking contract...');
+      
+      // Use optimized O(1) lookup to get contractId directly
+      const contractId = getContractId(String(orderId));
+      
+      console.log('🎯 Contract mapping:', orderId, '→', contractId || 'NOT FOUND');
+      
+      if (contractId) {
+        // Contract exists -> Download PDF directly using contractId
+        console.log('✅ Contract ID found:', contractId, '- Downloading PDF...');
+        
+        setNotification({
+          isVisible: true,
+          message: '⏳ Đang tải hợp đồng...',
+          type: 'info'
+        });
+        
+        // Download PDF directly with contractId (optimized!)
+        const pdfBlob = await downloadContractPdf(contractId);
+        
+        // Auto-download file
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `Hop-dong-${contractId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+        
+        setNotification({
+          isVisible: true,
+          message: `✅ Đã tải hợp đồng #${contractId} thành công!`,
+          type: 'success'
+        });
+        
+        console.log('💾 PDF downloaded for contract:', contractId);
+      } else {
+        // Contract doesn't exist -> Navigate to create page
+        console.log('⚠️ No contract found for order:', orderId, '- Navigating to create page...');
+        window.location.href = `/admin/contracts/new?orderId=${orderId}`;
+      }
+    } catch (error: any) {
+      console.error('❌ Error handling contract:', error);
+      setNotification({
+        isVisible: true,
+        message: `❌ ${error.message || 'Không thể xử lý hợp đồng'}`,
+        type: 'error'
+      });
+    }
+  };
+
   // Handle cancel order
   const handleCancelOrder = async (orderId: number | string, orderInfo: string) => {
     setConfirmDialog({
@@ -682,6 +774,7 @@ const AdminPage: React.FC = () => {
         widthMm: vehicleData.widthMm,
         heightMm: vehicleData.heightMm,
         priceRetail: vehicleData.priceRetail,
+        finalPrice: vehicleData.finalPrice || 0,
         status: vehicleData.status as 'AVAILABLE' | 'DISCONTINUED',
         manufactureYear: (vehicleData as any).manufactureYear || new Date().getFullYear()
       });
@@ -1573,10 +1666,13 @@ const AdminPage: React.FC = () => {
                           </button>
                           <button 
                             className={styles.contractButton} 
-                            title="Tạo hợp đồng"
-                            onClick={() => window.location.href = `/admin/contracts/new?orderId=${booking.id}`}
+                            title={hasContract(String(booking.id)) ? "📄 Tải PDF hợp đồng" : "📝 Tạo hợp đồng mới"}
+                            onClick={() => handleContractAction(booking.id)}
+                            style={{
+                              backgroundColor: hasContract(String(booking.id)) ? '#10b981' : '#6366f1'
+                            }}
                           >
-                            <i className="fas fa-file-contract"></i>
+                            <i className={hasContract(String(booking.id)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
                           </button>
                           <button 
                             className={styles.approveButton} 
@@ -2266,6 +2362,30 @@ const AdminPage: React.FC = () => {
                       )}
                     </div>
                     <div className={styles.settingItem}>
+                      <label>Final Price (VND) - Giá sau khuyến mãi</label>
+                      <input
+                        type="text"
+                        className={styles.settingInput}
+                        value={formatPriceInput(newCar.finalPrice)}
+                        onChange={(e) => {
+                          const numericValue = parsePriceInput(e.target.value);
+                          setNewCar({ ...newCar, finalPrice: numericValue });
+                          const error = validateCarField('finalPrice', numericValue, newCar);
+                          setNewCarErrors(prev => ({ ...prev, finalPrice: error }));
+                        }}
+                        placeholder="Để 0 nếu không có khuyến mãi"
+                        style={newCarErrors.finalPrice ? { borderColor: 'red' } : {}}
+                      />
+                      {newCarErrors.finalPrice && (
+                        <span style={{ color: 'red', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                          ⚠️ {newCarErrors.finalPrice}
+                        </span>
+                      )}
+                      <small style={{ color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                        💡 Nếu để 0, giá hiển thị sẽ là Price. Nếu có giá trị, sẽ hiển thị giá khuyến mãi.
+                      </small>
+                    </div>
+                    <div className={styles.settingItem}>
                       <label>Status</label>
                       <select
                         className={styles.settingInput}
@@ -2350,6 +2470,7 @@ const AdminPage: React.FC = () => {
                         widthMm: newCar.widthMm,
                         heightMm: newCar.heightMm,
                         priceRetail: newCar.priceRetail,
+                        finalPrice: newCar.finalPrice,
                         status: newCar.status,
                         manufactureYear: newCar.manufactureYear
                       };
@@ -2399,6 +2520,7 @@ const AdminPage: React.FC = () => {
                         widthMm: 0,
                         heightMm: 0,
                         priceRetail: 0,
+                        finalPrice: 0,
                         status: 'AVAILABLE',
                         manufactureYear: new Date().getFullYear()
                       });
@@ -2820,6 +2942,30 @@ const AdminPage: React.FC = () => {
                       )}
                     </div>
                     <div className={styles.settingItem}>
+                      <label>Final Price (VND) - Giá sau khuyến mãi</label>
+                      <input
+                        type="text"
+                        className={styles.settingInput}
+                        value={formatPriceInput(editCar.finalPrice)}
+                        onChange={(e) => {
+                          const numericValue = parsePriceInput(e.target.value);
+                          setEditCar({...editCar, finalPrice: numericValue});
+                          const error = validateCarField('finalPrice', numericValue, editCar);
+                          setEditCarErrors(prev => ({ ...prev, finalPrice: error }));
+                        }}
+                        placeholder="Để 0 nếu không có khuyến mãi"
+                        style={editCarErrors.finalPrice ? { borderColor: 'red' } : {}}
+                      />
+                      {editCarErrors.finalPrice && (
+                        <span style={{ color: 'red', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                          ⚠️ {editCarErrors.finalPrice}
+                        </span>
+                      )}
+                      <small style={{ color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                        💡 Nếu để 0, giá hiển thị sẽ là Price. Nếu có giá trị, sẽ hiển thị giá khuyến mãi.
+                      </small>
+                    </div>
+                    <div className={styles.settingItem}>
                       <label>Status</label>
                       <select
                         className={styles.settingInput}
@@ -2905,6 +3051,7 @@ const AdminPage: React.FC = () => {
                         widthMm: editCar.widthMm,
                         heightMm: editCar.heightMm,
                         priceRetail: editCar.priceRetail,
+                        finalPrice: editCar.finalPrice,
                         status: editCar.status,
                         manufactureYear: editCar.manufactureYear
                       };
@@ -2949,6 +3096,7 @@ const AdminPage: React.FC = () => {
                         widthMm: 0,
                         heightMm: 0,
                         priceRetail: 0,
+                        finalPrice: 0,
                         status: 'AVAILABLE',
                         manufactureYear: new Date().getFullYear()
                       });
@@ -3235,6 +3383,7 @@ const AdminPage: React.FC = () => {
                       widthMm: selectedCar.widthMm,
                       heightMm: selectedCar.heightMm,
                       priceRetail: selectedCar.priceRetail,
+                      finalPrice: (selectedCar as any).finalPrice || 0,
                       status: selectedCar.status as 'AVAILABLE' | 'DISCONTINUED',
                       manufactureYear: (selectedCar as any).manufactureYear || new Date().getFullYear()
                     });

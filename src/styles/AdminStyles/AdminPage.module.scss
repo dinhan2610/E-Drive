@@ -573,6 +573,17 @@
     background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
   }
+
+  // Contract statuses
+  &.draft {
+    background: rgba(156, 163, 175, 0.1);
+    color: #6b7280;
+  }
+
+  &.signing {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+  }
 }
 
 .paymentBadge {

@@ -176,7 +176,7 @@ const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload,
                 <span>{formatCurrency(payload.pricing.subtotal)}</span>
               </div>
               <div className={styles.row}>
-                <span>Giảm giá:</span>
+                <span>Chiết khấu:</span>
                 <span>-{formatCurrency(payload.pricing.discount)}</span>
               </div>
               <div className={styles.row}>

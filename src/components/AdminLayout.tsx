@@ -16,7 +16,7 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabChange, counters }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -30,7 +30,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'cars': return 'Quản lý xe';
       case 'dealers': return 'Đại lý';
       case 'bookings': return 'Đặt xe';
-      case 'contracts': return 'Hợp đồng';
       case 'analytics': return 'Thống kê';
       case 'settings': return 'Cài đặt';
       default: return 'Dashboard';
@@ -43,7 +42,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'cars': return 'fas fa-car';
       case 'dealers': return 'fas fa-store';
       case 'bookings': return 'fas fa-calendar-alt';
-      case 'contracts': return 'fas fa-file-contract';
       case 'analytics': return 'fas fa-chart-bar';
       case 'settings': return 'fas fa-cog';
       default: return 'fas fa-chart-line';
@@ -115,16 +113,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
             >
               <i className="fas fa-calendar-alt"></i>
               <span>Đặt xe ({counters.bookings})</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'contracts' ? styles.active : ''}`}
-              onClick={() => {
-                navigate('/admin/contracts/new');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-file-contract"></i>
-              <span>Hợp đồng</span>
             </div>
           </div>
 
