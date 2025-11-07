@@ -140,63 +140,81 @@ export const getOrders = async (): Promise<Order[]> => {
 
 /**
  * GET /api/orders/dealer/{dealerId} - Get orders by dealer ID
+ * Includes strict filtering to ensure only correct dealer orders are returned
  */
 export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
   try {
     const response = await api.get<any>(`/api/orders/dealer/${dealerId}`);
-    console.log('📦 Get orders by dealer response:', response.data);
-
     const data = response.data;
 
-    // Extract orders array from different response formats
-    let orders: any[] = [];
+    // Extract orders array from response
+    const rawOrders: any[] = Array.isArray(data) 
+      ? data 
+      : (data?.data || data?.content || []);
 
-    if (Array.isArray(data)) {
-      orders = data;
-    } else if (data && Array.isArray(data.data)) {
-      orders = data.data;
-    } else if (data && Array.isArray(data.content)) {
-      orders = data.content;
-    } else {
-      console.error('Unexpected response format:', data);
+    if (!Array.isArray(rawOrders)) {
+      console.error('Invalid response format');
       return [];
     }
 
-    console.log('✅ Orders array for dealer:', orders);
+    // CRITICAL: Filter to ensure ONLY orders for this dealer
+    const filteredOrders = rawOrders.filter(order => {
+      const orderDealerId = Number(order.dealerId);
+      const isMatch = orderDealerId === Number(dealerId);
+      
+      if (!isMatch) {
+        console.warn(`⚠️ Filtered out order ${order.orderId} - belongs to dealer ${orderDealerId}, not ${dealerId}`);
+      }
+      
+      return isMatch;
+    });
 
-    // Map backend field names to frontend Order interface
-    const mappedOrders: Order[] = orders.map((order: any) => ({
+    if (filteredOrders.length === 0) {
+      return [];
+    }
+
+    // Map to frontend Order interface
+    const mappedOrders: Order[] = filteredOrders.map((order: any) => ({
       orderId: order.orderId || order.id || order.orderID,
-      dealerId: order.dealerId,
+      dealerId: Number(order.dealerId),
       dealerName: order.dealerName,
       orderDate: order.orderDate,
       desiredDeliveryDate: order.desiredDeliveryDate || '',
-      actualDeliveryDate: order.actualDeliveryDate,
-      subtotal: order.subtotal || 0,
-      dealerDiscount: order.totalDiscount || order.dealerDiscount || 0,
-      vatAmount: order.vatAmount || 0,
-      grandTotal: order.totalPrice || order.grandTotal || 0,
+      actualDeliveryDate: order.actualDeliveryDate || null,
+      subtotal: Number(order.subtotal || 0),
+      dealerDiscount: Number(order.totalDiscount || order.dealerDiscount || 0),
+      vatAmount: Number(order.vatAmount || 0),
+      grandTotal: Number(order.totalPrice || order.grandTotal || 0),
       deliveryAddress: order.deliveryAddress || '',
       deliveryNote: order.deliveryNote || '',
       orderStatus: order.orderStatus || 'PENDING',
       paymentStatus: order.paymentStatus || 'PENDING',
       paymentMethod: order.paymentMethod || 'CASH',
-      orderItems: order.orderItems ? order.orderItems.map((item: any) => ({
+      orderItems: order.orderItems?.map((item: any) => ({
         vehicleId: item.vehicleId,
         vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
-        quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || 0,
-        itemSubtotal: item.itemSubtotal || 0,
-        itemDiscount: item.itemDiscount || 0,
-        itemTotal: item.itemTotal || 0
-      })) : []
+        quantity: Number(item.quantity || 1),
+        unitPrice: Number(item.unitPrice || 0),
+        itemSubtotal: Number(item.itemSubtotal || 0),
+        itemDiscount: Number(item.itemDiscount || 0),
+        itemTotal: Number(item.itemTotal || 0)
+      })) || []
     }));
 
-    console.log('✅ Mapped orders for dealer:', mappedOrders);
+    console.log(`✅ Loaded ${mappedOrders.length} orders for dealer ${dealerId}`);
     return mappedOrders;
 
   } catch (error: any) {
-    console.error('Error fetching orders by dealer:', error);
+    console.error('❌ Error fetching orders by dealer:', error);
+    
+    // Handle specific error codes
+    if (error.response?.status === 404) {
+      throw new OrderApiError('Dealer không tồn tại', 'DEALER_NOT_FOUND', error);
+    }
+    if (error.response?.status === 403) {
+      throw new OrderApiError('Bạn không có quyền xem đơn hàng của dealer này', 'FORBIDDEN', error);
+    }
+    
     const message = error.response?.data?.message || 'Không thể tải danh sách đơn hàng';
     throw new OrderApiError(message, `HTTP_${error.response?.status}`, error);
   }

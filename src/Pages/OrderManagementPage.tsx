@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  getOrders, 
+  getOrdersByDealer,
   formatOrderStatus,
   formatPaymentStatus,
   uploadOrderBill,
   type Order,
   OrderApiError 
 } from '../services/orderApi';
+import { getProfile } from '../services/profileApi';
 import { downloadContractPdf } from '../services/contractsApi';
 import { useContractCheck } from '../hooks/useContractCheck';
 import styles from '../styles/OrderStyles/OrderManagement.module.scss';
@@ -53,6 +54,7 @@ const OrderManagementPage: React.FC = () => {
   // Order data state
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   
   // Search and filter state
   const [filterStatus, setFilterStatus] = useState<'ALL' | string>('ALL');
@@ -72,12 +74,36 @@ const OrderManagementPage: React.FC = () => {
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId } = useContractCheck();
 
+  // ===== LOAD DEALER PROFILE =====
+  useEffect(() => {
+    const loadDealerProfile = async () => {
+      try {
+        const profile = await getProfile();
+        if (profile.dealerId) {
+          setCurrentDealerId(profile.dealerId);
+          console.log('✅ Dealer logged in - ID:', profile.dealerId);
+        } else {
+          console.warn('⚠️ No dealerId in profile');
+        }
+      } catch (error) {
+        console.error('❌ Error loading dealer profile:', error);
+      }
+    };
+    
+    loadDealerProfile();
+  }, []);
+
   // ===== LOAD ORDERS DATA =====
   const loadOrders = useCallback(async () => {
+    if (!currentDealerId) {
+      console.warn('⚠️ No dealerId available, skipping order load');
+      return;
+    }
+    
     setLoading(true);
     try {
-      console.log('🔄 Loading all orders from API...');
-      const fetchedOrders = await getOrders();
+      console.log(`🔄 Loading orders for dealer ${currentDealerId}...`);
+      const fetchedOrders = await getOrdersByDealer(currentDealerId);
       
       // Sort orders by newest first
       const sortedOrders = [...fetchedOrders].sort((a, b) => {
@@ -99,12 +125,14 @@ const OrderManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentDealerId]);
 
-  // Load data on mount and when dependencies change
+  // Load data when dealerId is available
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+    if (currentDealerId) {
+      loadOrders();
+    }
+  }, [currentDealerId, loadOrders]);
 
   // ===== HANDLERS =====
   const handleViewDetail = async (order: Order) => {
