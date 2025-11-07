@@ -8,32 +8,10 @@ import type {
 } from '../types/customer';
 
 /**
- * Get dealer ID from localStorage
- */
-function getDealerId(): number {
-  const userData = localStorage.getItem('e-drive-user');
-  if (userData) {
-    try {
-      const user = JSON.parse(userData);
-      if (user.dealerId) {
-        return user.dealerId;
-      }
-    } catch (error) {
-      console.error('Failed to parse user data:', error);
-    }
-  }
-  
-  // Fallback to dealerId 1 if not found
-  console.warn('Dealer ID not found in localStorage, using default dealerId=1');
-  return 1;
-}
-
-/**
  * List customers with pagination, search, and filters
  */
-export async function listCustomers(params: ListCustomersParams = {}): Promise<ListCustomersResponse> {
+export async function listCustomers(dealerId: number, params: ListCustomersParams = {}): Promise<ListCustomersResponse> {
   try {
-    const dealerId = getDealerId();
     const response = await api.get<ListCustomersResponse>(`/api/dealer/${dealerId}/customers`, { params });
     return response.data;
   } catch (error) {
@@ -45,9 +23,8 @@ export async function listCustomers(params: ListCustomersParams = {}): Promise<L
 /**
  * Get customer by ID
  */
-export async function getCustomer(id: number): Promise<Customer> {
+export async function getCustomer(dealerId: number, id: number): Promise<Customer> {
   try {
-    const dealerId = getDealerId();
     const response = await api.get<Customer>(`/api/dealer/${dealerId}/customers/${id}`);
     return response.data;
   } catch (error) {
@@ -59,12 +36,9 @@ export async function getCustomer(id: number): Promise<Customer> {
 /**
  * Create new customer
  */
-export async function createCustomer(payload: CreateCustomerPayload): Promise<Customer> {
+export async function createCustomer(dealerId: number, payload: CreateCustomerPayload): Promise<Customer> {
   try {
-    const dealerId = getDealerId();
     const response = await api.post<any>(`/api/dealer/${dealerId}/customers`, payload);
-    
-    console.log('Create customer response:', response.data);
     
     // Backend có thể trả về {statusCode, message, data} hoặc trực tiếp Customer object
     if (response.data && response.data.data) {
@@ -81,9 +55,8 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<Cu
 /**
  * Update customer
  */
-export async function updateCustomer(id: number, payload: UpdateCustomerPayload): Promise<Customer> {
+export async function updateCustomer(dealerId: number, id: number, payload: UpdateCustomerPayload): Promise<Customer> {
   try {
-    const dealerId = getDealerId();
     const response = await api.put<Customer>(`/api/dealer/${dealerId}/customers/${id}`, payload);
     return response.data;
   } catch (error) {
@@ -95,9 +68,8 @@ export async function updateCustomer(id: number, payload: UpdateCustomerPayload)
 /**
  * Delete customer
  */
-export async function deleteCustomer(id: number): Promise<void> {
+export async function deleteCustomer(dealerId: number, id: number): Promise<void> {
   try {
-    const dealerId = getDealerId();
     console.log(`🗑️ Attempting to delete customer ${id} for dealer ${dealerId}`);
     await api.delete(`/api/dealer/${dealerId}/customers/${id}`);
     console.log(`✅ Successfully deleted customer ${id}`);

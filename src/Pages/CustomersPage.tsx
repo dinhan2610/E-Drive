@@ -6,6 +6,7 @@ import {
   updateCustomer, 
   deleteCustomer 
 } from '../services/customersApi';
+import { getProfile } from '../services/profileApi';
 import CustomerTable from '../components/customers/CustomerTable';
 import CustomerForm from '../components/customers/CustomerForm';
 import CustomerDetail from '../components/customers/CustomerDetail';
@@ -13,6 +14,9 @@ import ConfirmDialog from '../components/customers/ConfirmDialog';
 import styles from '../styles/CustomersStyles/CustomersPage.module.scss';
 
 const CustomersPage: React.FC = () => {
+  // Dealer info state
+  const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
+  
   // Customer data state
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
@@ -37,10 +41,40 @@ const CustomersPage: React.FC = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Fetch dealer info from Profile API on mount
+  useEffect(() => {
+    const fetchDealerInfo = async () => {
+      try {
+        console.log('🔍 Fetching dealer info from /api/profile/me...');
+        const profile = await getProfile();
+        console.log('✅ Profile data:', profile);
+        console.log('🏢 Dealer ID from profile:', profile.dealerId);
+        
+        setDealerInfo({
+          id: profile.dealerId,
+          name: profile.agencyName
+        });
+      } catch (error) {
+        console.error('❌ Failed to fetch dealer info:', error);
+        // Fallback to default dealer ID
+        setDealerInfo({ id: 1 });
+      }
+    };
+
+    fetchDealerInfo();
+  }, []);
+
   // Load customers data
   const loadCustomers = useCallback(async () => {
+    if (!dealerInfo) {
+      console.log('⏳ Waiting for dealer info...');
+      return;
+    }
+
     setLoading(true);
     try {
+      console.log('📋 Loading customers for dealer:', dealerInfo.id);
+      
       const params: ListCustomersParams = {
         q: searchQuery || undefined,
         page,
@@ -48,7 +82,9 @@ const CustomersPage: React.FC = () => {
         sort: sortBy
       };
 
-      const response = await listCustomers(params);
+      const response = await listCustomers(dealerInfo.id, params);
+      
+      console.log(`✅ Loaded ${response.data?.length || 0} customers for dealer ${dealerInfo.id}`);
       
       setCustomers(response.data || []);
       setTotal(response.data?.length || 0);
@@ -59,12 +95,14 @@ const CustomersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, page, pageSize, sortBy]);
+  }, [dealerInfo, searchQuery, page, pageSize, sortBy]);
 
-  // Load data on mount and when dependencies change
+  // Load data when dealer info is ready and when dependencies change
   useEffect(() => {
-    loadCustomers();
-  }, [loadCustomers]);
+    if (dealerInfo) {
+      loadCustomers();
+    }
+  }, [dealerInfo, loadCustomers]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -95,14 +133,21 @@ const CustomersPage: React.FC = () => {
   };
 
   const handleFormSubmit = async (data: CustomerFormData) => {
+    if (!dealerInfo) {
+      console.error('❌ No dealer info available');
+      return;
+    }
+
     setFormLoading(true);
     try {
       if (editingCustomer) {
         // Update existing customer
-        await updateCustomer(editingCustomer.customerId, data);
+        console.log(`📝 Updating customer ${editingCustomer.customerId} for dealer ${dealerInfo.id}`);
+        await updateCustomer(dealerInfo.id, editingCustomer.customerId, data);
       } else {
         // Create new customer
-        await createCustomer(data);
+        console.log(`➕ Creating new customer for dealer ${dealerInfo.id}`);
+        await createCustomer(dealerInfo.id, data);
       }
       await loadCustomers();
       setIsFormOpen(false);
@@ -115,11 +160,12 @@ const CustomersPage: React.FC = () => {
   };
 
   const handleConfirmDelete = async () => {
-    if (!customerToDelete) return;
+    if (!customerToDelete || !dealerInfo) return;
     
     setDeleteLoading(true);
     try {
-      await deleteCustomer(customerToDelete.customerId);
+      console.log(`🗑️ Deleting customer ${customerToDelete.customerId} from dealer ${dealerInfo.id}`);
+      await deleteCustomer(dealerInfo.id, customerToDelete.customerId);
       await loadCustomers();
       setIsDeleteDialogOpen(false);
       setCustomerToDelete(null);
@@ -179,6 +225,14 @@ const CustomersPage: React.FC = () => {
         <div className={styles.heroContent}>
           <div className={styles.heroTop}>
             <div className={styles.heroLeft}>
+              {/* Dealer Badge */}
+              {dealerInfo && (
+                <div className={styles.dealerBadge}>
+                  <i className="fas fa-store" style={{ marginRight: '8px' }} />
+                  <span>Đại lý #{dealerInfo.id}</span>
+                  {dealerInfo.name && <span> - {dealerInfo.name}</span>}
+                </div>
+              )}
              
               <div className={styles.statsDisplay}>
                 <div className={styles.statItem}>
