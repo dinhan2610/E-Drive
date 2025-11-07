@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NotificationDropdown from './NotificationDropdown';
 import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
@@ -19,8 +19,23 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabChange, counters }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Khởi tạo sidebar mở cho desktop, đóng cho mobile
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
   const navigate = useNavigate();
+
+  // Xử lý resize window
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();

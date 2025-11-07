@@ -19,12 +19,13 @@
   z-index: 1000;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
+  transform: translateX(0); // Luôn hiển thị mặc định
 
   @media (max-width: 1024px) {
-    transform: translateX(-280px);
+    transform: translateX(-280px); // Ẩn trên mobile
     
     &.show {
-      transform: translateX(0);
+      transform: translateX(0); // Hiện khi click menu
     }
   }
 }
@@ -371,9 +372,16 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
   
-  &.show {
-    display: block;
+  @media (max-width: 1024px) {
+    &.show {
+      display: block;
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
