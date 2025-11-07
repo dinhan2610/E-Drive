@@ -33,8 +33,7 @@ const getStatusInfo = (status: string) => {
       return { label: 'Hoàn thành', icon: 'fa-flag-checkered', color: '#2196f3' };
     case 'CANCELLED':
       return { label: 'Đã hủy', icon: 'fa-times-circle', color: '#f44336' };
-    case 'NO_SHOW':
-      return { label: 'Không đến', icon: 'fa-user-slash', color: '#9e9e9e' };
+   
     default:
       return { label: status, icon: 'fa-info-circle', color: '#757575' };
   }

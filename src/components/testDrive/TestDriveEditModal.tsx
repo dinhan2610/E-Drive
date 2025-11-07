@@ -268,7 +268,7 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
                         <option value="CONFIRMED">Đã xác nhận</option>
                         <option value="COMPLETED">Hoàn thành</option>
                         <option value="CANCELLED">Đã hủy</option>
-                        <option value="NO_SHOW">Không đến</option>
+                        
                       </select>
                     </td>
                   </tr>

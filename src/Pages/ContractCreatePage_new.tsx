@@ -10,7 +10,6 @@ import type { ContractPayload } from '../types/contract';
 import ContractForm from '../components/contracts/ContractForm';
 import PdfPreview from '../components/contracts/PdfPreview';
 import styles from './ContractCreatePage.module.scss';
-import AdminLayout from '../components/AdminLayout';
 
 const ContractCreatePage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -220,10 +219,10 @@ const ContractCreatePage: React.FC = () => {
       await reloadContractMap();
       console.log('✅ Contract map refreshed!');
       
-      showToast('success', `Đã tạo hợp đồng ${contract.id} và tải PDF lên thành công!`);
+      showToast('success', `✅ Đã tạo hợp đồng ${contract.id} thành công! Đang quay về trang quản lý...`);
       
-      // Navigate về admin sau khi reload map xong
-      console.log('🏠 Navigating back to admin page...');
+      // Auto navigate về trang quản lý đặt xe sau 1 giây
+      console.log('🏠 Navigating back to order management page...');
       setTimeout(() => {
         navigate('/admin', { 
           state: { 
@@ -231,7 +230,7 @@ const ContractCreatePage: React.FC = () => {
             refresh: Date.now() // Timestamp để trigger refresh AdminPage
           } 
         });
-      }, 1500);
+      }, 1000); // Giảm từ 1500ms xuống 1000ms
     } catch (error: any) {
       console.error('❌ Error:', error);
       
@@ -358,19 +357,7 @@ const ContractCreatePage: React.FC = () => {
   const isFormValid = selectedOrder && payload.buyer.name && payload.vehicle.model && payload.pricing.subtotal > 0;
 
   return (
-    <AdminLayout 
-      activeTab="bookings"
-      onTabChange={() => {}}
-      counters={{
-        cars: 0,
-        colors: 0,
-        dealers: 0,
-        unverifiedDealers: 0,
-        bookings: 0,
-        testDrives: 0,
-        inventory: 0
-      }}
-    >
+    <>
       <div className={styles.page}>
         {/* Toast */}
         {toast && (
@@ -541,7 +528,7 @@ const ContractCreatePage: React.FC = () => {
         </div>
       )}
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

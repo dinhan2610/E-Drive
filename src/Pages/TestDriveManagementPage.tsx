@@ -28,7 +28,7 @@ const getStatusLabel = (status: string) => {
     case 'CONFIRMED': return 'Đã xác nhận';
     case 'COMPLETED': return 'Hoàn thành';
     case 'CANCELLED': return 'Đã hủy';
-    case 'NO_SHOW': return 'Không đến';
+   
     default: return status;
   }
 };
