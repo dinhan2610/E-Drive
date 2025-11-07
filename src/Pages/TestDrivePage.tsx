@@ -352,72 +352,71 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
   return (
     <>
       <div className={styles.wrap}>
-        <div className={styles.container}>
-          {/* Hero Section */}
-          <div className={styles.hero}>
-            <div className={styles.heroContent}>
-              <div className={styles.badge}>
-                <i className="fas fa-car"></i>
-                <span>Trải nghiệm lái thử miễn phí</span>
+        {/* Hero Section */}
+        <div className={styles.hero}>
+          <div className={styles.heroContent}>
+            <div className={styles.badge}>
+              <i className="fas fa-car"></i>
+              <span>Trải nghiệm lái thử miễn phí</span>
+            </div>
+            <h1 className={styles.heroTitle}>
+              Đăng ký <span className={styles.highlight}>Lái thử</span> E-Drive
+            </h1>
+            <p className={styles.heroSubtitle}>
+              Trải nghiệm cảm giác lái xe điện thế hệ mới. Đặt lịch ngay hôm nay và khám phá sức mạnh của công nghệ xanh!
+            </p>
+            
+            <div className={styles.features}>
+              <div className={styles.feature}>
+                <div className={styles.featureIcon}>
+                  <i className="fas fa-clock"></i>
+                </div>
+                <div className={styles.featureContent}>
+                  <h3>Thời gian linh hoạt</h3>
+                  <p>Chọn lịch phù hợp</p>
+                </div>
               </div>
-              <h1 className={styles.heroTitle}>
-                Đăng ký <span className={styles.highlight}>Lái thử</span> E-Drive
-              </h1>
-              <p className={styles.heroSubtitle}>
-                Trải nghiệm cảm giác lái xe điện thế hệ mới. Đặt lịch ngay hôm nay và khám phá sức mạnh của công nghệ xanh!
-              </p>
-              
-              <div className={styles.features}>
-                <div className={styles.feature}>
-                  <div className={styles.featureIcon}>
-                    <i className="fas fa-clock"></i>
-                  </div>
-                  <div className={styles.featureContent}>
-                    <h3>Thời gian linh hoạt</h3>
-                    <p>Chọn lịch phù hợp</p>
-                  </div>
+              <div className={styles.feature}>
+                <div className={styles.featureIcon}>
+                  <i className="fas fa-user-tie"></i>
                 </div>
-                <div className={styles.feature}>
-                  <div className={styles.featureIcon}>
-                    <i className="fas fa-user-tie"></i>
-                  </div>
-                  <div className={styles.featureContent}>
-                    <h3>Hỗ trợ chuyên nghiệp</h3>
-                    <p>Tư vấn nhiệt tình</p>
-                  </div>
+                <div className={styles.featureContent}>
+                  <h3>Hỗ trợ chuyên nghiệp</h3>
+                  <p>Tư vấn nhiệt tình</p>
                 </div>
-                <div className={styles.feature}>
-                  <div className={styles.featureIcon}>
-                    <i className="fas fa-shield-alt"></i>
-                  </div>
-                  <div className={styles.featureContent}>
-                    <h3>An toàn tuyệt đối</h3>
-                    <p>Bảo hiểm toàn diện</p>
-                  </div>
+              </div>
+              <div className={styles.feature}>
+                <div className={styles.featureIcon}>
+                  <i className="fas fa-shield-alt"></i>
+                </div>
+                <div className={styles.featureContent}>
+                  <h3>An toàn tuyệt đối</h3>
+                  <p>Bảo hiểm toàn diện</p>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Form Section */}
-          <div className={styles.formSection}>
-            <div className={styles.formHeader}>
-              <h2>Thông tin đặt lịch</h2>
-              <p>Vui lòng điền đầy đủ thông tin để chúng tôi phục vụ bạn tốt nhất</p>
-              {!currentDealerId && (
-                <div style={{
-                  background: '#fff3cd',
-                  border: '1px solid #ffc107',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  marginTop: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  color: '#856404'
-                }}>
-                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '20px' }}></i>
-                  <span>⚠️ Bạn cần đăng nhập với tài khoản đại lý để có thể đăng ký lái thử!</span>
+        {/* Form Section */}
+        <div className={styles.formSection}>
+          <div className={styles.formHeader}>
+            <h2>Thông tin đặt lịch</h2>
+            <p>Vui lòng điền đầy đủ thông tin để chúng tôi phục vụ bạn tốt nhất</p>
+            {!currentDealerId && (
+              <div style={{
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginTop: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                color: '#856404'
+              }}>
+                <i className="fas fa-exclamation-triangle" style={{ fontSize: '20px' }}></i>
+                <span>⚠️ Bạn cần đăng nhập với tài khoản đại lý để có thể đăng ký lái thử!</span>
                 </div>
               )}
             </div>
@@ -590,7 +589,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
               </div>
 
               {/* Appointment Details */}
-              <div className={styles.formGroup}>
+              <div className={`${styles.formGroup} ${styles.appointmentGroup}`}>
                 <h3 className={styles.sectionTitle}>
                   <i className="fas fa-calendar-alt"></i>
                   Thông tin lịch hẹn
@@ -746,7 +745,6 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
             </form>
           </div>
         </div>
-      </div>
 
       {/* Success Modal */}
       <SuccessModal
