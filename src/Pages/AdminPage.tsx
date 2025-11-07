@@ -10,6 +10,8 @@ import { getOrders, getOrderById, cancelOrder, type Order } from '../services/or
 import { confirmDelivery } from '../services/deliveryApi';
 import { fetchColors, createColor, getColorById, updateColor, deleteColor } from '../services/colorApi';
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
+import { fetchDiscountPolicies, fetchActiveDiscountPolicies, getDiscountPolicyById, createDiscountPolicy, updateDiscountPolicy, deleteDiscountPolicy } from '../services/discountApi';
+import type { DiscountPolicy, CreateDiscountRequest, UpdateDiscountRequest } from '../types/discount';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
 import modalStyles from '../styles/AdminStyles/OrderDetailModal.module.scss';
@@ -317,9 +319,10 @@ interface CarWithStatus extends CarType {
 const AdminPage: React.FC = () => {
   const location = useLocation();
   const initialTab = (location.state as any)?.tab || 'dashboard';
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'colors' | 'inventory' | 'dealers' | 'bookings' | 'analytics' | 'settings'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'colors' | 'inventory' | 'dealers' | 'discounts' | 'bookings' | 'analytics' | 'settings'>(initialTab);
   const [cars, setCars] = useState<CarWithStatus[]>([]);
   const [colors, setColors] = useState<VehicleColor[]>([]);
+  const [discounts, setDiscounts] = useState<DiscountPolicy[]>([]);
 
   // Helper function để set token từ console
   // Usage: window.setAdminToken('your-token-here')
@@ -517,6 +520,31 @@ const AdminPage: React.FC = () => {
   const [newInventoryErrors, setNewInventoryErrors] = useState<Record<string, string>>({});
   const [editInventoryErrors, setEditInventoryErrors] = useState<Record<string, string>>({});
   
+  // Discount Management States
+  const [showAddDiscountModal, setShowAddDiscountModal] = useState<boolean>(false);
+  const [showEditDiscountModal, setShowEditDiscountModal] = useState<boolean>(false);
+  const [showViewDiscountModal, setShowViewDiscountModal] = useState<boolean>(false);
+  const [selectedDiscount, setSelectedDiscount] = useState<DiscountPolicy | null>(null);
+  const [editingDiscount, setEditingDiscount] = useState<DiscountPolicy | null>(null);
+  const [isCreatingDiscount, setIsCreatingDiscount] = useState<boolean>(false);
+  const [isUpdatingDiscount, setIsUpdatingDiscount] = useState<boolean>(false);
+  const [newDiscount, setNewDiscount] = useState<CreateDiscountRequest>({
+    minQuantity: 0,
+    maxQuantity: 0,
+    discountRate: 0,
+    description: '',
+    isActive: true
+  });
+  const [editDiscount, setEditDiscount] = useState<UpdateDiscountRequest>({
+    minQuantity: 0,
+    maxQuantity: 0,
+    discountRate: 0,
+    description: '',
+    isActive: true
+  });
+  const [newDiscountErrors, setNewDiscountErrors] = useState<Record<string, string>>({});
+  const [editDiscountErrors, setEditDiscountErrors] = useState<Record<string, string>>({});
+  
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<AdminStats>({
     totalCars: 0,
@@ -576,6 +604,28 @@ const AdminPage: React.FC = () => {
       console.log('✅ Inventory reloaded successfully:', summary);
     } catch (err) {
       console.error('❌ Failed to reload inventory:', err);
+    }
+  };
+
+  // Function to reload discounts from API
+  const reloadDiscounts = async () => {
+    try {
+      console.log('🔄 Reloading discounts from API...');
+      const response = await fetchDiscountPolicies();
+      
+      // Handle response - might be array or object with data property
+      let discountList: DiscountPolicy[] = [];
+      if (Array.isArray(response)) {
+        discountList = response;
+      } else if (response && typeof response === 'object' && 'data' in response) {
+        discountList = Array.isArray((response as any).data) ? (response as any).data : [];
+      }
+      
+      setDiscounts(discountList);
+      console.log('✅ Discounts reloaded successfully:', discountList);
+    } catch (err) {
+      console.error('❌ Failed to reload discounts:', err);
+      setDiscounts([]);
     }
   };
 
@@ -667,6 +717,29 @@ const AdminPage: React.FC = () => {
       } catch (error) {
         console.error('❌ Failed to load unverified accounts:', error);
         setUnverifiedAccounts([]);
+      }
+    })();
+
+    // Fetch discount policies from API
+    (async () => {
+      try {
+        console.log('💰 Fetching discount policies from API...');
+        const response = await fetchDiscountPolicies();
+        console.log('📦 Raw discount response:', response);
+        
+        // Handle response - might be array or object with data property
+        let discountList: DiscountPolicy[] = [];
+        if (Array.isArray(response)) {
+          discountList = response;
+        } else if (response && typeof response === 'object' && 'data' in response) {
+          discountList = Array.isArray((response as any).data) ? (response as any).data : [];
+        }
+        
+        setDiscounts(discountList);
+        console.log('✅ Loaded discount policies:', discountList);
+      } catch (error) {
+        console.error('❌ Failed to load discount policies:', error);
+        setDiscounts([]);
       }
     })();
 
@@ -1910,6 +1983,159 @@ const AdminPage: React.FC = () => {
                                       setNotification({
                                         isVisible: true,
                                         message: 'Xóa tồn kho thất bại!',
+                                        type: 'error'
+                                      });
+                                    }
+                                  }
+                                });
+                              }}
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'discounts' && (
+          <div className={styles.usersManagement}>
+            <div className={styles.sectionHeader}>
+              <h3>Chính sách chiết khấu</h3>
+              <button 
+                className={styles.addButton}
+                onClick={() => {
+                  setNewDiscount({
+                    minQuantity: 0,
+                    maxQuantity: 0,
+                    discountRate: 0,
+                    description: '',
+                    isActive: true
+                  });
+                  setNewDiscountErrors({});
+                  setShowAddDiscountModal(true);
+                }}
+              >
+                <i className="fas fa-plus"></i>
+                Thêm chiết khấu mới
+              </button>
+            </div>
+
+            <div className={styles.usersTable}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Mô tả</th>
+                    <th>Số lượng</th>
+                    <th>Tỷ lệ giảm giá</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(!discounts || !Array.isArray(discounts) || discounts.length === 0) ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                        <i className="fas fa-percentage" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
+                        <p>Chưa có chính sách chiết khấu nào</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    discounts.map((discount) => (
+                      <tr key={discount.id}>
+                        <td>
+                          <div style={{fontWeight: '600', color: '#ff4d30'}}>#{discount.id}</div>
+                        </td>
+                        <td>
+                          <div style={{fontSize: '15px', fontWeight: 700}}>{discount.description}</div>
+                        </td>
+                        <td>
+                          <div style={{fontSize: '14px', color: '#555'}}>
+                            {discount.minQuantity === discount.maxQuantity 
+                              ? `${discount.minQuantity} xe` 
+                              : discount.maxQuantity >= 2147483647 
+                                ? `${discount.minQuantity}+ xe`
+                                : `${discount.minQuantity} - ${discount.maxQuantity} xe`
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            background: '#d1fae5',
+                            color: '#065f46',
+                            fontWeight: 700,
+                            fontSize: '14px'
+                          }}>
+                            {(discount.discountRate * 100).toFixed(2)}%
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`${styles.statusBadge} ${discount.isActive ? styles.active : styles.inactive}`}>
+                            {discount.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{display: 'flex', gap: '8px', justifyContent: 'center'}}>
+                            <button
+                              className={styles.viewButton}
+                              title="Xem chi tiết"
+                              onClick={() => {
+                                setSelectedDiscount(discount);
+                                setShowViewDiscountModal(true);
+                              }}
+                            >
+                              <i className="fas fa-eye"></i>
+                            </button>
+                            <button
+                              className={styles.editButton}
+                              title="Chỉnh sửa"
+                              onClick={() => {
+                                setEditingDiscount(discount);
+                                setEditDiscount({
+                                  minQuantity: discount.minQuantity,
+                                  maxQuantity: discount.maxQuantity,
+                                  discountRate: discount.discountRate,
+                                  description: discount.description,
+                                  isActive: discount.isActive
+                                });
+                                setEditDiscountErrors({});
+                                setShowEditDiscountModal(true);
+                              }}
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                            <button
+                              className={styles.deleteButton}
+                              title="Xóa"
+                              onClick={() => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Xác nhận xóa',
+                                  message: `Bạn có chắc chắn muốn xóa chính sách "${discount.description}"?`,
+                                  type: 'danger',
+                                  onConfirm: async () => {
+                                    try {
+                                      await deleteDiscountPolicy(discount.id);
+                                      setNotification({
+                                        isVisible: true,
+                                        message: 'Xóa chính sách chiết khấu thành công!',
+                                        type: 'success'
+                                      });
+                                      await reloadDiscounts();
+                                    } catch (error) {
+                                      console.error('Delete error:', error);
+                                      setNotification({
+                                        isVisible: true,
+                                        message: 'Xóa chính sách chiết khấu thất bại!',
                                         type: 'error'
                                       });
                                     }
@@ -5926,6 +6152,707 @@ const AdminPage: React.FC = () => {
                     setEditInventoryErrors({});
                     setSelectedInventoryItem(null);
                     setShowEditInventoryModal(true);
+                  }}
+                >
+                  <i className="fas fa-edit"></i>
+                  Chỉnh sửa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Discount Modal */}
+        {showAddDiscountModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal} style={{ maxWidth: '600px' }}>
+              <div className={styles.modalHeader}>
+                <h2>
+                  <i className="fas fa-percentage"></i>
+                  Thêm chính sách chiết khấu mới
+                </h2>
+                <button
+                  className={styles.closeButton}
+                  onClick={() => {
+                    setShowAddDiscountModal(false);
+                    setNewDiscount({
+                      minQuantity: 0,
+                      maxQuantity: 0,
+                      discountRate: 0,
+                      description: '',
+                      isActive: true
+                    });
+                    setNewDiscountErrors({});
+                  }}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div className={styles.modalBody} style={{ maxHeight: '500px', overflowY: 'auto', padding: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div className={styles.formGroup}>
+                    <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                      Mô tả <span style={{color: '#ef4444'}}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newDiscount.description}
+                      onChange={(e) => {
+                        setNewDiscount({ ...newDiscount, description: e.target.value });
+                        if (newDiscountErrors.description) {
+                          setNewDiscountErrors({ ...newDiscountErrors, description: '' });
+                        }
+                      }}
+                      placeholder="VD: 5% discount for orders of 1-5 vehicles"
+                      className={newDiscountErrors.description ? styles.inputError : ''}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: newDiscountErrors.description ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                        borderRadius: '10px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {newDiscountErrors.description && (
+                      <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                        <i className="fas fa-exclamation-circle"></i> {newDiscountErrors.description}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className={styles.formGroup}>
+                      <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                        Số lượng tối thiểu <span style={{color: '#ef4444'}}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={newDiscount.minQuantity || ''}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          setNewDiscount({ ...newDiscount, minQuantity: value });
+                          if (newDiscountErrors.minQuantity) {
+                            setNewDiscountErrors({ ...newDiscountErrors, minQuantity: '' });
+                          }
+                        }}
+                        placeholder="VD: 1"
+                        min="1"
+                        className={newDiscountErrors.minQuantity ? styles.inputError : ''}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: newDiscountErrors.minQuantity ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                          borderRadius: '10px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {newDiscountErrors.minQuantity && (
+                        <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                          <i className="fas fa-exclamation-circle"></i> {newDiscountErrors.minQuantity}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                        Số lượng tối đa <span style={{color: '#ef4444'}}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={newDiscount.maxQuantity || ''}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          setNewDiscount({ ...newDiscount, maxQuantity: value });
+                          if (newDiscountErrors.maxQuantity) {
+                            setNewDiscountErrors({ ...newDiscountErrors, maxQuantity: '' });
+                          }
+                        }}
+                        placeholder="VD: 5"
+                        min="1"
+                        className={newDiscountErrors.maxQuantity ? styles.inputError : ''}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: newDiscountErrors.maxQuantity ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                          borderRadius: '10px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {newDiscountErrors.maxQuantity && (
+                        <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                          <i className="fas fa-exclamation-circle"></i> {newDiscountErrors.maxQuantity}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                      Tỷ lệ giảm giá (%) <span style={{color: '#ef4444'}}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={newDiscount.discountRate ? (newDiscount.discountRate * 100) : ''}
+                      onChange={(e) => {
+                        const percentValue = parseFloat(e.target.value);
+                        // Convert percent to decimal (5% -> 0.05)
+                        const decimalValue = percentValue / 100;
+                        setNewDiscount({ ...newDiscount, discountRate: decimalValue });
+                        if (newDiscountErrors.discountRate) {
+                          setNewDiscountErrors({ ...newDiscountErrors, discountRate: '' });
+                        }
+                      }}
+                      placeholder="VD: 5, 10, 15, 20..."
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className={newDiscountErrors.discountRate ? styles.inputError : ''}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: newDiscountErrors.discountRate ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                        borderRadius: '10px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {newDiscountErrors.discountRate && (
+                      <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                        <i className="fas fa-exclamation-circle"></i> {newDiscountErrors.discountRate}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={newDiscount.isActive}
+                        onChange={(e) => {
+                          setNewDiscount({ ...newDiscount, isActive: e.target.checked });
+                        }}
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <span>Kích hoạt ngay</span>
+                    </label>
+                    <small style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginTop: '4px' }}>
+                      Chính sách sẽ được áp dụng ngay sau khi tạo
+                    </small>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.modalActions}>
+                <button
+                  className={styles.cancelButton}
+                  onClick={() => {
+                    setShowAddDiscountModal(false);
+                    setNewDiscount({
+                      minQuantity: 0,
+                      maxQuantity: 0,
+                      discountRate: 0,
+                      description: '',
+                      isActive: true
+                    });
+                    setNewDiscountErrors({});
+                  }}
+                  disabled={isCreatingDiscount}
+                >
+                  Hủy
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  onClick={async () => {
+                    // Validation
+                    const errors: Record<string, string> = {};
+                    if (!newDiscount.description || !newDiscount.description.trim()) {
+                      errors.description = 'Mô tả không được để trống';
+                    }
+                    if (!newDiscount.minQuantity || newDiscount.minQuantity <= 0) {
+                      errors.minQuantity = 'Số lượng tối thiểu phải lớn hơn 0';
+                    }
+                    if (!newDiscount.maxQuantity || newDiscount.maxQuantity <= 0) {
+                      errors.maxQuantity = 'Số lượng tối đa phải lớn hơn 0';
+                    }
+                    if (newDiscount.minQuantity && newDiscount.maxQuantity && newDiscount.minQuantity > newDiscount.maxQuantity) {
+                      errors.maxQuantity = 'Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu';
+                    }
+                    // discountRate is stored as decimal (0.05 = 5%), so check 0-1 range
+                    if (!newDiscount.discountRate || newDiscount.discountRate <= 0 || newDiscount.discountRate > 1) {
+                      errors.discountRate = 'Tỷ lệ giảm giá phải từ 0-100%';
+                    }
+
+                    if (Object.keys(errors).length > 0) {
+                      setNewDiscountErrors(errors);
+                      return;
+                    }
+
+                    setIsCreatingDiscount(true);
+                    try {
+                      await createDiscountPolicy(newDiscount);
+                      setShowAddDiscountModal(false);
+                      setNewDiscount({
+                        minQuantity: 0,
+                        maxQuantity: 0,
+                        discountRate: 0,
+                        description: '',
+                        isActive: true
+                      });
+                      setNewDiscountErrors({});
+                      setNotification({
+                        isVisible: true,
+                        message: 'Thêm chính sách chiết khấu thành công!',
+                        type: 'success'
+                      });
+                      await reloadDiscounts();
+                    } catch (error) {
+                      console.error('Create discount error:', error);
+                      setNotification({
+                        isVisible: true,
+                        message: 'Thêm chính sách chiết khấu thất bại!',
+                        type: 'error'
+                      });
+                    } finally {
+                      setIsCreatingDiscount(false);
+                    }
+                  }}
+                  disabled={isCreatingDiscount}
+                >
+                  {isCreatingDiscount ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Đang thêm...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-plus"></i>
+                      Thêm chính sách
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Discount Modal */}
+        {showEditDiscountModal && editingDiscount && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal} style={{ maxWidth: '600px' }}>
+              <div className={styles.modalHeader}>
+                <h2>
+                  <i className="fas fa-edit"></i>
+                  Chỉnh sửa chính sách chiết khấu
+                </h2>
+                <button
+                  className={styles.closeButton}
+                  onClick={() => {
+                    setShowEditDiscountModal(false);
+                    setEditingDiscount(null);
+                    setEditDiscount({
+                      minQuantity: 0,
+                      maxQuantity: 0,
+                      discountRate: 0,
+                      description: '',
+                      isActive: true
+                    });
+                    setEditDiscountErrors({});
+                  }}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div className={styles.modalBody} style={{ maxHeight: '500px', overflowY: 'auto', padding: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* Description Field */}
+                  <div className={styles.formGroup}>
+                    <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                      Mô tả chính sách <span style={{color: '#ef4444'}}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editDiscount.description}
+                      onChange={(e) => {
+                        setEditDiscount({ ...editDiscount, description: e.target.value });
+                        if (editDiscountErrors.description) {
+                          setEditDiscountErrors({ ...editDiscountErrors, description: '' });
+                        }
+                      }}
+                      placeholder="VD: Giảm 5% cho đơn hàng từ 1-5 xe"
+                      className={editDiscountErrors.description ? styles.inputError : ''}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: editDiscountErrors.description ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                        borderRadius: '10px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {editDiscountErrors.description && (
+                      <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                        <i className="fas fa-exclamation-circle"></i> {editDiscountErrors.description}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Quantity Range - Grid Layout */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    {/* Min Quantity */}
+                    <div className={styles.formGroup}>
+                      <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                        Số lượng tối thiểu <span style={{color: '#ef4444'}}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={editDiscount.minQuantity || ''}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          setEditDiscount({ ...editDiscount, minQuantity: value });
+                          if (editDiscountErrors.minQuantity) {
+                            setEditDiscountErrors({ ...editDiscountErrors, minQuantity: '' });
+                          }
+                        }}
+                        placeholder="VD: 1"
+                        min="0"
+                        className={editDiscountErrors.minQuantity ? styles.inputError : ''}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: editDiscountErrors.minQuantity ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                          borderRadius: '10px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {editDiscountErrors.minQuantity && (
+                        <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                          <i className="fas fa-exclamation-circle"></i> {editDiscountErrors.minQuantity}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Max Quantity */}
+                    <div className={styles.formGroup}>
+                      <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                        Số lượng tối đa <span style={{color: '#ef4444'}}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={editDiscount.maxQuantity || ''}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          setEditDiscount({ ...editDiscount, maxQuantity: value });
+                          if (editDiscountErrors.maxQuantity) {
+                            setEditDiscountErrors({ ...editDiscountErrors, maxQuantity: '' });
+                          }
+                        }}
+                        placeholder="VD: 5"
+                        min="0"
+                        className={editDiscountErrors.maxQuantity ? styles.inputError : ''}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: editDiscountErrors.maxQuantity ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                          borderRadius: '10px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {editDiscountErrors.maxQuantity && (
+                        <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                          <i className="fas fa-exclamation-circle"></i> {editDiscountErrors.maxQuantity}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Discount Rate with Percentage Conversion */}
+                  <div className={styles.formGroup}>
+                    <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'block', color: '#374151' }}>
+                      Tỷ lệ giảm giá (%) <span style={{color: '#ef4444'}}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={editDiscount.discountRate ? (editDiscount.discountRate * 100) : ''}
+                      onChange={(e) => {
+                        const percentValue = parseFloat(e.target.value);
+                        const decimalValue = percentValue / 100;
+                        setEditDiscount({ ...editDiscount, discountRate: decimalValue });
+                        if (editDiscountErrors.discountRate) {
+                          setEditDiscountErrors({ ...editDiscountErrors, discountRate: '' });
+                        }
+                      }}
+                      placeholder="Nhập phần trăm giảm giá (VD: 5 cho 5%)"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className={editDiscountErrors.discountRate ? styles.inputError : ''}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: editDiscountErrors.discountRate ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                        borderRadius: '10px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {editDiscountErrors.discountRate && (
+                      <span style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                        <i className="fas fa-exclamation-circle"></i> {editDiscountErrors.discountRate}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Active Status Checkbox */}
+                  <div className={styles.formGroup}>
+                    <label style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: '#374151', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={editDiscount.isActive}
+                        onChange={(e) => setEditDiscount({ ...editDiscount, isActive: e.target.checked })}
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          cursor: 'pointer',
+                          accentColor: '#ff4d30'
+                        }}
+                      />
+                      <span>Kích hoạt chính sách</span>
+                    </label>
+                    <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px', marginLeft: '26px' }}>
+                      Chính sách sẽ {editDiscount.isActive ? 'được áp dụng' : 'không được áp dụng'} ngay sau khi lưu
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.modalActions}>
+                <button
+                  className={styles.cancelButton}
+                  onClick={() => {
+                    setShowEditDiscountModal(false);
+                    setEditingDiscount(null);
+                    setEditDiscount({
+                      minQuantity: 0,
+                      maxQuantity: 0,
+                      discountRate: 0,
+                      description: '',
+                      isActive: true
+                    });
+                    setEditDiscountErrors({});
+                  }}
+                  disabled={isUpdatingDiscount}
+                >
+                  Hủy
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  onClick={async () => {
+                    // Validation
+                    const errors: Record<string, string> = {};
+                    
+                    if (!editDiscount.description || !editDiscount.description.trim()) {
+                      errors.description = 'Mô tả chính sách không được để trống';
+                    }
+                    
+                    if (editDiscount.minQuantity === undefined || editDiscount.minQuantity < 0) {
+                      errors.minQuantity = 'Số lượng tối thiểu phải lớn hơn hoặc bằng 0';
+                    }
+                    
+                    if (editDiscount.maxQuantity === undefined || editDiscount.maxQuantity < 0) {
+                      errors.maxQuantity = 'Số lượng tối đa phải lớn hơn hoặc bằng 0';
+                    }
+                    
+                    if (editDiscount.minQuantity !== undefined && editDiscount.maxQuantity !== undefined && 
+                        editDiscount.minQuantity > editDiscount.maxQuantity) {
+                      errors.maxQuantity = 'Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu';
+                    }
+                    
+                    if (!editDiscount.discountRate || editDiscount.discountRate <= 0 || editDiscount.discountRate > 1) {
+                      errors.discountRate = 'Tỷ lệ giảm giá phải từ 0-100%';
+                    }
+
+                    if (Object.keys(errors).length > 0) {
+                      setEditDiscountErrors(errors);
+                      return;
+                    }
+
+                    setIsUpdatingDiscount(true);
+                    try {
+                      await updateDiscountPolicy(editingDiscount.id, editDiscount);
+                      setShowEditDiscountModal(false);
+                      setEditingDiscount(null);
+                      setEditDiscount({
+                        minQuantity: 0,
+                        maxQuantity: 0,
+                        discountRate: 0,
+                        description: '',
+                        isActive: true
+                      });
+                      setEditDiscountErrors({});
+                      setNotification({
+                        isVisible: true,
+                        message: 'Cập nhật chính sách chiết khấu thành công!',
+                        type: 'success'
+                      });
+                      await reloadDiscounts();
+                    } catch (error) {
+                      console.error('Update discount error:', error);
+                      setNotification({
+                        isVisible: true,
+                        message: 'Cập nhật chính sách chiết khấu thất bại!',
+                        type: 'error'
+                      });
+                    } finally {
+                      setIsUpdatingDiscount(false);
+                    }
+                  }}
+                  disabled={isUpdatingDiscount}
+                >
+                  {isUpdatingDiscount ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Đang cập nhật...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-save"></i>
+                      Lưu thay đổi
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Discount Modal */}
+        {showViewDiscountModal && selectedDiscount && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal} style={{ maxWidth: '600px' }}>
+              <div className={styles.modalHeader}>
+                <h2>
+                  <i className="fas fa-info-circle"></i>
+                  Chi tiết chính sách chiết khấu
+                </h2>
+                <button
+                  className={styles.closeButton}
+                  onClick={() => {
+                    setShowViewDiscountModal(false);
+                    setSelectedDiscount(null);
+                  }}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+
+              <div className={styles.modalBody}>
+                <div className={styles.carDetails}>
+                  {/* Policy ID */}
+                  <div className={styles.detailRow}>
+                    <div className={styles.detailLabel}>
+                      <i className="fas fa-hashtag"></i>
+                      ID Chính sách
+                    </div>
+                    <div className={styles.detailValue}>#{selectedDiscount.id}</div>
+                  </div>
+
+                  {/* Description */}
+                  <div className={styles.detailRow}>
+                    <div className={styles.detailLabel}>
+                      <i className="fas fa-align-left"></i>
+                      Mô tả
+                    </div>
+                    <div className={styles.detailValue} style={{fontWeight: 'bold', fontSize: '16px'}}>
+                      {selectedDiscount.description}
+                    </div>
+                  </div>
+
+                  <div className={styles.divider}></div>
+
+                  {/* Min Quantity */}
+                  <div className={styles.detailRow}>
+                    <div className={styles.detailLabel}>
+                      <i className="fas fa-arrow-down"></i>
+                      Số lượng tối thiểu
+                    </div>
+                    <div className={styles.detailValue} style={{fontWeight: 'bold'}}>
+                      {selectedDiscount.minQuantity} xe
+                    </div>
+                  </div>
+
+                  {/* Max Quantity */}
+                  <div className={styles.detailRow}>
+                    <div className={styles.detailLabel}>
+                      <i className="fas fa-arrow-up"></i>
+                      Số lượng tối đa
+                    </div>
+                    <div className={styles.detailValue} style={{fontWeight: 'bold'}}>
+                      {selectedDiscount.maxQuantity >= 2147483647 
+                        ? 'Không giới hạn' 
+                        : `${selectedDiscount.maxQuantity} xe`
+                      }
+                    </div>
+                  </div>
+
+                  {/* Discount Rate */}
+                  <div className={styles.detailRow}>
+                    <div className={styles.detailLabel}>
+                      <i className="fas fa-percentage"></i>
+                      Tỷ lệ giảm giá
+                    </div>
+                    <div className={styles.detailValue} style={{
+                      fontWeight: 'bold',
+                      fontSize: '20px',
+                      color: '#065f46'
+                    }}>
+                      {(selectedDiscount.discountRate * 100).toFixed(2)}%
+                    </div>
+                  </div>
+
+                  <div className={styles.divider}></div>
+
+                  {/* Status */}
+                  <div className={styles.detailRow}>
+                    <div className={styles.detailLabel}>
+                      <i className="fas fa-toggle-on"></i>
+                      Trạng thái
+                    </div>
+                    <div className={styles.detailValue}>
+                      <span className={`${styles.statusBadge} ${selectedDiscount.isActive ? styles.active : styles.inactive}`}
+                        style={{ padding: '6px 16px', fontSize: '13px', fontWeight: 700 }}>
+                        <i className={`fas ${selectedDiscount.isActive ? 'fa-check-circle' : 'fa-times-circle'}`} 
+                           style={{ marginRight: '6px' }}></i>
+                        {selectedDiscount.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button
+                  className={styles.cancelButton}
+                  onClick={() => {
+                    setShowViewDiscountModal(false);
+                    setSelectedDiscount(null);
+                  }}
+                >
+                  Đóng
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => {
+                    setShowViewDiscountModal(false);
+                    setEditingDiscount(selectedDiscount);
+                    setEditDiscount({
+                      minQuantity: selectedDiscount.minQuantity,
+                      maxQuantity: selectedDiscount.maxQuantity,
+                      discountRate: selectedDiscount.discountRate,
+                      description: selectedDiscount.description,
+                      isActive: selectedDiscount.isActive
+                    });
+                    setEditDiscountErrors({});
+                    setSelectedDiscount(null);
+                    setShowEditDiscountModal(true);
                   }}
                 >
                   <i className="fas fa-edit"></i>

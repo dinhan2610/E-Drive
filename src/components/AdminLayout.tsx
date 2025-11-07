@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import NotificationDropdown from './NotificationDropdown';
 import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
 
 interface AdminLayoutProps {
@@ -33,6 +34,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'cars': return 'Quản lý xe';
       case 'colors': return 'Quản lý màu xe';
       case 'dealers': return 'Đại lý';
+      case 'discounts': return 'Chính sách chiết khấu';
       case 'bookings': return 'Đặt xe';
       case 'analytics': return 'Thống kê';
       case 'settings': return 'Cài đặt';
@@ -47,6 +49,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'cars': return 'fas fa-car';
       case 'colors': return 'fas fa-palette';
       case 'dealers': return 'fas fa-store';
+      case 'discounts': return 'fas fa-tags';
       case 'bookings': return 'fas fa-calendar-alt';
       case 'analytics': return 'fas fa-chart-bar';
       case 'settings': return 'fas fa-cog';
@@ -131,6 +134,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
               </span>
             </div>
             <div
+              className={`${styles.navItem} ${activeTab === 'discounts' ? styles.active : ''}`}
+              onClick={() => {
+                onTabChange('discounts');
+                setSidebarOpen(false);
+              }}
+            >
+              <i className="fas fa-tags"></i>
+              <span>Chính sách chiết khấu</span>
+            </div>
+            <div
               className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}
               onClick={() => {
                 onTabChange('bookings');
@@ -208,10 +221,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
               <i className="fas fa-search"></i>
               <input type="text" placeholder="Tìm kiếm..." />
             </div>
-            <button className={styles.iconBtn}>
-              <i className="fas fa-bell"></i>
-              <span className={styles.badge}>3</span>
-            </button>
+            <NotificationDropdown />
             <button className={styles.iconBtn}>
               <i className="fas fa-envelope"></i>
               <span className={styles.badge}>5</span>

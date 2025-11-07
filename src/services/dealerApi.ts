@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api';
+import api from '../lib/apiClient';
 
 export interface Dealer {
   dealerId: number;
@@ -38,29 +38,14 @@ export interface UnverifiedAccountsApiResponse {
 
 // Fetch all dealers
 export async function fetchDealers(): Promise<Dealer[]> {
-  const url = `${API_BASE_URL}/dealers`;
-  console.log('🏢 Fetching dealers from:', url);
+  console.log('🏢 Fetching dealers from API');
 
   try {
-    const token = localStorage.getItem('accessToken');
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': '*/*',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      },
-    });
+    const response = await api.get<DealerApiResponse>('/api/dealers');
+    console.log('✅ Dealers Response:', response.data);
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-    }
-
-    const data: DealerApiResponse = await response.json();
-    console.log('✅ Dealers Response:', data);
-
-    if (data.statusCode === 200 && data.data) {
-      return data.data;
+    if (response.data.statusCode === 200 && response.data.data) {
+      return response.data.data;
     }
 
     throw new Error('Unexpected API response format');
@@ -72,29 +57,14 @@ export async function fetchDealers(): Promise<Dealer[]> {
 
 // Fetch unverified accounts (accounts waiting to become dealers)
 export async function fetchUnverifiedAccounts(): Promise<UnverifiedAccount[]> {
-  const url = `${API_BASE_URL}/admin/unverified-accounts`;
-  console.log('👥 Fetching unverified accounts from:', url);
+  console.log('👥 Fetching unverified accounts from API');
 
   try {
-    const token = localStorage.getItem('accessToken');
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': '*/*',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      },
-    });
+    const response = await api.get<UnverifiedAccountsApiResponse>('/api/admin/unverified-accounts');
+    console.log('✅ Unverified Accounts Response:', response.data);
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-    }
-
-    const data: UnverifiedAccountsApiResponse = await response.json();
-    console.log('✅ Unverified Accounts Response:', data);
-
-    if (data.statusCode === 200) {
-      return data.data || [];
+    if (response.data.statusCode === 200) {
+      return response.data.data || [];
     }
 
     throw new Error('Unexpected API response format');
@@ -106,39 +76,12 @@ export async function fetchUnverifiedAccounts(): Promise<UnverifiedAccount[]> {
 
 // Verify account (approve dealer registration)
 export async function verifyAccount(userId: number): Promise<{ success: boolean; message: string; alreadyVerified?: boolean }> {
-  const url = `${API_BASE_URL}/admin/verify-account/${userId}`;
-  console.log('✅ Verifying account:', url);
+  console.log('✅ Verifying account:', userId);
 
   try {
-    const token = localStorage.getItem('accessToken');
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Accept': '*/*',
-        'Authorization': `Bearer ${token}`
-      },
-    });
-
-    const data = await response.json();
+    const response = await api.post<any>(`/api/admin/verify-account/${userId}`);
+    const data = response.data;
     console.log('📦 Verify Account Response:', data);
-
-    // Handle "already verified" case (status 400)
-    if (response.status === 400 && data.message?.toLowerCase().includes('already verified')) {
-      return {
-        success: true,
-        message: 'Tài khoản đã được xác minh trước đó',
-        alreadyVerified: true
-      };
-    }
-
-    if (!response.ok) {
-      throw new Error(data.message || `API request failed: ${response.status} ${response.statusText}`);
-    }
 
     if (data.statusCode === 200) {
       return {
@@ -148,32 +91,35 @@ export async function verifyAccount(userId: number): Promise<{ success: boolean;
     }
 
     throw new Error(data.message || 'Failed to verify account');
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Verify Account Error:', error);
+    
+    // Handle "already verified" case (status 400)
+    if (error.response?.status === 400 && error.response?.data?.message?.toLowerCase().includes('already verified')) {
+      return {
+        success: true,
+        message: 'Tài khoản đã được xác minh trước đó',
+        alreadyVerified: true
+      };
+    }
+    
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'An error occurred while verifying account'
+      message: error.response?.data?.message || error.message || 'An error occurred while verifying account'
     };
   }
 }
 
 // Get dealer by ID
 export async function getDealerById(dealerId: number): Promise<Dealer> {
-  const url = `${API_BASE_URL}/dealers/${dealerId}`;
-  console.log('🔍 Getting dealer by ID:', url);
+  console.log('🔍 Getting dealer by ID:', dealerId);
 
   try {
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-    }
+    const response = await api.get<any>(`/api/dealers/${dealerId}`);
+    console.log('✅ Dealer Detail Response:', response.data);
 
-    const data = await response.json();
-    console.log('✅ Dealer Detail Response:', data);
-
-    if (data.statusCode === 200 && data.data) {
-      return data.data;
+    if (response.data.statusCode === 200 && response.data.data) {
+      return response.data.data;
     }
 
     throw new Error('Dealer not found');
@@ -185,178 +131,63 @@ export async function getDealerById(dealerId: number): Promise<Dealer> {
 
 // Create new dealer
 export async function createDealer(dealerData: Omit<Dealer, 'dealerId'>): Promise<Dealer> {
-  const url = `${API_BASE_URL}/dealers`;
-  console.log('🏢 Creating dealer at:', url);
+  console.log('🏢 Creating dealer');
   console.log('📤 Request body:', JSON.stringify(dealerData, null, 2));
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Accept': '*/*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(dealerData),
-    });
+    const response = await api.post<any>('/api/dealers', dealerData);
+    console.log('✅ Dealer Created Response:', response.data);
 
-    const responseText = await response.text();
-    console.log('📥 Raw API Response:', responseText);
-
-    if (!response.ok) {
-      try {
-        const errorData = JSON.parse(responseText);
-        console.error('❌ API Error Response:', errorData);
-        
-        if (errorData.message) {
-          throw new Error(`API Error (${response.status}): ${errorData.message}`);
-        } else if (errorData.error) {
-          throw new Error(`API Error (${response.status}): ${errorData.error}`);
-        } else {
-          throw new Error(`API Error (${response.status}): ${response.statusText}`);
-        }
-      } catch (parseError) {
-        console.error('❌ Raw error response:', responseText);
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-      }
-    }
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      throw new Error('Invalid JSON response from server');
-    }
-
-    console.log('✅ Dealer Created Response:', data);
-
-    if ((data.statusCode === 200 || data.statusCode === 201) && data.data) {
-      return data.data;
+    if ((response.data.statusCode === 200 || response.data.statusCode === 201) && response.data.data) {
+      return response.data.data;
     }
 
     throw new Error('API did not return created dealer data in expected format');
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Create Dealer Error:', error);
-    
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('Unknown error occurred while creating dealer');
-    }
+    const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred while creating dealer';
+    throw new Error(errorMessage);
   }
 }
 
 // Update dealer
 export async function updateDealer(dealerId: number, dealerData: Omit<Dealer, 'dealerId'>): Promise<Dealer> {
-  const url = `${API_BASE_URL}/dealers/${dealerId}`;
-  console.log('✏️ Updating dealer at:', url);
+  console.log('✏️ Updating dealer:', dealerId);
   console.log('📤 Request body:', JSON.stringify(dealerData, null, 2));
 
   try {
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Accept': '*/*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(dealerData),
-    });
+    const response = await api.put<any>(`/api/dealers/${dealerId}`, dealerData);
+    console.log('✅ Dealer Updated Response:', response.data);
 
-    const responseText = await response.text();
-    console.log('📥 Raw API Response:', responseText);
-
-    if (!response.ok) {
-      try {
-        const errorData = JSON.parse(responseText);
-        console.error('❌ API Error Response:', errorData);
-        
-        if (errorData.message) {
-          throw new Error(`API Error (${response.status}): ${errorData.message}`);
-        } else if (errorData.error) {
-          throw new Error(`API Error (${response.status}): ${errorData.error}`);
-        } else {
-          throw new Error(`API Error (${response.status}): ${response.statusText}`);
-        }
-      } catch (parseError) {
-        console.error('❌ Raw error response:', responseText);
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-      }
-    }
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      throw new Error('Invalid JSON response from server');
-    }
-
-    console.log('✅ Dealer Updated Response:', data);
-
-    if ((data.statusCode === 200 || data.statusCode === 201) && data.data) {
-      return data.data;
+    if ((response.data.statusCode === 200 || response.data.statusCode === 201) && response.data.data) {
+      return response.data.data;
     }
 
     throw new Error('API did not return updated dealer data in expected format');
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Update Dealer Error:', error);
-    
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('Unknown error occurred while updating dealer');
-    }
+    const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred while updating dealer';
+    throw new Error(errorMessage);
   }
 }
 
 // Delete dealer
 export async function deleteDealer(dealerId: number): Promise<{ success: boolean; message: string }> {
-  const url = `${API_BASE_URL}/dealers/${dealerId}`;
-  console.log('🗑️ Deleting dealer at:', url);
+  console.log('🗑️ Deleting dealer:', dealerId);
 
   try {
-    const token = localStorage.getItem('accessToken');
+    await api.delete(`/api/dealers/${dealerId}`);
     
-    if (!token) {
-      throw new Error('No authentication token found. Please login first.');
-    }
-
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Accept': '*/*',
-        'Authorization': `Bearer ${token}`
-      },
-    });
-
-    console.log('📥 Delete Response Status:', response.status);
-
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error('❌ Delete Error Response:', responseText);
-      
-      try {
-        const errorData = JSON.parse(responseText);
-        if (errorData.message) {
-          throw new Error(`API Error (${response.status}): ${errorData.message}`);
-        } else if (errorData.error) {
-          throw new Error(`API Error (${response.status}): ${errorData.error}`);
-        }
-      } catch (parseError) {
-        // If can't parse JSON, throw with status text
-      }
-      
-      throw new Error(`Failed to delete dealer: ${response.status} ${response.statusText}`);
-    }
-
     console.log('✅ Dealer deleted successfully');
     return {
       success: true,
       message: 'Xóa đại lý thành công'
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Delete Dealer Error:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Đã xảy ra lỗi khi xóa đại lý'
+      message: error.response?.data?.message || error.message || 'Đã xảy ra lỗi khi xóa đại lý'
     };
   }
 }

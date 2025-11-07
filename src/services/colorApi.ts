@@ -1,6 +1,5 @@
+import api from '../lib/apiClient';
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
-
-const API_BASE_URL = 'http://localhost:8080/api';
 
 /**
  * Fetch all vehicle colors
@@ -8,31 +7,19 @@ const API_BASE_URL = 'http://localhost:8080/api';
  * Response format: { statusCode: 200, message: "...", data: [...] }
  */
 export async function fetchColors(): Promise<VehicleColor[]> {
-  const url = `${API_BASE_URL}/colors`;
-  console.log('🎨 Fetching colors from:', url);
+  console.log('🎨 Fetching colors from API');
 
   try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-    }
-
-    const response = await res.json();
-    console.log('✅ API Response:', response);
+    const response = await api.get<{ statusCode: number; message: string; data: VehicleColor[] }>('/api/colors');
+    console.log('✅ API Response:', response.data);
     
     // API returns { statusCode, message, data: [...] }
-    if (response && response.data && Array.isArray(response.data)) {
-      console.log('✅ Colors fetched:', response.data);
-      return response.data;
+    if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      console.log('✅ Colors fetched:', response.data.data);
+      return response.data.data;
     }
     
-    console.warn('⚠️ Unexpected response format', response);
+    console.warn('⚠️ Unexpected response format', response.data);
     return [];
   } catch (error) {
     console.error('❌ fetchColors error:', error);
@@ -46,27 +33,15 @@ export async function fetchColors(): Promise<VehicleColor[]> {
  * Response format: { statusCode: 200, message: "...", data: {...} }
  */
 export async function getColorById(colorId: number): Promise<VehicleColor> {
-  const url = `${API_BASE_URL}/colors/${colorId}`;
   console.log('🎨 Fetching color by ID:', colorId);
 
   try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-    }
-
-    const response = await res.json();
-    console.log('✅ Color fetched:', response);
+    const response = await api.get<{ statusCode: number; message: string; data: VehicleColor }>(`/api/colors/${colorId}`);
+    console.log('✅ Color fetched:', response.data);
     
     // API returns { statusCode, message, data: {...} }
-    if (response && response.data) {
-      return response.data;
+    if (response.data && response.data.data) {
+      return response.data.data;
     }
     
     throw new Error('Invalid response format');
@@ -82,45 +57,22 @@ export async function getColorById(colorId: number): Promise<VehicleColor> {
  * Response format: { statusCode: 201, message: "...", data: {...} }
  */
 export async function createColor(colorData: CreateColorRequest): Promise<VehicleColor> {
-  const url = `${API_BASE_URL}/colors`;
   console.log('🎨 Creating color:', colorData);
 
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(colorData),
-    });
-
-    console.log('📡 Response status:', res.status);
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('❌ API Error Response:', errorText);
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.message || `API request failed: ${res.status}`);
-      } catch {
-        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-      }
-    }
-
-    const response = await res.json();
-    console.log('✅ Color created:', response);
+    const response = await api.post<{ statusCode: number; message: string; data: VehicleColor }>('/api/colors', colorData);
+    console.log('✅ Color created:', response.data);
     
     // API returns { statusCode, message, data: {...} }
-    if (response && response.data) {
-      return response.data;
+    if (response.data && response.data.data) {
+      return response.data.data;
     }
     
     throw new Error('Invalid response format');
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ createColor error:', error);
-    throw error;
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to create color';
+    throw new Error(errorMessage);
   }
 }
 
@@ -130,30 +82,15 @@ export async function createColor(colorData: CreateColorRequest): Promise<Vehicl
  * Response format: { statusCode: 200, message: "...", data: {...} }
  */
 export async function updateColor(colorId: number, colorData: UpdateColorRequest): Promise<VehicleColor> {
-  const url = `${API_BASE_URL}/colors/${colorId}`;
   console.log('🎨 Updating color:', colorId, colorData);
 
   try {
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(colorData),
-    });
-
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-    }
-
-    const response = await res.json();
-    console.log('✅ Color updated:', response);
+    const response = await api.put<{ statusCode: number; message: string; data: VehicleColor }>(`/api/colors/${colorId}`, colorData);
+    console.log('✅ Color updated:', response.data);
     
     // API returns { statusCode, message, data: {...} }
-    if (response && response.data) {
-      return response.data;
+    if (response.data && response.data.data) {
+      return response.data.data;
     }
     
     throw new Error('Invalid response format');
@@ -168,21 +105,10 @@ export async function updateColor(colorId: number, colorData: UpdateColorRequest
  * DELETE /api/colors/{id}
  */
 export async function deleteColor(colorId: number): Promise<void> {
-  const url = `${API_BASE_URL}/colors/${colorId}`;
   console.log('🎨 Deleting color:', colorId);
 
   try {
-    const res = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-    }
-
+    await api.delete(`/api/colors/${colorId}`);
     console.log('✅ Color deleted successfully');
   } catch (error) {
     console.error('❌ deleteColor error:', error);
