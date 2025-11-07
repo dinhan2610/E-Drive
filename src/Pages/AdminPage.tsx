@@ -6,7 +6,7 @@ import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, del
 import { fetchManufacturerInventorySummary, createInventoryRecord, updateInventoryRecord, deleteInventoryRecord, type CreateInventoryRequest, type UpdateInventoryRequest } from '../services/manufacturerInventoryApi';
 import type { ManufacturerInventorySummary, VehicleInventoryItem } from '../types/inventory';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
-import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, updateOrderStatus, type Order } from '../services/orderApi';
+import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, updateOrderStatus, markOrderAsPaid, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
 import { createColor, updateColor, deleteColor, fetchColors } from '../services/colorApi';
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
@@ -367,11 +367,10 @@ interface Booking {
   endDate: string;
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'refunded';
+  paymentStatus: 'pending' | 'paid' | 'refunded' | 'cancelled';
   deliveryAddress: string;
   orderItems: Array<{
     vehicleName: string;
-    color?: string;
     quantity: number;
     unitPrice: number;
   }>;
@@ -725,6 +724,77 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  // Function to reload orders from API
+  const reloadOrders = async () => {
+    try {
+      console.log('🔄 Reloading orders from API...');
+      const ordersData = await getOrders();
+      console.log('📦 Orders fetched:', ordersData);
+      
+      // Map Order data to Booking interface
+      const mappedBookings: Booking[] = ordersData.map((order: Order) => {
+        // Get first order item for car name
+        const firstItem = order.orderItems && order.orderItems.length > 0 
+          ? order.orderItems[0] 
+          : null;
+        
+        // Map order status to booking status (support both English and Vietnamese formats)
+        let bookingStatus: Booking['status'] = 'pending';
+        const orderStatusUpper = order.orderStatus?.toUpperCase() || '';
+        if (orderStatusUpper === 'PENDING' || orderStatusUpper === 'CHỜ_DUYỆT') bookingStatus = 'pending';
+        else if (orderStatusUpper === 'CONFIRMED' || orderStatusUpper === 'ĐÃ_XÁC_NHẬN') bookingStatus = 'confirmed';
+        else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
+        else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
+        else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
+        else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
+        
+        // Map payment status (support both English and Vietnamese formats)
+        let paymentSt: Booking['paymentStatus'] = 'pending';
+        const paymentStatusUpper = order.paymentStatus?.toUpperCase() || '';
+        if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
+        else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
+        else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
+        
+        return {
+          id: order.orderId,
+          userId: order.dealerId || 0,
+          userName: order.dealerName || 'N/A',
+          dealerName: order.dealerName || 'N/A',
+          carId: firstItem?.vehicleId || 0,
+          carName: firstItem?.vehicleName || 'N/A',
+          startDate: order.orderDate || order.desiredDeliveryDate || 'N/A',
+          endDate: order.actualDeliveryDate || order.desiredDeliveryDate || 'N/A',
+          status: bookingStatus,
+          totalAmount: order.grandTotal || 0,
+          paymentStatus: paymentSt,
+          deliveryAddress: order.deliveryAddress || '',
+          orderItems: order.orderItems || []
+        };
+      });
+      
+      setBookings(mappedBookings);
+      console.log('✅ Orders reloaded successfully:', mappedBookings);
+
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalRevenue: mappedBookings.reduce((sum, b) => sum + b.totalAmount, 0),
+        monthlyBookings: mappedBookings.filter(b => {
+          const orderDate = new Date(b.startDate);
+          const now = new Date();
+          return orderDate.getMonth() === now.getMonth() && 
+                 orderDate.getFullYear() === now.getFullYear();
+        }).length,
+        activeBookings: mappedBookings.filter(b => 
+          b.status === 'processing' || b.status === 'shipped'
+        ).length,
+        totalBookings: mappedBookings.length
+      }));
+    } catch (err) {
+      console.error('❌ Failed to reload orders:', err);
+    }
+  };
+
   useEffect(() => {
     // Fetch vehicles from API for Cars management tab
     (async () => {
@@ -852,19 +922,22 @@ const AdminPage: React.FC = () => {
             ? order.orderItems[0] 
             : null;
           
-          // Map order status to booking status
+          // Map order status to booking status (support both English and Vietnamese formats)
           let bookingStatus: Booking['status'] = 'pending';
-          if (order.orderStatus === 'PENDING') bookingStatus = 'pending';
-          else if (order.orderStatus === 'CONFIRMED') bookingStatus = 'confirmed';
-          else if (order.orderStatus === 'PROCESSING') bookingStatus = 'processing';
-          else if (order.orderStatus === 'SHIPPED') bookingStatus = 'shipped';
-          else if (order.orderStatus === 'DELIVERED') bookingStatus = 'delivered';
-          else if (order.orderStatus === 'CANCELLED') bookingStatus = 'cancelled';
+          const orderStatusUpper = order.orderStatus?.toUpperCase() || '';
+          if (orderStatusUpper === 'PENDING' || orderStatusUpper === 'CHỜ_DUYỆT') bookingStatus = 'pending';
+          else if (orderStatusUpper === 'CONFIRMED' || orderStatusUpper === 'ĐÃ_XÁC_NHẬN') bookingStatus = 'confirmed';
+          else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
+          else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
+          else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
+          else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
           
-          // Map payment status
+          // Map payment status (support both English and Vietnamese formats)
           let paymentSt: Booking['paymentStatus'] = 'pending';
-          if (order.paymentStatus === 'PENDING') paymentSt = 'pending';
-          else if (order.paymentStatus === 'PAID') paymentSt = 'paid';
+          const paymentStatusUpper = order.paymentStatus?.toUpperCase() || '';
+          if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
+          else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
+          else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
           
           return {
             id: order.orderId,
@@ -1100,9 +1173,95 @@ const AdminPage: React.FC = () => {
     orderId: number | string,
     newStatus: 'PENDING' | 'PAID' | 'CANCELLED'
   ) => {
+    // Show confirmation dialog for CANCELLED status
+    if (newStatus === 'CANCELLED') {
+      const booking = bookings.find(b => b.id === orderId);
+      const orderInfo = booking ? `#${booking.id} - ${booking.dealerName}` : `#${orderId}`;
+      
+      setConfirmDialog({
+        isOpen: true,
+        title: '❌ Hủy đơn hàng',
+        message: `Bạn có chắc chắn muốn HỦY đơn hàng ${orderInfo}?\n\n⚠️ Hành động này sẽ:\n• Hủy đơn hàng\n• Đặt trạng thái thanh toán thành "Đã hủy"\n• Không thể hoàn tác!`,
+        type: 'danger',
+        onConfirm: () => performPaymentStatusUpdate(orderId, newStatus)
+      });
+      return;
+    }
+
+    // Show info dialog for PAID status (backend will validate bill)
+    if (newStatus === 'PAID') {
+      const booking = bookings.find(b => b.id === orderId);
+      const orderInfo = booking ? `#${booking.id} - ${booking.dealerName}` : `#${orderId}`;
+      
+      setConfirmDialog({
+        isOpen: true,
+        title: '💰 Xác nhận thanh toán',
+        message: `Xác nhận đơn hàng ${orderInfo} đã thanh toán?\n\n📋 Lưu ý:\n• Hệ thống sẽ kiểm tra đại lý đã upload hóa đơn chưa\n• Nếu chưa có hóa đơn, sẽ không thể xác nhận\n• Yêu cầu đại lý upload bill trước khi xác nhận`,
+        type: 'warning',
+        onConfirm: () => performPaymentStatusUpdate(orderId, newStatus)
+      });
+      return;
+    }
+
+    // For PENDING - no confirmation needed
+    await performPaymentStatusUpdate(orderId, newStatus);
+  };
+
+  // Perform actual payment status update (separated for confirm dialog)
+  const performPaymentStatusUpdate = async (
+    orderId: number | string,
+    newStatus: 'PENDING' | 'PAID' | 'CANCELLED'
+  ) => {
     try {
       console.log('💳 Updating payment status:', orderId, '→', newStatus);
 
+      // Special handling for PAID status - use mark-paid API
+      if (newStatus === 'PAID') {
+        setNotification({
+          isVisible: true,
+          message: '⏳ Đang kiểm tra hóa đơn và xác nhận thanh toán...',
+          type: 'info'
+        });
+
+        await markOrderAsPaid(orderId);
+
+        // Reload orders to get fresh data from backend
+        await reloadOrders();
+
+        setNotification({
+          isVisible: true,
+          message: '✅ Đã xác nhận đơn hàng đã thanh toán!',
+          type: 'success'
+        });
+
+        console.log('✅ Order marked as paid successfully');
+        return;
+      }
+
+      // Special handling for CANCELLED status - use cancel API
+      if (newStatus === 'CANCELLED') {
+        setNotification({
+          isVisible: true,
+          message: '⏳ Đang hủy đơn hàng...',
+          type: 'info'
+        });
+
+        await cancelOrder(orderId);
+
+        // Reload orders to get fresh data from backend
+        await reloadOrders();
+
+        setNotification({
+          isVisible: true,
+          message: '✅ Đã hủy đơn hàng thành công!',
+          type: 'success'
+        });
+
+        console.log('✅ Order cancelled successfully');
+        return;
+      }
+
+      // For PENDING status - use regular update API
       setNotification({
         isVisible: true,
         message: '⏳ Đang cập nhật trạng thái thanh toán...',
@@ -1111,12 +1270,8 @@ const AdminPage: React.FC = () => {
 
       await updatePaymentStatus(orderId, newStatus);
 
-      // Update local state
-      setBookings(prev => prev.map(booking =>
-        booking.id === orderId
-          ? { ...booking, paymentStatus: newStatus.toLowerCase() as any }
-          : booking
-      ));
+      // Reload orders to get fresh data from backend
+      await reloadOrders();
 
       setNotification({
         isVisible: true,
@@ -1141,6 +1296,9 @@ const AdminPage: React.FC = () => {
         message: `❌ ${errorMessage}`,
         type: 'error'
       });
+      
+      // Reload orders to reset dropdown to correct state
+      await reloadOrders();
     }
   };
 
@@ -2829,16 +2987,14 @@ const AdminPage: React.FC = () => {
                       <td>{booking.endDate}</td>
                       <td>{formatCurrency(booking.totalAmount)}</td>
                       <td>
-                        <select
-                          className={`${styles.orderStatusDropdown} ${styles[booking.status || 'pending']}`}
-                          value={booking.status?.toUpperCase() || 'PENDING'}
-                          onChange={(e) => handleUpdateOrderStatus(booking.id, e.target.value as any)}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <option value="PENDING">Chờ duyệt</option>
-                          <option value="CONFIRMED">Đã xác nhận</option>
-                          <option value="CANCELLED">Hủy đơn hàng</option>
-                        </select>
+                        <span className={`${styles.statusBadge} ${styles[booking.status || 'pending']}`}>
+                          {booking.status === 'pending' && 'Chờ duyệt'}
+                          {booking.status === 'confirmed' && 'Đã xác nhận'}
+                          {booking.status === 'processing' && 'Đang xử lý'}
+                          {booking.status === 'shipped' && 'Đang giao'}
+                          {booking.status === 'delivered' && 'Đã giao'}
+                          {booking.status === 'cancelled' && 'Đã hủy'}
+                        </span>
                       </td>
                       <td>
                         <select
@@ -2970,13 +3126,7 @@ const AdminPage: React.FC = () => {
                           <tbody>
                             {selectedOrder.orderItems.map((item, index) => (
                               <tr key={index}>
-                                <td>
-                                  {item.vehicleName}
-                                  {item.color && <div style={{ fontSize: '0.9em', color: '#8b5cf6', marginTop: '4px' }}>
-                                    <i className="fas fa-palette" style={{ marginRight: '6px' }}></i>
-                                    Màu: {item.color}
-                                  </div>}
-                                </td>
+                                <td>{item.vehicleName}</td>
                                 <td>{item.quantity}</td>
                                 <td>{formatCurrency(item.unitPrice)}</td>
                                 <td>{formatCurrency(item.itemSubtotal)}</td>

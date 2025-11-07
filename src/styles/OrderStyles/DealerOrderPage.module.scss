@@ -1871,6 +1871,49 @@
   padding: 3rem;
 }
 
+.modalActions {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: center;
+}
+
+.addProductBtn {
+  background: linear-gradient(135deg, #ff4d30 0%, #e63946 100%);
+  color: white;
+  border: none;
+  padding: 1.4rem 3rem;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-family: $text-font;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 15px rgba(255, 77, 48, 0.3);
+
+  i {
+    font-size: 1.6rem;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 77, 48, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background: #dee2e6;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
+  }
+}
+
 .detailSection {
   margin-bottom: 3rem;
 

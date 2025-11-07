@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { listFeedbacks, deleteFeedback } from '../services/feedbackApi';
+import { getProfile } from '../services/profileApi';
 import type { Feedback } from '../types/feedback';
 import styles from '../styles/TicketsStyles/TicketsPage.module.scss';
 
@@ -24,18 +25,49 @@ const TicketsPage: React.FC = () => {
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filterRating, setFilterRating] = useState<number | undefined>(undefined);
+  const [dealerId, setDealerId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadFeedbacks();
+    loadDealerProfile();
   }, []);
 
+  useEffect(() => {
+    if (dealerId !== null) {
+      loadFeedbacks();
+    }
+  }, [dealerId]);
+
+  const loadDealerProfile = async () => {
+    try {
+      console.log('🔍 [Tickets] Loading dealer profile...');
+      const profile = await getProfile();
+      console.log('✅ [Tickets] Dealer ID:', profile.dealerId);
+      setDealerId(profile.dealerId);
+    } catch (error) {
+      console.error('❌ [Tickets] Error loading dealer profile:', error);
+    }
+  };
+
   const loadFeedbacks = async () => {
+    if (dealerId === null) {
+      console.log('⏳ [Tickets] Waiting for dealer ID...');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const data = await listFeedbacks({ page: 0, size: 100 });
+      console.log(`📋 [Tickets] Loading feedbacks for dealer ${dealerId}...`);
+      
+      const data = await listFeedbacks({ 
+        page: 0, 
+        size: 100,
+        dealerId: dealerId
+      });
+      
+      console.log(`✅ [Tickets] Loaded ${data.content?.length || 0} feedbacks`);
       setFeedbacks(data.content);
     } catch (error) {
-      console.error('Error loading feedbacks:', error);
+      console.error('❌ [Tickets] Error loading feedbacks:', error);
       alert('❌ Không thể tải danh sách phản hồi');
     } finally {
       setIsLoading(false);

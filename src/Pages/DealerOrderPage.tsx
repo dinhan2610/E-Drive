@@ -66,6 +66,10 @@ const DealerOrderPage: React.FC = () => {
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   
+  // Product selector state
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedColor, setSelectedColor] = useState<string>('');
+  
   // Discount policies state
   const [discountPolicies, setDiscountPolicies] = useState<DiscountPolicy[]>([]);
   const [isLoadingDiscounts, setIsLoadingDiscounts] = useState(true);
@@ -743,20 +747,14 @@ const DealerOrderPage: React.FC = () => {
                 <select
                   id="vehicleSelect"
                   className={styles.vehicleDropdown}
+                  value={selectedVehicleId}
                   onChange={(e) => {
                     const vehicleId = e.target.value;
                     console.log('🚗 Selected vehicle ID:', vehicleId);
-                    if (vehicleId) {
-                      const vehicle = availableVehicles.find(v => v.id === vehicleId);
-                      console.log('🔍 Found vehicle:', vehicle);
-                      if (vehicle) {
-                        handleAddProduct(vehicle);
-                        setShowProductSelector(false);
-                      }
-                    }
+                    setSelectedVehicleId(vehicleId);
+                    setSelectedColor(''); // Reset color when vehicle changes
                   }}
                   disabled={isLoadingVehicles}
-                  defaultValue=""
                 >
                   <option value="" disabled>
                     {isLoadingVehicles ? 'Đang tải...' : 'Chọn xe từ danh sách'}
@@ -770,6 +768,79 @@ const DealerOrderPage: React.FC = () => {
                     );
                   })}
                 </select>
+              </div>
+
+              {/* Color selector - shown only when vehicle is selected */}
+              {selectedVehicleId && (() => {
+                const vehicle = availableVehicles.find(v => v.id === selectedVehicleId);
+                const hasColors = vehicle?.colorVariants && vehicle.colorVariants.length > 0;
+                
+                return (
+                  <div className={styles.dropdownContainer}>
+                    <label htmlFor="colorSelect">
+                      <i className="fas fa-palette"></i>
+                      Chọn màu xe
+                    </label>
+                    {hasColors ? (
+                      <select
+                        id="colorSelect"
+                        className={styles.vehicleDropdown}
+                        value={selectedColor}
+                        onChange={(e) => setSelectedColor(e.target.value)}
+                      >
+                        <option value="" disabled>Chọn màu xe</option>
+                        {vehicle.colorVariants!.map((colorVar, idx) => (
+                          <option key={idx} value={colorVar.color}>
+                            {colorVar.color} - {formatPrice(colorVar.finalPrice)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        id="colorSelect"
+                        className={styles.vehicleDropdown}
+                        value={selectedColor}
+                        onChange={(e) => setSelectedColor(e.target.value)}
+                        placeholder="Nhập màu xe (ví dụ: Đen, Trắng, Xanh...)"
+                      />
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Add product button */}
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.addProductBtn}
+                  onClick={() => {
+                    if (!selectedVehicleId) {
+                      alert('Vui lòng chọn xe');
+                      return;
+                    }
+                    if (!selectedColor) {
+                      alert('Vui lòng chọn hoặc nhập màu xe');
+                      return;
+                    }
+                    
+                    const vehicle = availableVehicles.find(v => v.id === selectedVehicleId);
+                    if (vehicle) {
+                      // Set selectedColor to vehicle before adding
+                      vehicle.selectedColor = selectedColor;
+                      handleAddProduct(vehicle);
+                      
+                      // Reset modal state
+                      setSelectedVehicleId('');
+                      setSelectedColor('');
+                      setShowProductSelector(false);
+                    }
+                  }}
+                  disabled={!selectedVehicleId || !selectedColor}
+                >
+                  <i className="fas fa-plus"></i>
+                  Thêm vào đơn hàng
+                </button>
               </div>
             </div>
           </div>

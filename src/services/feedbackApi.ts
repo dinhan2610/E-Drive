@@ -10,11 +10,20 @@ export async function listFeedbacks(filters: FeedbackFilters = {}): Promise<Feed
   if (filters.page !== undefined) params.page = filters.page;
   if (filters.size !== undefined) params.size = filters.size;
   if (filters.rating !== undefined) params.rating = filters.rating;
-  if (filters.dealerId !== undefined) params.dealerId = filters.dealerId;
   if (filters.customerId !== undefined) params.customerId = filters.customerId;
   if (filters.status) params.status = filters.status;
 
-  const response = await apiClient.get<FeedbackListResponse>('/api/feedbacks', { params });
+  // Use dealer-specific endpoint if dealerId is provided
+  const endpoint = filters.dealerId !== undefined
+    ? `/api/feedbacks/by-dealer/${filters.dealerId}`
+    : '/api/feedbacks';
+
+  console.log('🔗 Feedback API endpoint:', endpoint);
+  console.log('📦 Feedback API params:', params);
+  console.log('🏢 DealerId in filters:', filters.dealerId);
+
+  const response = await apiClient.get<FeedbackListResponse>(endpoint, { params });
+  console.log('✅ Feedback API response:', response.data);
   return response.data;
 }
 
