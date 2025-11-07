@@ -62,13 +62,13 @@ export const SuccessModal: FC<ModalProps> = ({
       default:
         return {
           icon: 'fas fa-check-circle',
-          iconBg: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-          iconShadow: 'rgba(16, 185, 129, 0.3)',
+          iconBg: 'linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%)',
+          iconShadow: 'rgba(255, 77, 48, 0.4)',
           mainTitle: title || 'Đặt lịch thành công!',
           subtitle: '',
           description: message || 'Chúng tôi sẽ liên hệ với bạn để xác nhận lịch hẹn trong thời gian sớm nhất. Cảm ơn bạn đã tin tưởng E-Drive!',
           buttonText: 'Hoàn tất',
-          bgColor: '#10B981'
+          bgColor: '#ff4d30'
         };
     }
   };

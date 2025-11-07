@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { getProfile } from '../services/profileApi';
-import { createOrder, getOrdersByDealer, type CreateOrderRequest, type Order } from '../services/orderApi';
-import { confirmDelivery, DeliveryApiError } from '../services/deliveryApi';
+import { createOrder, type CreateOrderRequest } from '../services/orderApi';
 import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
 import { fetchActiveDiscountPolicies } from '../services/discountApi';
 import type { DiscountPolicy } from '../types/discount';
@@ -49,7 +48,6 @@ const DealerOrderPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const incomingProduct = location.state?.product as Product | undefined;
-  const initialTab = (location.state?.activeTab as 'create' | 'list') || 'create';
   
   // Check authentication on mount
   useEffect(() => {
@@ -70,16 +68,6 @@ const DealerOrderPage: React.FC = () => {
   // Discount policies state
   const [discountPolicies, setDiscountPolicies] = useState<DiscountPolicy[]>([]);
   const [isLoadingDiscounts, setIsLoadingDiscounts] = useState(true);
-  
-  // Tab management
-  const [activeTab, setActiveTab] = useState<'create' | 'list'>(initialTab);
-  
-  // Orders list
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
-  const [confirmingOrderId, setConfirmingOrderId] = useState<number | string | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showOrderDetail, setShowOrderDetail] = useState(false);
   
   const [formData, setFormData] = useState<DealerOrderForm>({
     dealerName: '',
@@ -177,71 +165,6 @@ const DealerOrderPage: React.FC = () => {
     
     loadDiscountPolicies();
   }, []);
-
-  // Load orders when switching to list tab
-  useEffect(() => {
-    if (activeTab === 'list' && currentDealerId) {
-      loadOrders();
-    }
-  }, [activeTab, currentDealerId]);
-
-  const loadOrders = async () => {
-    if (!currentDealerId) {
-      console.warn('⚠️ No dealer ID available, cannot load orders');
-      return;
-    }
-    
-    setIsLoadingOrders(true);
-    try {
-      console.log('🔄 Loading orders for dealer:', currentDealerId);
-      const fetchedOrders = await getOrdersByDealer(currentDealerId);
-      setOrders(fetchedOrders);
-      console.log('✅ Orders loaded:', fetchedOrders);
-    } catch (error: any) {
-      console.error('❌ Error loading orders:', error);
-      alert('Không thể tải danh sách đơn hàng: ' + error.message);
-    } finally {
-      setIsLoadingOrders(false);
-    }
-  };
-
-  const handleConfirmDelivery = async (orderId: number | string) => {
-    if (!window.confirm('Bạn xác nhận đã nhận đủ hàng cho đơn hàng này?')) {
-      return;
-    }
-
-    setConfirmingOrderId(orderId);
-    try {
-      console.log(`🚚 Confirming delivery for order ${orderId}...`);
-      await confirmDelivery(orderId);
-      
-      alert('✅ Đã xác nhận nhận hàng thành công!');
-      
-      // Reload orders to get updated status
-      await loadOrders();
-    } catch (error: any) {
-      console.error('❌ Error confirming delivery:', error);
-      
-      if (error instanceof DeliveryApiError) {
-        if (error.code === 'ORDER_NOT_FOUND') {
-          alert('Không tìm thấy đơn hàng. Vui lòng kiểm tra lại.');
-        } else if (error.code === 'FORBIDDEN') {
-          alert('Bạn không có quyền xác nhận đơn hàng này.');
-        } else {
-          alert(`Lỗi: ${error.message}`);
-        }
-      } else {
-        alert('Không thể xác nhận nhận hàng. Vui lòng thử lại.');
-      }
-    } finally {
-      setConfirmingOrderId(null);
-    }
-  };
-
-  const handleViewOrderDetail = (order: Order) => {
-    setSelectedOrder(order);
-    setShowOrderDetail(true);
-  };
 
   // Auto-add product from navigation state
   useEffect(() => {
@@ -465,13 +388,8 @@ const DealerOrderPage: React.FC = () => {
         urgentOrder: false
       });
       
-      // Reload orders list
-      await loadOrders();
-      
-      // Switch to list tab after short delay
-      setTimeout(() => {
-        setActiveTab('list');
-      }, 2000);
+      // Show success modal
+      setShowSuccess(true);
       
     } catch (error: any) {
       console.error('Error creating order:', error);
@@ -483,8 +401,8 @@ const DealerOrderPage: React.FC = () => {
 
   const handleSuccessClose = () => {
     setShowSuccess(false);
-    // Navigate to home or order list page
-    navigate('/');
+    // Navigate to home or products page
+    navigate('/products');
   };
 
   const pricing = calculateTotal();
@@ -501,26 +419,7 @@ const DealerOrderPage: React.FC = () => {
             <p>Dành cho đại lý - Đặt hàng số lượng lớn với giá ưu đãi</p>
           </div>
 
-          {/* Tabs */}
-          <div className={styles.tabs}>
-            <button
-              type="button"
-              className={`${styles.tab} ${activeTab === 'create' ? styles.active : ''}`}
-              onClick={() => setActiveTab('create')}
-            >
-              📝 Tạo đơn hàng mới
-            </button>
-            <button
-              type="button"
-              className={`${styles.tab} ${activeTab === 'list' ? styles.active : ''}`}
-              onClick={() => setActiveTab('list')}
-            >
-              📦 Đơn hàng của tôi
-            </button>
-          </div>
-
           {/* Create Order Form */}
-          {activeTab === 'create' && (
           <div className={styles.content}>
             {/* Left: Form */}
             <form className={styles.form} onSubmit={handleSubmit}>
@@ -797,95 +696,6 @@ const DealerOrderPage: React.FC = () => {
               </div>
             </form>
           </div>
-          )}
-
-          {/* Orders List */}
-          {activeTab === 'list' && (
-            <div className={styles.ordersList}>
-              <h2>Đơn hàng của tôi</h2>
-              
-              {isLoadingOrders ? (
-                <div className={styles.loading}>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>Đang tải danh sách đơn hàng...</p>
-                </div>
-              ) : orders.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <i className="fas fa-inbox"></i>
-                  <p>Chưa có đơn hàng nào</p>
-                  <button 
-                    type="button"
-                    onClick={() => setActiveTab('create')}
-                    className={styles.createButton}
-                  >
-                    Tạo đơn hàng mới
-                  </button>
-                </div>
-              ) : (
-                <div className={styles.ordersGrid}>
-                  {orders.map(order => (
-                    <div 
-                      key={order.orderId} 
-                      className={styles.orderCard}
-                      onClick={() => handleViewOrderDetail(order)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className={styles.orderHeader}>
-                        <h3>Đơn hàng #{order.orderId}</h3>
-                        <span className={`${styles.status} ${styles[order.orderStatus.toLowerCase()]}`}>
-                          {order.orderStatus}
-                        </span>
-                      </div>
-                      
-                      <div className={styles.orderInfo}>
-                        <div className={styles.infoRow}>
-                          <span className={styles.label}>Tổng tiền:</span>
-                          <span className={styles.value}>{formatPrice(order.grandTotal)}</span>
-                        </div>
-                        <div className={styles.infoRow}>
-                          <span className={styles.label}>Ngày giao dự kiến:</span>
-                          <span className={styles.value}>{order.desiredDeliveryDate}</span>
-                        </div>
-                        <div className={styles.infoRow}>
-                          <span className={styles.label}>Địa chỉ giao hàng:</span>
-                          <span className={styles.value}>{order.deliveryAddress}</span>
-                        </div>
-                        <div className={styles.infoRow}>
-                          <span className={styles.label}>Thanh toán:</span>
-                          <span className={`${styles.value} ${styles[order.paymentStatus.toLowerCase()]}`}>
-                            {order.paymentStatus}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className={styles.orderActions} onClick={(e) => e.stopPropagation()}>
-                        {order.orderStatus === 'SHIPPED' && (
-                          <button
-                            type="button"
-                            onClick={() => handleConfirmDelivery(order.orderId)}
-                            disabled={confirmingOrderId === order.orderId}
-                            className={styles.confirmButton}
-                          >
-                            {confirmingOrderId === order.orderId ? (
-                              <>
-                                <i className="fas fa-spinner fa-spin"></i>
-                                Đang xác nhận...
-                              </>
-                            ) : (
-                              <>
-                                <i className="fas fa-check-circle"></i>
-                                Xác nhận đã nhận hàng
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
         </div>
       </div>
@@ -896,123 +706,6 @@ const DealerOrderPage: React.FC = () => {
         title="Đặt hàng thành công!"
         message="Đơn hàng của bạn đã được gửi thành công và đang chờ Admin duyệt. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất."
       />
-
-      {/* Order Detail Modal */}
-      {showOrderDetail && selectedOrder && (
-        <div className={styles.modalOverlay} onClick={() => setShowOrderDetail(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2>Chi tiết đơn hàng #{selectedOrder.orderId}</h2>
-              <button onClick={() => setShowOrderDetail(false)} className={styles.closeBtn}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-
-            <div className={styles.modalBody}>
-              {/* Order Status */}
-              <div className={styles.detailSection}>
-                <h3>Trạng thái</h3>
-                <div className={styles.statusRow}>
-                  <div>
-                    <span className={styles.label}>Đơn hàng:</span>
-                    <span className={`${styles.badge} ${styles[selectedOrder.orderStatus.toLowerCase()]}`}>
-                      {selectedOrder.orderStatus}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.label}>Thanh toán:</span>
-                    <span className={`${styles.badge} ${styles[selectedOrder.paymentStatus.toLowerCase()]}`}>
-                      {selectedOrder.paymentStatus}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Order Items */}
-              {selectedOrder.orderItems && selectedOrder.orderItems.length > 0 && (
-                <div className={styles.detailSection}>
-                  <h3>Danh sách xe</h3>
-                  <div className={styles.itemsList}>
-                    {selectedOrder.orderItems.map((item, index) => (
-                      <div key={index} className={styles.orderItem}>
-                        <div className={styles.itemInfo}>
-                          <strong>{item.vehicleName || `Vehicle #${item.vehicleId}`}</strong>
-                          <span className={styles.itemQuantity}>Số lượng: {item.quantity}</span>
-                        </div>
-                        <div className={styles.itemPrice}>
-                          <div>{formatPrice(item.unitPrice)} x {item.quantity}</div>
-                          <strong>{formatPrice(item.unitPrice * item.quantity)}</strong>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Pricing Breakdown */}
-              <div className={styles.detailSection}>
-                <h3>Tổng quan thanh toán</h3>
-                <div className={styles.pricingBreakdown}>
-                  <div className={styles.priceRow}>
-                    <span>Tạm tính:</span>
-                    <span>{formatPrice(selectedOrder.subtotal)}</span>
-                  </div>
-                  {selectedOrder.dealerDiscount > 0 && (
-                    <div className={styles.priceRow}>
-                      <span>Chiết khấu đại lý:</span>
-                      <span className={styles.discount}>-{formatPrice(selectedOrder.dealerDiscount)}</span>
-                    </div>
-                  )}
-                  <div className={styles.priceRow}>
-                    <span>VAT (10%):</span>
-                    <span>{formatPrice(selectedOrder.vatAmount)}</span>
-                  </div>
-                  <div className={`${styles.priceRow} ${styles.total}`}>
-                    <strong>Tổng cộng:</strong>
-                    <strong className={styles.totalPrice}>{formatPrice(selectedOrder.grandTotal)}</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Delivery Information */}
-              <div className={styles.detailSection}>
-                <h3>Thông tin giao hàng</h3>
-                <div className={styles.deliveryInfo}>
-                  <div className={styles.infoItem}>
-                    <i className="fas fa-calendar"></i>
-                    <div>
-                      <strong>Ngày giao dự kiến</strong>
-                      <span>{selectedOrder.desiredDeliveryDate}</span>
-                    </div>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <i className="fas fa-map-marker-alt"></i>
-                    <div>
-                      <strong>Địa chỉ giao hàng</strong>
-                      <span>{selectedOrder.deliveryAddress}</span>
-                    </div>
-                  </div>
-                  {selectedOrder.deliveryNote && (
-                    <div className={styles.infoItem}>
-                      <i className="fas fa-sticky-note"></i>
-                      <div>
-                        <strong>Ghi chú</strong>
-                        <span>{selectedOrder.deliveryNote}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.modalFooter}>
-              <button onClick={() => setShowOrderDetail(false)} className={styles.closeButton}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Vehicle Selection Modal */}
       {showProductSelector && (
