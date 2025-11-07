@@ -266,6 +266,11 @@ const TestDrivePage: React.FC = () => {
     try {
       // Bước 1: Tạo customer trước (backend validate customerId)
       console.log('📝 Step 1: Creating customer for validation...');
+      
+      if (!currentDealerId) {
+        throw new Error('Không tìm thấy thông tin đại lý. Vui lòng đăng nhập lại.');
+      }
+      
       const customerPayload = {
         fullName: formData.name,
         dob: '2000-01-01',
@@ -276,7 +281,8 @@ const TestDrivePage: React.FC = () => {
         idCardNo: formData.citizenId
       };
       
-      const createdCustomer = await createCustomer(customerPayload);
+      console.log('📝 Creating customer for dealer:', currentDealerId);
+      const createdCustomer = await createCustomer(currentDealerId, customerPayload);
       console.log('✅ Customer created with ID:', createdCustomer.customerId);
       
       // Bước 2: Tạo test drive với thông tin đầy đủ trong note
