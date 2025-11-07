@@ -29,6 +29,7 @@ interface DealerOrderForm {
     quantity: number;
     unitPrice: number;
     image: string;
+    color?: string;
   }>;
   
   // Delivery
@@ -176,6 +177,7 @@ const DealerOrderPage: React.FC = () => {
         quantity: 1,
         unitPrice: incomingProduct.price || 0,
         image: incomingProduct.image || 'default-image.jpg',
+        color: incomingProduct.selectedColor,
       };
 
       setFormData(prev => ({
@@ -242,6 +244,7 @@ const DealerOrderPage: React.FC = () => {
       quantity: 1,
       unitPrice: vehicle.price || 0,
       image: vehicle.image || 'default-image.jpg',
+      color: vehicle.selectedColor,
     };
 
     setFormData(prev => ({
@@ -349,7 +352,8 @@ const DealerOrderPage: React.FC = () => {
       // Prepare order items array
       const orderItems = formData.selectedProducts.map(product => ({
         vehicleId: parseInt(product.productId),
-        quantity: product.quantity
+        quantity: product.quantity,
+        color: product.color
       }));
 
       const orderRequest: CreateOrderRequest = {
@@ -512,11 +516,16 @@ const DealerOrderPage: React.FC = () => {
                       <div key={index} className={styles.selectedProduct}>
                         <img src={product.image} alt={product.productName} />
                         <div className={styles.productInfo}>
-                          <h4>{product.productName}</h4>
-                          <p>{product.variant}</p>
-                          <span className={styles.unitPrice}>
-                            {formatPrice(product.unitPrice)}
-                          </span>
+                          <div className={styles.productMainInfo}>
+                            <h4>{product.productName}</h4>
+                            <span className={styles.productVariant}>{product.variant}</span>
+                          </div>
+                          {product.color && (
+                            <div className={styles.productColor}>
+                              <i className="fas fa-palette"></i>
+                              {product.color}
+                            </div>
+                          )}
                         </div>
                         <div className={styles.quantityControl}>
                           <button

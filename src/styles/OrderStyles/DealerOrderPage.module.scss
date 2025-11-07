@@ -1216,15 +1216,41 @@
   .productInfo {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
 
-    h4 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #212529;
-      margin: 0 0 0.3rem 0;
+    .productMainInfo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
 
-      @include respond-to('md') {
-        font-size: 1.4rem;
+      h4 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #212529;
+        margin: 0;
+
+        @include respond-to('md') {
+          font-size: 1.4rem;
+        }
+      }
+
+      .productVariant {
+        font-size: 1.3rem;
+        color: #6c757d;
+      }
+    }
+
+    .productColor {
+      display: block;
+      font-size: 1.2rem;
+      color: #ff4d30;
+      font-weight: 500;
+
+      i {
+        font-size: 1.1rem;
+        margin-right: 0.4rem;
       }
     }
 

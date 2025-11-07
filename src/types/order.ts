@@ -65,5 +65,6 @@ export interface OrderLite {
     itemSubtotal: number;
     itemDiscount: number;
     itemTotal: number;
+    color?: string;
   }>;
 }
