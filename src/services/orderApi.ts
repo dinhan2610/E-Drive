@@ -304,8 +304,6 @@ export const updatePaymentStatus = async (
 ): Promise<Order> => {
   try {
     console.log('💳 Updating payment status for order:', orderId, '→', paymentStatus);
-    console.log('📋 Request URL:', `/api/orders/${orderId}`);
-    console.log('📋 Request body:', { paymentStatus });
     
     const response = await api.put<Order>(`/api/orders/${orderId}`, {
       paymentStatus
@@ -315,14 +313,11 @@ export const updatePaymentStatus = async (
     return response.data;
   } catch (error: any) {
     console.error('❌ Error updating payment status:', error);
-    console.error('📋 Error response:', error.response?.data);
-    console.error('📋 Error status:', error.response?.status);
     
     if (error.response?.status === 404) {
       throw new OrderApiError('Không tìm thấy đơn hàng', 'ORDER_NOT_FOUND');
     } else if (error.response?.status === 403) {
-      const backendMessage = error.response?.data?.message || 'Bạn không có quyền cập nhật đơn hàng này';
-      throw new OrderApiError(backendMessage, 'FORBIDDEN');
+      throw new OrderApiError('Bạn không có quyền cập nhật đơn hàng này', 'FORBIDDEN');
     } else {
       throw new OrderApiError(
         error.response?.data?.message || 'Không thể cập nhật trạng thái thanh toán',
@@ -343,8 +338,6 @@ export const updateOrderStatus = async (
 ): Promise<Order> => {
   try {
     console.log('📦 Updating order status for order:', orderId, '→', orderStatus);
-    console.log('📋 Request URL:', `/api/orders/${orderId}`);
-    console.log('📋 Request body:', { orderStatus });
     
     const response = await api.put<Order>(`/api/orders/${orderId}`, {
       orderStatus
@@ -354,15 +347,11 @@ export const updateOrderStatus = async (
     return response.data;
   } catch (error: any) {
     console.error('❌ Error updating order status:', error);
-    console.error('📋 Error response:', error.response?.data);
-    console.error('📋 Error status:', error.response?.status);
-    console.error('📋 Error headers:', error.response?.headers);
     
     if (error.response?.status === 404) {
       throw new OrderApiError('Không tìm thấy đơn hàng', 'ORDER_NOT_FOUND');
     } else if (error.response?.status === 403) {
-      const backendMessage = error.response?.data?.message || 'Bạn không có quyền cập nhật đơn hàng này';
-      throw new OrderApiError(backendMessage, 'FORBIDDEN');
+      throw new OrderApiError('Bạn không có quyền cập nhật đơn hàng này', 'FORBIDDEN');
     } else {
       throw new OrderApiError(
         error.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng',
@@ -424,34 +413,6 @@ export const markOrderAsPaid = async (id: number | string): Promise<Order> => {
       message = 'Đơn hàng chưa có hóa đơn. Vui lòng yêu cầu đại lý upload hóa đơn trước!';
     } else if (error.response?.status === 404) {
       message = 'Không tìm thấy đơn hàng';
-    }
-    
-    throw new OrderApiError(message, `HTTP_${error.response?.status}`, error);
-  }
-};
-
-/**
- * PUT /api/orders/{id}/confirm - Confirm order (Admin only)
- */
-export const confirmOrder = async (id: number | string): Promise<Order> => {
-  try {
-    console.log('✅ Confirming order:', id);
-    const response = await api.put<Order>(`/api/orders/${id}/confirm`);
-    console.log('✅ Order confirmed successfully:', response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error('❌ Error confirming order:', error);
-    console.error('Error response:', error.response?.data);
-    
-    // Extract error message from backend
-    let message = 'Không thể xác nhận đơn hàng';
-    
-    if (error.response?.data?.message) {
-      message = error.response.data.message;
-    } else if (error.response?.status === 404) {
-      message = 'Không tìm thấy đơn hàng';
-    } else if (error.response?.status === 403) {
-      message = 'Bạn không có quyền xác nhận đơn hàng này';
     }
     
     throw new OrderApiError(message, `HTTP_${error.response?.status}`, error);

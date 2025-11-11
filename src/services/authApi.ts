@@ -81,14 +81,16 @@ export const tokenManager = {
 
 export const authApi = {
   // Register API
-  async register(userData: RegisterRequest): Promise<AuthResponse> {
+  async register(userData: RegisterRequest | FormData): Promise<AuthResponse> {
     try {
+      const isFormData = userData instanceof FormData;
+      
       const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
-        headers: {
+        headers: isFormData ? {} : {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: isFormData ? userData : JSON.stringify(userData),
       });
 
       const data = await response.json();
@@ -104,6 +106,37 @@ export const authApi = {
       };
     } catch (error) {
       console.error('Register error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi đăng ký'
+      };
+    }
+  },
+
+  // Register API with file upload (multipart/form-data with URL params)
+  async registerWithFile(formData: FormData, queryParams: string): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/register?${queryParams}`, {
+        method: 'POST',
+        headers: {
+          'Accept': '*/*',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Đăng ký thất bại');
+      }
+
+      return {
+        success: true,
+        data: data,
+        message: 'Đăng ký thành công'
+      };
+    } catch (error) {
+      console.error('Register with file error:', error);
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi đăng ký'

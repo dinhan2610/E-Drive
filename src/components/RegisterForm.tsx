@@ -23,6 +23,7 @@ interface FormData {
   password: string;
   confirmPassword: string;
   agreeToTerms: boolean;
+  businessLicense: File | null;
 }
 
 interface FormErrors {
@@ -38,6 +39,7 @@ interface FormErrors {
   password?: string;
   confirmPassword?: string;
   agreeToTerms?: string;
+  businessLicense?: string;
   general?: string;
 }
 
@@ -58,7 +60,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     provinceOrCity: '',
     password: '',
     confirmPassword: '',
-    agreeToTerms: false
+    agreeToTerms: false,
+    businessLicense: null
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -67,6 +70,87 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredUserName, setRegisteredUserName] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      validateAndSetFile(file);
+    }
+  };
+
+  const validateAndSetFile = (file: File) => {
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setErrors(prev => ({
+        ...prev,
+        businessLicense: 'Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)'
+      }));
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors(prev => ({
+        ...prev,
+        businessLicense: 'Kích thước file không được vượt quá 5MB'
+      }));
+      return;
+    }
+
+    // Clear error and set file
+    setErrors(prev => ({
+      ...prev,
+      businessLicense: undefined
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      businessLicense: file
+    }));
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      validateAndSetFile(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setFormData(prev => ({
+      ...prev,
+      businessLicense: null
+    }));
+    setPreviewUrl(null);
+    setErrors(prev => ({
+      ...prev,
+      businessLicense: undefined
+    }));
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -80,9 +164,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     
     if (name === 'fullName') {
       if (value.trim() && value.trim().length < 2) {
-        fieldErrors.fullName = 'Tên đại lý phải có ít nhất 2 ký tự';
+        fieldErrors.fullName = 'Họ và Tên phải có ít nhất 2 ký tự';
       } else if (value.trim() && !/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/.test(value)) {
-        fieldErrors.fullName = 'Tên đại lý chỉ được chứa chữ cái và khoảng trắng';
+        fieldErrors.fullName = 'Họ và Tên chỉ được chứa chữ cái và khoảng trắng';
       } else {
         fieldErrors.fullName = undefined;
       }
@@ -272,6 +356,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       newErrors.agreeToTerms = 'Bạn phải đồng ý với điều khoản sử dụng';
     }
 
+    // Business license validation (optional - not required)
+    // Removed required validation for businessLicense
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -287,20 +374,47 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     setErrors({});
 
     try {
-      // Call API
-      const result = await authApi.register({
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        dealerName: formData.dealerName,
-        houseNumberAndStreet: formData.houseNumberAndStreet,
-        wardOrCommune: formData.wardOrCommune,
-        district: formData.district,
-        provinceOrCity: formData.provinceOrCity,
-        username: formData.username,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword
-      });
+      let result;
+
+      // Check if business license file is provided
+      if (formData.businessLicense) {
+        // Create FormData for multipart/form-data
+        const apiFormData = new FormData();
+        apiFormData.append('businessLicense', formData.businessLicense);
+
+        // Create URL with query parameters
+        const params = new URLSearchParams({
+          username: formData.username,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          email: formData.email,
+          phone: formData.phone,
+          fullName: formData.fullName,
+          dealerName: formData.dealerName,
+          houseNumberAndStreet: formData.houseNumberAndStreet,
+          wardOrCommune: formData.wardOrCommune,
+          district: formData.district,
+          provinceOrCity: formData.provinceOrCity
+        });
+
+        // Call API with FormData and URL params
+        result = await authApi.registerWithFile(apiFormData, params.toString());
+      } else {
+        // Call standard register API without file
+        result = await authApi.register({
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          dealerName: formData.dealerName,
+          houseNumberAndStreet: formData.houseNumberAndStreet,
+          wardOrCommune: formData.wardOrCommune,
+          district: formData.district,
+          provinceOrCity: formData.provinceOrCity,
+          username: formData.username,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword
+        });
+      }
       
       if (result.success) {
         // Set user name for success modal
@@ -319,8 +433,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           provinceOrCity: '',
           password: '',
           confirmPassword: '',
-          agreeToTerms: false
+          agreeToTerms: false,
+          businessLicense: null
         });
+        setPreviewUrl(null);
         
         // Show success modal with verification pending message
         setShowSuccessModal(true);
@@ -329,8 +445,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       }
       
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Đăng ký thất bại. Vui lòng thử lại sau.';
       setErrors({
-        general: 'Đăng ký thất bại. Vui lòng thử lại sau.'
+        general: errorMessage
       });
     } finally {
       setIsLoading(false);
@@ -369,25 +486,53 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <div className="input-wrapper">
-                <i className="fas fa-user input-icon"></i>
-                <input
-                  type="text"
-                  name="fullName"
-                  placeholder="Tên đại lý *"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  className={errors.fullName ? 'error' : ''}
-                />
+          {/* THÔNG TIN CÁ NHÂN */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-user-circle"></i>
+              Thông tin cá nhân
+            </h3>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <div className="input-wrapper">
+                  <i className="fas fa-user input-icon"></i>
+                  <input
+                    type="text"
+                    name="fullName"
+                    placeholder="Họ và Tên *"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    className={errors.fullName ? 'error' : ''}
+                  />
+                </div>
+                {errors.fullName && (
+                  <span className="field-error">
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.fullName}
+                  </span>
+                )}
               </div>
-              {errors.fullName && (
-                <span className="field-error">
-                  <i className="fa-solid fa-exclamation-circle"></i>
-                  {errors.fullName}
-                </span>
-              )}
+
+              <div className="form-group">
+                <div className="input-wrapper">
+                  <i className="fas fa-phone input-icon"></i>
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder="Số điện thoại *"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className={errors.phone ? 'error' : ''}
+                  />
+                </div>
+                {errors.phone && (
+                  <span className="field-error">
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.phone}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="form-group">
@@ -411,7 +556,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           </div>
 
-          <div className="form-row">
+          {/* THÔNG TIN ĐĂNG NHẬP */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-shield-alt"></i>
+              Thông tin đăng nhập
+            </h3>
+            
             <div className="form-group">
               <div className="input-wrapper">
                 <i className="fas fa-at input-icon"></i>
@@ -432,13 +583,77 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
               )}
             </div>
 
+            <div className="form-row">
+              <div className="form-group">
+                <div className="input-wrapper">
+                  <i className="fas fa-lock input-icon"></i>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    placeholder="Mật khẩu *"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className={errors.password ? 'error' : ''}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                  </button>
+                </div>
+                {errors.password && (
+                  <span className="field-error">
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.password}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <div className="input-wrapper">
+                  <i className="fas fa-lock input-icon"></i>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    placeholder="Nhập lại mật khẩu *"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className={errors.confirmPassword ? 'error' : ''}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <span className="field-error">
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.confirmPassword}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* THÔNG TIN ĐẠI LÝ */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-store"></i>
+              Thông tin đại lý
+            </h3>
+            
             <div className="form-group">
               <div className="input-wrapper">
                 <i className="fas fa-building input-icon"></i>
                 <input
                   type="text"
                   name="dealerName"
-                  placeholder="Tên đại lý"
+                  placeholder="Tên đại lý *"
                   value={formData.dealerName}
                   onChange={handleInputChange}
                   className={errors.dealerName ? 'error' : ''}
@@ -453,56 +668,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <div className="input-wrapper">
-                <i className="fas fa-phone input-icon"></i>
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder="Số điện thoại *"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className={errors.phone ? 'error' : ''}
-                />
-              </div>
-              {errors.phone && (
-                <span className="field-error">
-                  <i className="fa-solid fa-exclamation-circle"></i>
-                  {errors.phone}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <div className="input-wrapper">
-                <i className="fas fa-lock input-icon"></i>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  placeholder="Mật khẩu *"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={errors.password ? 'error' : ''}
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                </button>
-              </div>
-              {errors.password && (
-                <span className="field-error">
-                  <i className="fa-solid fa-exclamation-circle"></i>
-                  {errors.password}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="form-row">
+          {/* ĐỊA CHỈ */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-map-marked-alt"></i>
+              Địa chỉ đại lý
+            </h3>
+            
             <div className="form-group">
               <div className="input-wrapper">
                 <i className="fas fa-map-marker-alt input-icon"></i>
@@ -523,51 +695,51 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
               )}
             </div>
 
-            <div className="form-group">
-              <div className="input-wrapper">
-                <i className="fas fa-map-pin input-icon"></i>
-                <input
-                  type="text"
-                  name="wardOrCommune"
-                  placeholder="Phường/Xã *"
-                  value={formData.wardOrCommune}
-                  onChange={handleInputChange}
-                  className={errors.wardOrCommune ? 'error' : ''}
-                />
+            <div className="form-row">
+              <div className="form-group">
+                <div className="input-wrapper">
+                  <i className="fas fa-map-pin input-icon"></i>
+                  <input
+                    type="text"
+                    name="wardOrCommune"
+                    placeholder="Phường/Xã *"
+                    value={formData.wardOrCommune}
+                    onChange={handleInputChange}
+                    className={errors.wardOrCommune ? 'error' : ''}
+                  />
+                </div>
+                {errors.wardOrCommune && (
+                  <span className="field-error">
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.wardOrCommune}
+                  </span>
+                )}
               </div>
-              {errors.wardOrCommune && (
-                <span className="field-error">
-                  <i className="fa-solid fa-exclamation-circle"></i>
-                  {errors.wardOrCommune}
-                </span>
-              )}
-            </div>
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <div className="input-wrapper">
-                <i className="fas fa-city input-icon"></i>
-                <input
-                  type="text"
-                  name="district"
-                  placeholder="Quận/Huyện *"
-                  value={formData.district}
-                  onChange={handleInputChange}
-                  className={errors.district ? 'error' : ''}
-                />
+              <div className="form-group">
+                <div className="input-wrapper">
+                  <i className="fas fa-city input-icon"></i>
+                  <input
+                    type="text"
+                    name="district"
+                    placeholder="Quận/Huyện *"
+                    value={formData.district}
+                    onChange={handleInputChange}
+                    className={errors.district ? 'error' : ''}
+                  />
+                </div>
+                {errors.district && (
+                  <span className="field-error">
+                    <i className="fa-solid fa-exclamation-circle"></i>
+                    {errors.district}
+                  </span>
+                )}
               </div>
-              {errors.district && (
-                <span className="field-error">
-                  <i className="fa-solid fa-exclamation-circle"></i>
-                  {errors.district}
-                </span>
-              )}
             </div>
 
             <div className="form-group">
               <div className="input-wrapper">
-                <i className="fas fa-map-marked-alt input-icon"></i>
+                <i className="fas fa-globe-asia input-icon"></i>
                 <input
                   type="text"
                   name="provinceOrCity"
@@ -586,31 +758,83 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           </div>
 
-          <div className="form-group">
-            <div className="input-wrapper">
-              <i className="fas fa-lock input-icon"></i>
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmPassword"
-                placeholder="Nhập lại mật khẩu *"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                className={errors.confirmPassword ? 'error' : ''}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          {/* GIẤY PHÉP KINH DOANH */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-file-contract"></i>
+              Giấy phép kinh doanh <span className="optional-label">(Không bắt buộc)</span>
+            </h3>
+            
+            <div className="form-group">
+              <div 
+                className="file-upload-wrapper"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-              </button>
+                <input
+                  type="file"
+                  id="businessLicense"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="file-input"
+                  style={{ display: 'none' }}
+                />
+                
+                {!formData.businessLicense ? (
+                  <label 
+                    htmlFor="businessLicense" 
+                    className={`file-upload-label ${isDragging ? 'dragging' : ''}`}
+                  >
+                    <div className="upload-icon">
+                      <i className="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div className="upload-text">
+                      <p className="upload-title">
+                        {isDragging ? 'Thả file vào đây' : 'Tải lên giấy phép kinh doanh'}
+                      </p>
+                      <p className="upload-subtitle">
+                        {isDragging 
+                          ? 'Thả file để tải lên' 
+                          : 'Kéo thả hoặc click để chọn ảnh JPG, PNG, WEBP (tối đa 5MB)'
+                        }
+                      </p>
+                    </div>
+                  </label>
+                ) : (
+                  <div className="file-preview">
+                    <div className="preview-header">
+                      <div className="file-info">
+                        <i className="fas fa-file-image"></i>
+                        <span className="file-name">{formData.businessLicense.name}</span>
+                        <span className="file-size">
+                          ({(formData.businessLicense.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="remove-file-btn"
+                        onClick={handleRemoveFile}
+                        title="Xóa file"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                    {previewUrl && (
+                      <div className="image-preview">
+                        <img src={previewUrl} alt="Preview" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {errors.businessLicense && (
+                <span className="field-error">
+                  <i className="fa-solid fa-exclamation-circle"></i>
+                  {errors.businessLicense}
+                </span>
+              )}
             </div>
-            {errors.confirmPassword && (
-              <span className="field-error">
-                <i className="fa-solid fa-exclamation-circle"></i>
-                {errors.confirmPassword}
-              </span>
-            )}
           </div>
 
           <div className="form-group terms-group">
