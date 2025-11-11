@@ -423,40 +423,102 @@ export const markOrderAsPaid = async (id: number | string): Promise<Order> => {
  * Utility: Format order status to Vietnamese
  */
 export const formatOrderStatus = (status: string): string => {
+  // Normalize status: remove underscores and convert to uppercase
+  const normalizedStatus = status?.toUpperCase().replace(/_/g, ' ').trim();
+  
   const statusMap: Record<string, string> = {
     'PENDING': 'Chờ xử lý',
+    'CHỜ DUYỆT': 'Chờ xử lý',
     'CONFIRMED': 'Đã xác nhận',
+    'ĐÃ XÁC NHẬN': 'Đã xác nhận',
     'PROCESSING': 'Đang xử lý',
+    'ĐANG XỬ LÝ': 'Đang xử lý',
     'SHIPPED': 'Đang giao hàng',
+    'ĐANG GIAO': 'Đang giao hàng',
     'DELIVERED': 'Đã giao hàng',
+    'ĐÃ GIAO': 'Đã giao hàng',
     'CANCELLED': 'Đã hủy',
+    'ĐÃ HỦY': 'Đã hủy',
   };
-  return statusMap[status] || status;
+  return statusMap[normalizedStatus] || status;
 };
 
 /**
  * Utility: Format payment status to Vietnamese
  */
 export const formatPaymentStatus = (status: string): string => {
+  // Normalize status: remove underscores and convert to uppercase
+  const normalizedStatus = status?.toUpperCase().replace(/_/g, ' ').trim();
+  
   const statusMap: Record<string, string> = {
     'PENDING': 'Chờ thanh toán',
+    'CHỜ THANH TOÁN': 'Chờ thanh toán',
     'PAID': 'Đã thanh toán',
+    'ĐÃ THANH TOÁN': 'Đã thanh toán',
     'CANCELLED': 'Đã hủy',
+    'ĐÃ HỦY': 'Đã hủy',
   };
-  return statusMap[status] || status;
+  return statusMap[normalizedStatus] || status;
+};
+
+/**
+ * Utility: Get CSS class name for order status (normalized to English for styling)
+ */
+export const getOrderStatusClass = (status: string): string => {
+  const normalizedStatus = status?.toUpperCase().replace(/_/g, ' ').trim();
+  
+  const classMap: Record<string, string> = {
+    'PENDING': 'pending',
+    'CHỜ DUYỆT': 'pending',
+    'CONFIRMED': 'confirmed',
+    'ĐÃ XÁC NHẬN': 'confirmed',
+    'PROCESSING': 'processing',
+    'ĐANG XỬ LÝ': 'processing',
+    'SHIPPED': 'shipped',
+    'ĐANG GIAO': 'shipped',
+    'DELIVERED': 'delivered',
+    'ĐÃ GIAO': 'delivered',
+    'CANCELLED': 'cancelled',
+    'ĐÃ HỦY': 'cancelled',
+  };
+  return classMap[normalizedStatus] || 'pending';
+};
+
+/**
+ * Utility: Get CSS class name for payment status (normalized to English for styling)
+ */
+export const getPaymentStatusClass = (status: string): string => {
+  const normalizedStatus = status?.toUpperCase().replace(/_/g, ' ').trim();
+  
+  const classMap: Record<string, string> = {
+    'PENDING': 'pending',
+    'CHỜ THANH TOÁN': 'pending',
+    'PAID': 'paid',
+    'ĐÃ THANH TOÁN': 'paid',
+    'CANCELLED': 'cancelled',
+    'ĐÃ HỦY': 'cancelled',
+  };
+  return classMap[normalizedStatus] || 'pending';
 };
 
 /**
  * Utility: Format payment method to Vietnamese
  */
 export const formatPaymentMethod = (method: string): string => {
+  // Normalize method: remove underscores and convert to uppercase
+  const normalizedMethod = method?.toUpperCase().replace(/_/g, ' ').trim();
+  
   const methodMap: Record<string, string> = {
     'CASH': 'Tiền mặt',
-    'BANK_TRANSFER': 'Chuyển khoản',
+    'TIỀN MẶT': 'Tiền mặt',
+    'BANK TRANSFER': 'Chuyển khoản',
+    'CHUYỂN KHOẢN': 'Chuyển khoản',
     'INSTALLMENT': 'Trả góp',
+    'TRẢ GÓP': 'Trả góp',
     'FULL': 'Thanh toán đầy đủ',
+    'THANH TOÁN ĐẦY ĐỦ': 'Thanh toán đầy đủ',
   };
-  return methodMap[method] || method;
+  return methodMap[normalizedMethod] || method;
 };
 
 /**

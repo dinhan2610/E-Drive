@@ -1,6 +1,6 @@
 interface RegisterRequest {
   fullName: string;
-  email: string;
+  dealerEmail: string; // Backend field name (changed from email)
   phone: string;
   dealerName: string;
   houseNumberAndStreet: string;

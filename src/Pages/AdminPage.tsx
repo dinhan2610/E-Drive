@@ -649,6 +649,7 @@ const AdminPage: React.FC = () => {
   const [editDiscountErrors, setEditDiscountErrors] = useState<Record<string, string>>({});
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [updateTrigger, setUpdateTrigger] = useState(0); // Force re-render trigger
 
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId, reload: reloadContractMap } = useContractCheck();
@@ -670,6 +671,14 @@ const AdminPage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]); // Only depend on location.state, NOT reloadContractMap
+
+  // Auto-reload orders when switching to bookings tab
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      console.log('📋 Bookings tab active - reloading orders to ensure fresh data...');
+      reloadOrders();
+    }
+  }, [activeTab]); // Reload when activeTab changes to 'bookings'
 
   const [stats, setStats] = useState<AdminStats>({
     totalCars: 0,
@@ -768,22 +777,27 @@ const AdminPage: React.FC = () => {
           ? order.orderItems[0] 
           : null;
         
-        // Map order status to booking status (support both English and Vietnamese formats)
+        // Map order status to booking status (support both English and Vietnamese formats with underscores and spaces)
         let bookingStatus: Booking['status'] = 'pending';
         const orderStatusUpper = order.orderStatus?.toUpperCase() || '';
-        if (orderStatusUpper === 'PENDING' || orderStatusUpper === 'CHỜ_DUYỆT') bookingStatus = 'pending';
-        else if (orderStatusUpper === 'CONFIRMED' || orderStatusUpper === 'ĐÃ_XÁC_NHẬN') bookingStatus = 'confirmed';
-        else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
-        else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
-        else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
-        else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
+        if (orderStatusUpper === 'PENDING' || orderStatusUpper === 'CHỜ DUYỆT' || orderStatusUpper === 'CHỜ_DUYỆT') bookingStatus = 'pending';
+        else if (orderStatusUpper === 'CONFIRMED' || orderStatusUpper === 'ĐÃ XÁC NHẬN' || orderStatusUpper === 'ĐÃ_XÁC_NHẬN') bookingStatus = 'confirmed';
+        else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG XỬ LÝ' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
+        else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG GIAO' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
+        else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ GIAO' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
+        else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ HỦY' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
         
-        // Map payment status (support both English and Vietnamese formats)
+        // Map payment status (support both English and Vietnamese formats with underscores and spaces)
         let paymentSt: Booking['paymentStatus'] = 'pending';
         const paymentStatusUpper = order.paymentStatus?.toUpperCase() || '';
-        if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
-        else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
-        else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
+        
+        console.log(`🔍 Order ${order.orderId} - Raw paymentStatus from backend:`, order.paymentStatus, '→ Upper:', paymentStatusUpper);
+        
+        if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ THANH TOÁN' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
+        else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ THANH TOÁN' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
+        else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ HỦY' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
+        
+        console.log(`✅ Order ${order.orderId} - Mapped paymentStatus:`, paymentSt);
         
         return {
           id: order.orderId,
@@ -803,7 +817,9 @@ const AdminPage: React.FC = () => {
       });
       
       setBookings(mappedBookings);
-      console.log('✅ Orders reloaded successfully:', mappedBookings);
+      setUpdateTrigger(prev => prev + 1); // Force component re-render
+      console.log('✅ Orders reloaded successfully:', mappedBookings.length, 'orders');
+      console.log('📊 Payment statuses after mapping:', mappedBookings.map(b => ({ id: b.id, paymentStatus: b.paymentStatus })));
 
       // Update stats
       setStats(prev => ({
@@ -953,22 +969,27 @@ const AdminPage: React.FC = () => {
             ? order.orderItems[0] 
             : null;
           
-          // Map order status to booking status (support both English and Vietnamese formats)
+          // Map order status to booking status (support both English and Vietnamese formats with underscores and spaces)
           let bookingStatus: Booking['status'] = 'pending';
           const orderStatusUpper = order.orderStatus?.toUpperCase() || '';
-          if (orderStatusUpper === 'PENDING' || orderStatusUpper === 'CHỜ_DUYỆT') bookingStatus = 'pending';
-          else if (orderStatusUpper === 'CONFIRMED' || orderStatusUpper === 'ĐÃ_XÁC_NHẬN') bookingStatus = 'confirmed';
-          else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
-          else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
-          else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
-          else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
+          if (orderStatusUpper === 'PENDING' || orderStatusUpper === 'CHỜ DUYỆT' || orderStatusUpper === 'CHỜ_DUYỆT') bookingStatus = 'pending';
+          else if (orderStatusUpper === 'CONFIRMED' || orderStatusUpper === 'ĐÃ XÁC NHẬN' || orderStatusUpper === 'ĐÃ_XÁC_NHẬN') bookingStatus = 'confirmed';
+          else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG XỬ LÝ' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
+          else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG GIAO' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
+          else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ GIAO' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
+          else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ HỦY' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
           
-          // Map payment status (support both English and Vietnamese formats)
+          // Map payment status (support both English and Vietnamese formats with underscores and spaces)
           let paymentSt: Booking['paymentStatus'] = 'pending';
           const paymentStatusUpper = order.paymentStatus?.toUpperCase() || '';
-          if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
-          else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
-          else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
+          
+          console.log(`🔍 [Initial Load] Order ${order.orderId} - Raw paymentStatus:`, order.paymentStatus, '→ Upper:', paymentStatusUpper);
+          
+          if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ THANH TOÁN' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
+          else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ THANH TOÁN' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
+          else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ HỦY' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
+          
+          console.log(`✅ [Initial Load] Order ${order.orderId} - Mapped paymentStatus:`, paymentSt);
           
           return {
             id: order.orderId,
@@ -988,7 +1009,8 @@ const AdminPage: React.FC = () => {
         });
         
         setBookings(mappedBookings);
-        console.log('✅ Bookings mapped:', mappedBookings);
+        console.log('✅ [Initial Load] Bookings mapped:', mappedBookings.length, 'orders');
+        console.log('📊 [Initial Load] Payment statuses after mapping:', mappedBookings.map(b => ({ id: b.id, paymentStatus: b.paymentStatus })));
 
     // Calculate enhanced stats
     setStats({
@@ -1197,6 +1219,17 @@ const AdminPage: React.FC = () => {
     try {
       console.log('💳 Updating payment status:', orderId, '→', newStatus);
 
+      // Check current status first to avoid duplicate updates
+      const currentBooking = bookings.find(b => b.id === orderId);
+      if (currentBooking?.paymentStatus === newStatus.toLowerCase()) {
+        setNotification({
+          isVisible: true,
+          message: '⚠️ Đơn hàng đã ở trạng thái này rồi!',
+          type: 'warning'
+        });
+        return;
+      }
+
       // Special handling for PAID status - use mark-paid API
       if (newStatus === 'PAID') {
         setNotification({
@@ -1267,10 +1300,19 @@ const AdminPage: React.FC = () => {
 
       let errorMessage = 'Không thể cập nhật trạng thái thanh toán';
 
+      // Better error message handling
       if (error.code === 'FORBIDDEN') {
         errorMessage = 'Bạn không có quyền cập nhật đơn hàng này';
       } else if (error.message) {
-        errorMessage = error.message;
+        // Clean up error messages from backend
+        const msg = error.message;
+        if (msg.includes('đã được đánh dấu là ĐÃ THANH TOÁN')) {
+          errorMessage = '⚠️ Đơn hàng này đã được thanh toán rồi!';
+        } else if (msg.includes('chưa có hóa đơn')) {
+          errorMessage = '📄 Vui lòng yêu cầu đại lý upload hóa đơn trước khi xác nhận thanh toán!';
+        } else {
+          errorMessage = msg;
+        }
       }
 
       setNotification({
@@ -3065,7 +3107,9 @@ const AdminPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map(booking => (
+                  {bookings.map(booking => {
+                    console.log(`🎨 Rendering order ${booking.id} - paymentStatus:`, booking.paymentStatus);
+                    return (
                     <tr key={booking.id}>
                       <td title={String(booking.id)}>
                         #{typeof booking.id === 'string' ? booking.id.substring(0, 8) + '...' : booking.id}
@@ -3087,10 +3131,22 @@ const AdminPage: React.FC = () => {
                       </td>
                       <td>
                         <select
+                          key={`payment-${booking.id}-${booking.paymentStatus}`}
                           className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
                           value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
-                          onChange={(e) => handleUpdatePaymentStatus(booking.id, e.target.value as any)}
-                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            console.log('🔄 Dropdown changed for order:', booking.id);
+                            console.log('   Current booking.paymentStatus:', booking.paymentStatus);
+                            console.log('   New value selected:', e.target.value);
+                            handleUpdatePaymentStatus(booking.id, e.target.value as any);
+                          }}
+                          title={
+                            booking.paymentStatus === 'paid' 
+                              ? '✅ Đơn hàng đã thanh toán' 
+                              : booking.paymentStatus === 'cancelled'
+                              ? '❌ Đơn hàng đã hủy'
+                              : '⏳ Chờ thanh toán - Click để thay đổi'
+                          }
                         >
                           <option value="PENDING">Chờ thanh toán</option>
                           <option value="PAID">Đã thanh toán</option>
@@ -3126,7 +3182,8 @@ const AdminPage: React.FC = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

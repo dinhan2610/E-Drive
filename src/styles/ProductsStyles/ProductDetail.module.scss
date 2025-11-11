@@ -391,6 +391,123 @@
   }
 }
 
+// Color Selection
+.colorSelection {
+  margin-top: 3rem;
+  
+  h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    i {
+      color: $text-orange;
+      font-size: 2rem;
+    }
+  }
+  
+  .colorOptions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    
+    @include respond-to('sm') {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    @include respond-to('lg') {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  
+  .colorOption {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    
+    &:hover:not(:disabled) {
+      border-color: $text-orange;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255, 77, 48, 0.15);
+    }
+    
+    &.active {
+      border-color: $text-orange;
+      background: linear-gradient(135deg, rgba(255, 77, 48, 0.05) 0%, rgba(255, 77, 48, 0.02) 100%);
+      box-shadow: 0 8px 25px rgba(255, 77, 48, 0.2);
+      
+      .fas {
+        display: block;
+      }
+    }
+    
+    &.outOfStock {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: #f8fafc;
+      
+      &:hover {
+        transform: none;
+        box-shadow: none;
+      }
+    }
+    
+    .colorCircle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), inset 0 2px 8px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
+    }
+    
+    .colorInfo {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      
+      .colorName {
+        font-weight: 600;
+        font-size: 1.5rem;
+        color: #1e293b;
+      }
+      
+      .colorPrice {
+        font-size: 1.3rem;
+        color: $text-orange;
+        font-weight: 600;
+      }
+      
+      .outOfStockText {
+        font-size: 1.2rem;
+        color: #94a3b8;
+        font-style: italic;
+      }
+    }
+    
+    .fas {
+      display: none;
+      font-size: 2rem;
+      color: $text-orange;
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+    }
+  }
+}
+
 .specs {
   h3 {
     font-size: 2rem;

@@ -3,6 +3,8 @@ import {
   getOrdersByDealer,
   formatOrderStatus,
   formatPaymentStatus,
+  getOrderStatusClass,
+  getPaymentStatusClass,
   uploadOrderBill,
   type Order,
   OrderApiError 
@@ -404,12 +406,12 @@ const OrderManagementPage: React.FC = () => {
                         </span>
                       </td>
                       <td className={styles.tableCell}>
-                        <span className={`${styles.statusBadge} ${styles[order.orderStatus.toLowerCase()]}`}>
+                        <span className={`${styles.statusBadge} ${styles[getOrderStatusClass(order.orderStatus)]}`}>
                           {formatOrderStatus(order.orderStatus)}
                         </span>
                       </td>
                       <td className={styles.tableCell}>
-                        <span className={`${styles.paymentBadge} ${styles[order.paymentStatus.toLowerCase()]}`}>
+                        <span className={`${styles.paymentBadge} ${styles[getPaymentStatusClass(order.paymentStatus)]}`}>
                           {formatPaymentStatus(order.paymentStatus)}
                         </span>
                       </td>
@@ -495,7 +497,7 @@ const OrderManagementPage: React.FC = () => {
                 </div>
                 <div className={styles.statusCardContent}>
                   <span className={styles.statusCardLabel}>Trạng thái đơn</span>
-                  <span className={`${styles.statusBadge} ${styles[selectedOrder.orderStatus.toLowerCase()]}`}>
+                  <span className={`${styles.statusBadge} ${styles[getOrderStatusClass(selectedOrder.orderStatus)]}`}>
                     {formatOrderStatus(selectedOrder.orderStatus)}
                   </span>
                 </div>
@@ -507,7 +509,7 @@ const OrderManagementPage: React.FC = () => {
                 </div>
                 <div className={styles.statusCardContent}>
                   <span className={styles.statusCardLabel}>Thanh toán</span>
-                  <span className={`${styles.statusBadge} ${styles[selectedOrder.paymentStatus.toLowerCase()]}`}>
+                  <span className={`${styles.statusBadge} ${styles[getPaymentStatusClass(selectedOrder.paymentStatus)]}`}>
                     {formatPaymentStatus(selectedOrder.paymentStatus)}
                   </span>
                 </div>

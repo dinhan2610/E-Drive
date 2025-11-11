@@ -11,6 +11,7 @@ const ProductDetailPage: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -54,6 +55,29 @@ const ProductDetailPage: React.FC = () => {
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
     target.src = '/src/images/cars-big/audia1.jpg'; // Fallback image
+  };
+
+  const handleColorChange = (colorIndex: number) => {
+    setSelectedColorIndex(colorIndex);
+    
+    if (product && product.colorVariants && product.colorVariants[colorIndex]) {
+      const selectedVariant = product.colorVariants[colorIndex];
+      
+      // Update product with new color info
+      const updatedProduct = {
+        ...product,
+        selectedColor: selectedVariant.color,
+        price: selectedVariant.finalPrice > 0 ? selectedVariant.finalPrice : selectedVariant.priceRetail,
+        originalPrice: selectedVariant.finalPrice > 0 ? selectedVariant.priceRetail : undefined,
+        image: selectedVariant.imageUrl || product.image,
+        images: [selectedVariant.imageUrl || product.image],
+        inStock: selectedVariant.inStock,
+      };
+      
+      setProduct(updatedProduct);
+      setSelectedImage(0); // Reset to first image
+      console.log('🎨 Color changed to:', selectedVariant.color, 'Image:', selectedVariant.imageUrl);
+    }
   };
 
   const handleOrder = () => {
@@ -152,6 +176,44 @@ const ProductDetailPage: React.FC = () => {
                   <div className={styles.originalPrice}>{formatPrice(product.originalPrice)}</div>
                 )}
               </div>
+
+              {/* Color Selection */}
+              {product.colorVariants && product.colorVariants.length > 0 && (
+                <div className={styles.colorSelection}>
+                  <h3>
+                    <i className="fas fa-palette"></i>
+                    Chọn màu sắc ({product.colorVariants.length} màu)
+                  </h3>
+                  <div className={styles.colorOptions}>
+                    {product.colorVariants.map((colorVariant, index) => (
+                      <button
+                        key={index}
+                        className={`${styles.colorOption} ${selectedColorIndex === index ? styles.active : ''} ${!colorVariant.inStock ? styles.outOfStock : ''}`}
+                        onClick={() => handleColorChange(index)}
+                        disabled={!colorVariant.inStock}
+                        title={colorVariant.inStock ? colorVariant.color : `${colorVariant.color} - Hết hàng`}
+                      >
+                        <div 
+                          className={styles.colorCircle}
+                          style={{ background: colorVariant.colorGradient || colorVariant.colorHex }}
+                        />
+                        <div className={styles.colorInfo}>
+                          <span className={styles.colorName}>{colorVariant.color}</span>
+                          <span className={styles.colorPrice}>
+                            {formatPrice(colorVariant.finalPrice > 0 ? colorVariant.finalPrice : colorVariant.priceRetail)}
+                          </span>
+                          {!colorVariant.inStock && (
+                            <span className={styles.outOfStockText}>Hết hàng</span>
+                          )}
+                        </div>
+                        {selectedColorIndex === index && (
+                          <i className="fas fa-check-circle"></i>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className={styles.specs}>
                 <h3>Thông số kỹ thuật</h3>

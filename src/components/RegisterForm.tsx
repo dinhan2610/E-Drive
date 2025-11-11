@@ -382,12 +382,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         const apiFormData = new FormData();
         apiFormData.append('businessLicense', formData.businessLicense);
 
-        // Create URL with query parameters
+        // Create URL with query parameters (use dealerEmail instead of email)
         const params = new URLSearchParams({
           username: formData.username,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
-          email: formData.email,
+          dealerEmail: formData.email, // Backend expects dealerEmail
           phone: formData.phone,
           fullName: formData.fullName,
           dealerName: formData.dealerName,
@@ -400,10 +400,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         // Call API with FormData and URL params
         result = await authApi.registerWithFile(apiFormData, params.toString());
       } else {
-        // Call standard register API without file
+        // Call standard register API without file (use dealerEmail)
         result = await authApi.register({
           fullName: formData.fullName,
-          email: formData.email,
+          dealerEmail: formData.email, // Backend expects dealerEmail
           phone: formData.phone,
           dealerName: formData.dealerName,
           houseNumberAndStreet: formData.houseNumberAndStreet,

@@ -15,12 +15,17 @@ export interface UserProfile {
   city: string;
   fullAddress: string;
   dealerId: number;
+  // Backend compatibility fields
+  dealerEmail?: string;
+  contactPhone?: string;
 }
 
 export interface UpdateProfilePayload {
   fullName: string;
   email: string;
+  dealerEmail?: string; // Backend compatibility
   phone: string;
+  contactPhone?: string; // Backend compatibility
   agencyName: string;
   contactPerson: string;
   agencyPhone: string;
@@ -31,13 +36,30 @@ export interface UpdateProfilePayload {
   fullAddress: string;
 }
 
+// Normalize backend response to frontend format
+function normalizeProfileData(data: any): UserProfile {
+  return {
+    ...data,
+    email: data.dealerEmail || data.email,
+    phoneNumber: data.contactPhone || data.phoneNumber || data.agencyPhone,
+    dealerEmail: data.dealerEmail || data.email,
+    contactPhone: data.contactPhone || data.phoneNumber
+  };
+}
+
 /**
  * Get user profile from API - GET /api/profile/me
  */
 export async function getProfile(): Promise<UserProfile> {
   try {
-    const response = await api.get<UserProfile>('/api/profile/me');
-    return response.data;
+    console.log('🔍 Fetching profile from API...');
+    const response = await api.get<any>('/api/profile/me');
+    console.log('📦 Raw Profile API Response:', response.data);
+    
+    const normalized = normalizeProfileData(response.data);
+    console.log('✅ Normalized Profile Data:', normalized);
+    
+    return normalized;
   } catch (error: any) {
     console.error('Failed to get profile:', error.response?.data || error.message);
     throw error;
@@ -45,12 +67,89 @@ export async function getProfile(): Promise<UserProfile> {
 }
 
 /**
- * Update user profile via API - PUT /api/profile/me
+ * Get dealer details by ID (for real-time updated data)
+ */
+export async function getDealerProfile(dealerId: number): Promise<UserProfile> {
+  try {
+    console.log('🔍 Fetching dealer profile from /api/dealers/' + dealerId);
+    const response = await api.get<any>(`/api/dealers/${dealerId}`);
+    console.log('📦 Raw Dealer API Response:', response.data);
+    
+    // Map dealer response to UserProfile format
+    const dealerData = response.data.data || response.data;
+    const normalized: UserProfile = {
+      profileId: dealerData.dealerId,
+      fullName: dealerData.contactPerson || dealerData.fullName,
+      username: dealerData.username || '',
+      email: dealerData.dealerEmail || dealerData.email,
+      phoneNumber: dealerData.contactPhone || dealerData.phone,
+      agencyName: dealerData.dealerName,
+      contactPerson: dealerData.contactPerson,
+      agencyPhone: dealerData.contactPhone || dealerData.phone,
+      streetAddress: dealerData.houseNumberAndStreet,
+      ward: dealerData.wardOrCommune,
+      district: dealerData.district,
+      city: dealerData.provinceOrCity,
+      fullAddress: `${dealerData.houseNumberAndStreet}, ${dealerData.wardOrCommune}, ${dealerData.district}, ${dealerData.provinceOrCity}`,
+      dealerId: dealerData.dealerId,
+      dealerEmail: dealerData.dealerEmail || dealerData.email,
+      contactPhone: dealerData.contactPhone || dealerData.phone
+    };
+    
+    console.log('✅ Normalized Dealer Profile:', normalized);
+    return normalized;
+  } catch (error: any) {
+    console.error('Failed to get dealer profile:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+/**
+ * Update user profile via API - Uses dealer endpoint for consistency
  */
 export async function updateProfile(data: UpdateProfilePayload): Promise<UserProfile> {
   try {
-    const response = await api.put<UserProfile>('/api/profile/me', data);
-    return response.data;
+    console.log('📝 Updating profile...');
+    
+    // First get current profile to get dealerId
+    const currentProfile = await getProfile();
+    
+    if (currentProfile.dealerId) {
+      // Update via dealer API for consistency with admin updates
+      console.log('🔄 Updating via dealer API (dealerId:', currentProfile.dealerId, ')');
+      
+      const dealerUpdateData = {
+        dealerName: data.agencyName,
+        email: data.email,
+        dealerEmail: data.email,
+        houseNumberAndStreet: data.streetAddress,
+        wardOrCommune: data.ward,
+        district: data.district,
+        provinceOrCity: data.city,
+        contactPerson: data.fullName,
+        phone: data.phone,
+        contactPhone: data.phone
+      };
+      
+      await api.put<any>(`/api/dealers/${currentProfile.dealerId}`, dealerUpdateData);
+      console.log('✅ Dealer updated successfully');
+      
+      // Return updated dealer profile
+      return getDealerProfile(currentProfile.dealerId);
+    } else {
+      // Fallback to profile API if no dealerId
+      console.log('⚠️ No dealerId found, using profile API');
+      const requestData = {
+        ...data,
+        email: data.email,
+        dealerEmail: data.email,
+        phone: data.phone,
+        contactPhone: data.phone
+      };
+      
+      const response = await api.put<any>('/api/profile/me', requestData);
+      return normalizeProfileData(response.data);
+    }
   } catch (error: any) {
     console.error('Failed to update profile:', error.response?.data || error.message);
     throw error;

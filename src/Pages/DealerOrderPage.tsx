@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Product } from '../types/product';
-import { getProfile } from '../services/profileApi';
+import { getProfile, getDealerProfile } from '../services/profileApi';
 import { createOrder, type CreateOrderRequest } from '../services/orderApi';
-import { fetchVehiclesFromApi, convertVehicleToProduct } from '../services/vehicleApi';
+import { fetchVehiclesFromApi, groupVehiclesByModel } from '../services/vehicleApi';
 import { fetchActiveDiscountPolicies } from '../services/discountApi';
 import type { DiscountPolicy } from '../types/discount';
 import { SuccessModal } from '../components/SuccessModal';
@@ -66,6 +66,10 @@ const DealerOrderPage: React.FC = () => {
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   
+  // State for vehicle and color selection
+  const [selectedVehicle, setSelectedVehicle] = useState<Product | null>(null);
+  const [selectedColorIndex, setSelectedColorIndex] = useState<number>(0);
+  
   // Discount policies state
   const [discountPolicies, setDiscountPolicies] = useState<DiscountPolicy[]>([]);
   const [isLoadingDiscounts, setIsLoadingDiscounts] = useState(true);
@@ -102,21 +106,29 @@ const DealerOrderPage: React.FC = () => {
         setCurrentDealerId(profile.dealerId || null);
         console.log('✅ Current dealer ID:', profile.dealerId);
         
-        // Auto-fill dealer information from profile API
+        // If dealerId exists, fetch real-time data from dealer API
+        let dealerData = profile;
+        if (profile.dealerId) {
+          console.log('🔄 Fetching real-time dealer data...');
+          dealerData = await getDealerProfile(profile.dealerId);
+          console.log('✅ Real-time dealer data loaded:', dealerData);
+        }
+        
+        // Auto-fill dealer information from dealer API (more up-to-date)
         setFormData(prev => ({
           ...prev,
-          dealerName: profile.agencyName || profile.fullName || '',
-          dealerCode: profile.dealerId ? `DL${String(profile.dealerId).padStart(6, '0')}` : '',
-          contactPerson: profile.contactPerson || profile.fullName || '',
-          email: profile.email || '',
-          phone: profile.agencyPhone || profile.phoneNumber || '',
-          address: profile.streetAddress || '',
-          ward: profile.ward || '',
-          district: profile.district || '',
-          city: profile.city || '',
+          dealerName: dealerData.agencyName || dealerData.fullName || '',
+          dealerCode: dealerData.dealerId ? `DL${String(dealerData.dealerId).padStart(6, '0')}` : '',
+          contactPerson: dealerData.contactPerson || dealerData.fullName || '',
+          email: dealerData.email || '',
+          phone: dealerData.agencyPhone || dealerData.phoneNumber || '',
+          address: dealerData.streetAddress || '',
+          ward: dealerData.ward || '',
+          district: dealerData.district || '',
+          city: dealerData.city || '',
         }));
 
-        console.log('✅ Dealer profile loaded:', profile);
+        console.log('✅ Dealer profile loaded and populated');
       } catch (error: any) {
         console.error('❌ Error loading profile:', error);
         
@@ -170,15 +182,32 @@ const DealerOrderPage: React.FC = () => {
   // Auto-add product from navigation state
   useEffect(() => {
     if (incomingProduct) {
+      console.log('📦 Incoming product from navigation:', incomingProduct);
+      
+      // Lấy hình ảnh đúng theo màu đã chọn
+      let productImage = incomingProduct.image || 'default-image.jpg';
+      
+      if (incomingProduct.selectedColor && incomingProduct.colorVariants && incomingProduct.colorVariants.length > 0) {
+        const selectedColorVariant = incomingProduct.colorVariants.find(
+          (cv: any) => cv.color === incomingProduct.selectedColor
+        );
+        if (selectedColorVariant && selectedColorVariant.imageUrl) {
+          productImage = selectedColorVariant.imageUrl;
+          console.log('🎨 Using color-specific image from navigation:', productImage, 'for color:', incomingProduct.selectedColor);
+        }
+      }
+
       const newProduct = {
         productId: incomingProduct.id,
         productName: incomingProduct.name,
         variant: incomingProduct.variant || 'Standard',
         quantity: 1,
         unitPrice: incomingProduct.price || 0,
-        image: incomingProduct.image || 'default-image.jpg',
+        image: productImage,
         color: incomingProduct.selectedColor,
       };
+
+      console.log('✅ Auto-added product with correct color image:', newProduct);
 
       setFormData(prev => ({
         ...prev,
@@ -201,10 +230,12 @@ const DealerOrderPage: React.FC = () => {
       console.log('✅ Fetched vehicles:', vehicles);
       console.log('📊 Number of vehicles:', vehicles.length);
       
-      // Convert API vehicles to Product format
-      const products = vehicles.map(convertVehicleToProduct);
-      console.log('🔄 Converted products:', products);
-      setAvailableVehicles(products);
+      // Group vehicles by model and variant - each group will have color variants
+      const groupedProducts = groupVehiclesByModel(vehicles);
+      console.log('🔄 Grouped products by model:', groupedProducts);
+      console.log('� Number of unique models:', groupedProducts.length);
+      
+      setAvailableVehicles(groupedProducts);
     } catch (error) {
       console.error('❌ Error fetching vehicles:', error);
       setAvailableVehicles([]);
@@ -228,6 +259,8 @@ const DealerOrderPage: React.FC = () => {
   };
 
   const handleAddProduct = (vehicle: any) => {
+    console.log('🛒 handleAddProduct called with vehicle:', vehicle);
+    
     const existingProduct = formData.selectedProducts.find(
       p => p.productId === vehicle.id
     );
@@ -237,15 +270,30 @@ const DealerOrderPage: React.FC = () => {
       return;
     }
 
+    // Lấy hình ảnh đúng theo màu đã chọn
+    let productImage = vehicle.image || 'default-image.jpg';
+    
+    if (vehicle.selectedColor && vehicle.colorVariants && vehicle.colorVariants.length > 0) {
+      const selectedColorVariant = vehicle.colorVariants.find(
+        (cv: any) => cv.color === vehicle.selectedColor
+      );
+      if (selectedColorVariant && selectedColorVariant.imageUrl) {
+        productImage = selectedColorVariant.imageUrl;
+        console.log('🎨 Using color-specific image:', productImage, 'for color:', vehicle.selectedColor);
+      }
+    }
+
     const newProduct = {
       productId: vehicle.id,
       productName: vehicle.name,
       variant: vehicle.variant || 'Standard',
       quantity: 1,
       unitPrice: vehicle.price || 0,
-      image: vehicle.image || 'default-image.jpg',
+      image: productImage,
       color: vehicle.selectedColor,
     };
+
+    console.log('✅ Created newProduct:', newProduct);
 
     setFormData(prev => ({
       ...prev,
@@ -595,7 +643,7 @@ const DealerOrderPage: React.FC = () => {
                                 Không có chính sách chiết khấu phù hợp
                               </small>
                             )}
-                            :
+                            
                           </span>
                           <strong className={styles.discount}>
                             {pricing.discount > 0 ? `-${formatPrice(pricing.discount)}` : formatPrice(0)}
@@ -720,56 +768,169 @@ const DealerOrderPage: React.FC = () => {
       {showProductSelector && (
         <div className={styles.modalOverlay} onClick={() => setShowProductSelector(false)}>
           <div className={styles.vehicleModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalTitle}>
-                <i className="fas fa-car"></i>
-                <h2>Chọn xe cần đặt hàng</h2>
-              </div>
-              <button
-                type="button"
-                className={styles.closeModalBtn}
-                onClick={() => setShowProductSelector(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
+            <button
+              type="button"
+              className={styles.closeModalBtn}
+              onClick={() => setShowProductSelector(false)}
+            >
+              <i className="fas fa-times"></i>
+            </button>
 
             <div className={styles.modalBody}>
               <div className={styles.dropdownContainer}>
                 <label htmlFor="vehicleSelect">
                   <i className="fas fa-car"></i>
-                  Chọn xe
+                  Chọn mẫu xe
                 </label>
                 <select
                   id="vehicleSelect"
                   className={styles.vehicleDropdown}
                   onChange={(e) => {
                     const vehicleId = e.target.value;
-                    console.log('🚗 Selected vehicle ID:', vehicleId);
                     if (vehicleId) {
                       const vehicle = availableVehicles.find(v => v.id === vehicleId);
-                      console.log('🔍 Found vehicle:', vehicle);
                       if (vehicle) {
-                        handleAddProduct(vehicle);
-                        setShowProductSelector(false);
+                        setSelectedVehicle(vehicle);
+                        setSelectedColorIndex(0); // Reset to first color
                       }
+                    } else {
+                      setSelectedVehicle(null);
+                      setSelectedColorIndex(0);
                     }
                   }}
                   disabled={isLoadingVehicles}
-                  defaultValue=""
+                  value={selectedVehicle?.id || ''}
                 >
-                  <option value="" disabled>
-                    {isLoadingVehicles ? 'Đang tải...' : 'Chọn xe từ danh sách'}
+                  <option value="">
+                    {isLoadingVehicles ? 'Đang tải...' : 'Chọn mẫu xe từ danh sách'}
                   </option>
-                  {availableVehicles.map(vehicle => {
-                    console.log('🎨 Rendering option:', vehicle);
-                    return (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.name} - {vehicle.variant} - {formatPrice(vehicle.price)}
-                      </option>
-                    );
-                  })}
+                  {availableVehicles.map(vehicle => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.name} - {vehicle.variant}
+                    </option>
+                  ))}
                 </select>
+              </div>
+
+              {selectedVehicle && selectedVehicle.colorVariants && selectedVehicle.colorVariants.length > 0 && (
+                <div className={styles.colorSelectionContainer}>
+                  <label>
+                    <i className="fas fa-palette"></i>
+                    Chọn màu sắc ({selectedVehicle.colorVariants.length} màu có sẵn)
+                  </label>
+                  <div className={styles.colorOptions}>
+                    {selectedVehicle.colorVariants.map((colorVariant, index) => {
+                      const isSelected = selectedColorIndex === index;
+                      const isAvailable = colorVariant.inStock;
+                      return (
+                        <div
+                          key={colorVariant.vehicleId}
+                          className={`${styles.colorOption} ${isSelected ? styles.selected : ''} ${!isAvailable ? styles.outOfStock : ''}`}
+                          onClick={() => isAvailable && setSelectedColorIndex(index)}
+                          title={!isAvailable ? 'Màu này hiện đang hết hàng' : ''}
+                        >
+                          <div 
+                            className={styles.colorCircle}
+                            style={{ 
+                              background: colorVariant.colorGradient || colorVariant.colorHex 
+                            }}
+                          />
+                          <div className={styles.colorInfo}>
+                            <span className={styles.colorName}>{colorVariant.color}</span>
+                            <span className={styles.colorPrice}>
+                              {formatPrice(colorVariant.finalPrice > 0 ? colorVariant.finalPrice : colorVariant.priceRetail)}
+                            </span>
+                            {!isAvailable && (
+                              <span className={styles.outOfStockBadge}>Hết hàng</span>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <i className="fas fa-check-circle"></i>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {selectedVehicle && selectedVehicle.colorVariants && selectedVehicle.colorVariants[selectedColorIndex] && (
+                <div className={styles.previewContainer}>
+                  <label>
+                    <i className="fas fa-image"></i>
+                    Xem trước
+                  </label>
+                  <div className={styles.vehiclePreview}>
+                    <img 
+                      src={
+                        selectedVehicle.colorVariants[selectedColorIndex].imageUrl || 
+                        selectedVehicle.image
+                      } 
+                      alt={`${selectedVehicle.name} - ${selectedVehicle.colorVariants[selectedColorIndex].color}`}
+                    />
+                    <div className={styles.previewInfo}>
+                      <h4>{selectedVehicle.name} {selectedVehicle.variant}</h4>
+                      <p className={styles.previewColor}>
+                        <i className="fas fa-palette"></i>
+                        Màu: {selectedVehicle.colorVariants[selectedColorIndex].color}
+                      </p>
+                      <p className={styles.previewPrice}>
+                        <i className="fas fa-tag"></i>
+                        {formatPrice(
+                          selectedVehicle.colorVariants[selectedColorIndex].finalPrice > 0
+                            ? selectedVehicle.colorVariants[selectedColorIndex].finalPrice 
+                            : selectedVehicle.colorVariants[selectedColorIndex].priceRetail
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProductSelector(false);
+                    setSelectedVehicle(null);
+                    setSelectedColorIndex(0);
+                  }}
+                  className={styles.cancelButton}
+                >
+                  <i className="fas fa-times"></i>
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedVehicle && selectedVehicle.colorVariants && selectedVehicle.colorVariants[selectedColorIndex]) {
+                      const colorVariant = selectedVehicle.colorVariants[selectedColorIndex];
+                      
+                      if (!colorVariant.inStock) {
+                        alert('Màu này hiện đang hết hàng. Vui lòng chọn màu khác.');
+                        return;
+                      }
+                      
+                      const vehicleToAdd = {
+                        ...selectedVehicle,
+                        id: colorVariant.vehicleId.toString(), // Use specific vehicleId for this color
+                        selectedColor: colorVariant.color,
+                        price: colorVariant.finalPrice > 0 ? colorVariant.finalPrice : colorVariant.priceRetail,
+                        image: colorVariant.imageUrl || selectedVehicle.image,
+                      };
+                      handleAddProduct(vehicleToAdd);
+                      setSelectedVehicle(null);
+                      setSelectedColorIndex(0);
+                    } else {
+                      alert('Vui lòng chọn xe và màu sắc');
+                    }
+                  }}
+                  className={styles.addButton}
+                  disabled={!selectedVehicle || !selectedVehicle.colorVariants || !selectedVehicle.colorVariants[selectedColorIndex] || !selectedVehicle.colorVariants[selectedColorIndex].inStock}
+                >
+                  <i className="fas fa-plus"></i>
+                  Thêm vào đơn hàng
+                </button>
               </div>
             </div>
           </div>

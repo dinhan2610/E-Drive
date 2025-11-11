@@ -178,20 +178,22 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(226, 232, 240, 0.5);
 
   h3 {
-    font-size: 1.625rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #1e293b;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 
     &::before {
       content: '';
       width: 4px;
-      height: 24px;
+      height: 22px;
       background: linear-gradient(135deg, #ff4d30, #ff6b47);
       border-radius: 2px;
     }
@@ -544,13 +546,14 @@
 
 .roleBadge,
 .statusBadge {
-  padding: 5px 12px;
-  border-radius: 16px;
-  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   display: inline-block;
+  white-space: nowrap;
 }
 
 .roleBadge {
@@ -664,61 +667,99 @@
 
 // Payment status dropdown
 .paymentStatusDropdown {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 16px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.3s ease;
   outline: none;
+  max-width: 155px;
+  min-width: 125px;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 24px;
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  background-size: 9px;
+  
+  // Styling cho dropdown options (limited browser support)
+  option {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: none;
+    background: white;
+    color: #1e293b;
+    
+    &:hover {
+      background: #f8f9fa;
+    }
+  }
   
   &.pending {
-    background: rgba(251, 191, 36, 0.1);
+    background-color: rgba(251, 191, 36, 0.1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23d97706' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
     color: #d97706;
     border-color: rgba(251, 191, 36, 0.3);
     
     &:hover {
-      background: rgba(251, 191, 36, 0.2);
+      background-color: rgba(251, 191, 36, 0.2);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23d97706' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
       border-color: rgba(251, 191, 36, 0.5);
+    }
+    
+    &:focus {
+      border-color: rgba(251, 191, 36, 0.6);
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
     }
   }
 
   &.paid {
-    background: rgba(16, 185, 129, 0.1);
+    background-color: rgba(16, 185, 129, 0.1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23059669' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
     color: #059669;
     border-color: rgba(16, 185, 129, 0.3);
     
     &:hover {
-      background: rgba(16, 185, 129, 0.2);
+      background-color: rgba(16, 185, 129, 0.2);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23059669' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
       border-color: rgba(16, 185, 129, 0.5);
+    }
+    
+    &:focus {
+      border-color: rgba(16, 185, 129, 0.6);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
     }
   }
 
   &.cancelled {
-    background: rgba(239, 68, 68, 0.1);
+    background-color: rgba(239, 68, 68, 0.1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23dc2626' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
     color: #dc2626;
     border-color: rgba(239, 68, 68, 0.3);
     
     &:hover {
-      background: rgba(239, 68, 68, 0.2);
+      background-color: rgba(239, 68, 68, 0.2);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23dc2626' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
       border-color: rgba(239, 68, 68, 0.5);
     }
+    
+    &:focus {
+      border-color: rgba(239, 68, 68, 0.6);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
   }
-  
-  // Dropdown arrow
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='currentColor' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 12px;
-  padding-right: 28px;
 }
 
 // Order status dropdown
 .orderStatusDropdown {
-  padding: 6px 12px;
+  padding: 7px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
@@ -728,6 +769,8 @@
   cursor: pointer;
   transition: all 0.3s ease;
   outline: none;
+  min-width: 145px;
+  max-width: 170px;
   
   &.pending {
     background: rgba(251, 191, 36, 0.1);
@@ -765,14 +808,15 @@
   // Dropdown arrow
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='currentColor' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 12px;
+  background-position: right 9px center;
+  background-size: 11px;
   padding-right: 28px;
 }
 
 .tableActions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
+  justify-content: center;
 
   .viewButton,
   .editButton,
@@ -780,9 +824,75 @@
   .billButton,
   .deleteButton,
   .approveButton {
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+  
+  .viewButton {
+    background: #3b82f6;
+    color: white;
+    
+    &:hover {
+      background: #2563eb;
+    }
+  }
+  
+  .editButton {
+    background: #10b981;
+    color: white;
+    
+    &:hover {
+      background: #059669;
+    }
+  }
+  
+  .contractButton {
+    background: #6366f1;
+    color: white;
+    
+    &:hover {
+      background: #4f46e5;
+    }
+  }
+  
+  .billButton {
+    background: #f59e0b;
+    color: white;
+    
+    &:hover {
+      background: #d97706;
+    }
+  }
+  
+  .deleteButton {
+    background: #ef4444;
+    color: white;
+    
+    &:hover {
+      background: #dc2626;
+    }
+  }
+  
+  .approveButton {
+    background: #8b5cf6;
+    color: white;
+    
+    &:hover {
+      background: #7c3aed;
+    }
   }
 }
 
@@ -794,7 +904,7 @@
 
 .filterButtons {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   
   @media (max-width: 768px) {
     flex-wrap: wrap;
@@ -806,17 +916,19 @@
   background: rgba(248, 250, 252, 0.8);
   border: 1px solid rgba(226, 232, 240, 0.8);
   color: #64748b;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 
   &:hover {
     background: rgba(255, 77, 48, 0.05);
     border-color: rgba(255, 77, 48, 0.3);
     color: #ff4d30;
+    transform: translateY(-1px);
   }
 
   &.active {
@@ -843,23 +955,47 @@
 
     th,
     td {
-      padding: 14px 16px;
+      padding: 12px 10px;
       text-align: left;
       border-bottom: 1px solid rgba(226, 232, 240, 0.4);
-      font-size: 13px;
+      font-size: 12.5px;
+      white-space: nowrap;
     }
 
     th {
       background: rgba(248, 250, 252, 0.9);
-      font-weight: 600;
-      color: #374151;
+      font-weight: 700;
+      color: #1e293b;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
+      font-size: 11.5px;
+      padding: 10px 10px;
+      
+      // Điều chỉnh độ rộng các cột cho cân đối
+      &:nth-child(1) { width: 100px; padding-left: 16px; } // Mã đơn
+      &:nth-child(2) { width: 110px; } // Đại lý
+      &:nth-child(3) { width: 80px; } // Xe
+      &:nth-child(4) { width: 100px; } // Ngày đặt
+      &:nth-child(5) { width: 125px; } // Ngày giao dự kiến
+      &:nth-child(6) { width: 95px; } // Tổng tiền
+      &:nth-child(7) { width: 115px; } // Trạng thái
+      &:nth-child(8) { width: 140px; } // Thanh toán
+      &:nth-child(9) { width: 130px; padding-right: 16px; } // Thao tác
     }
 
     td {
       color: #4b5563;
       font-weight: 500;
+      vertical-align: middle;
+      
+      // Căn chỉnh padding trái phải cho đồng nhất với header
+      &:first-child {
+        padding-left: 16px;
+      }
+      
+      &:last-child {
+        padding-right: 16px;
+      }
     }
 
     tbody tr {

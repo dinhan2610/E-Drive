@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getProfile, updateProfile } from '../services/profileApi';
+import { getProfile, updateProfile, getDealerProfile } from '../services/profileApi';
 import { authApi } from '../services/authApi';
 import '../styles/ProfileStyles/_profile.scss';
 
@@ -66,9 +66,51 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
+        console.log('🔄 Loading profile...');
         const apiProfile = await getProfile();
+        console.log('📊 Profile loaded:', apiProfile);
 
-        // Map API data to UI format
+        // If dealerId exists, fetch real-time data from dealer API
+        if (apiProfile.dealerId) {
+          console.log('🔄 Fetching real-time dealer data with ID:', apiProfile.dealerId);
+          const dealerProfile = await getDealerProfile(apiProfile.dealerId);
+          console.log('✅ Real-time dealer data loaded:', dealerProfile);
+          
+          // Use dealer data (more up-to-date)
+          const uiProfile: UserProfile = {
+            id: String(dealerProfile.dealerId),
+            fullName: dealerProfile.fullName,
+            email: dealerProfile.email,
+            phone: dealerProfile.phoneNumber,
+            address: dealerProfile.fullAddress || 'Chưa cập nhật',
+            company: dealerProfile.agencyName || 'E-Drive Dealer',
+            dealerName: dealerProfile.agencyName || 'E-Drive',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(dealerProfile.fullName)}&background=ff4d30&color=fff&size=200`,
+            joinDate: new Date().toLocaleDateString('vi-VN'),
+            dealerStatus: 'active',
+            totalSales: 42,
+            commission: 125000000,
+            username: dealerProfile.username || apiProfile.username,
+            role: 'dealer'
+          };
+
+          console.log('✅ UI Profile mapped from dealer data:', uiProfile);
+
+          setUser(uiProfile);
+          setFormData({
+            fullName: dealerProfile.fullName,
+            email: dealerProfile.email,
+            phone: dealerProfile.phoneNumber,
+            address: dealerProfile.fullAddress || '',
+            company: dealerProfile.agencyName || '',
+            dealerName: dealerProfile.agencyName || '',
+            dealerCode: dealerProfile.dealerId ? `DL${String(dealerProfile.dealerId).padStart(6, '0')}` : ''
+          });
+          setAvatarPreview(uiProfile.avatar);
+          return;
+        }
+
+        // Fallback to profile API data if no dealerId
         const uiProfile: UserProfile = {
           id: String(apiProfile.profileId),
           fullName: apiProfile.fullName,
@@ -85,6 +127,8 @@ const ProfilePage: React.FC = () => {
           username: apiProfile.username,
           role: 'dealer'
         };
+
+        console.log('✅ UI Profile mapped:', uiProfile);
 
         setUser(uiProfile);
         setFormData({
@@ -167,6 +211,9 @@ const ProfilePage: React.FC = () => {
     setIsSaving(true);
 
     try {
+      // Get current profile to preserve ward/district/city
+      const currentProfile = await getProfile();
+      
       // Call real API with all required fields
       const updatedProfile = await updateProfile({
         fullName: formData.fullName,
@@ -175,11 +222,11 @@ const ProfilePage: React.FC = () => {
         agencyName: formData.company || 'E-Drive Dealer',
         contactPerson: formData.fullName,
         agencyPhone: formData.phone,
-        streetAddress: formData.address || '',
-        ward: '',
-        district: '',
-        city: '',
-        fullAddress: formData.address || ''
+        streetAddress: formData.address || currentProfile.streetAddress || '',
+        ward: currentProfile.ward || 'Chưa cập nhật',
+        district: currentProfile.district || 'Chưa cập nhật',
+        city: currentProfile.city || 'Hồ Chí Minh',
+        fullAddress: formData.address || currentProfile.fullAddress || ''
       });
 
       // Update UI with API response
