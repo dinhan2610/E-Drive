@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { CAR_DATA } from '../constants/CarDatas';
 import type { CarType } from '../constants/CarDatas';
@@ -6,7 +6,7 @@ import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, del
 import { fetchManufacturerInventorySummary, createInventoryRecord, updateInventoryRecord, deleteInventoryRecord, type CreateInventoryRequest, type UpdateInventoryRequest } from '../services/manufacturerInventoryApi';
 import type { ManufacturerInventorySummary, VehicleInventoryItem } from '../types/inventory';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
-import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, updateOrderStatus, markOrderAsPaid, type Order } from '../services/orderApi';
+import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, markOrderAsPaid, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
 import { createColor, updateColor, deleteColor, fetchColors } from '../services/colorApi';
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
@@ -327,6 +327,7 @@ const validateDealerField = (fieldName: string, value: string): string => {
       provinceOrCity: 'Tỉnh/Thành phố',
       contactPerson: 'Người liên hệ',
       phone: 'Số điện thoại',
+      email: 'Email',
       fullAddress: 'Địa chỉ đầy đủ'
     };
     if (fieldLabels[fieldName]) {
@@ -339,6 +340,14 @@ const validateDealerField = (fieldName: string, value: string): string => {
     const phoneRegex = /^[0-9]{10,11}$/;
     if (!phoneRegex.test(value.trim())) {
       return 'Số điện thoại phải có 10-11 chữ số';
+    }
+  }
+
+  // Validate email format
+  if (fieldName === 'email' && value && value.trim()) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value.trim())) {
+      return 'Email không hợp lệ (VD: example@email.com)';
     }
   }
 
@@ -528,6 +537,26 @@ const AdminPage: React.FC = () => {
     onConfirm: () => {}
   });
   const [verifyingUserId, setVerifyingUserId] = useState<number | null>(null);
+
+  // Calculate verified and pending dealers count
+  const dealerCounts = useMemo(() => {
+    const pendingDealers = dealers.filter(dealer => {
+      return unverifiedAccounts.some(acc => {
+        const nameMatch = acc.dealerName && dealer.dealerName &&
+          acc.dealerName.toLowerCase().trim() === dealer.dealerName.toLowerCase().trim();
+        const phoneMatch = acc.phone && dealer.phone ?
+          acc.phone.replace(/[\s\-\(\)]/g, '').toLowerCase() === 
+          dealer.phone.replace(/[\s\-\(\)]/g, '').toLowerCase() : true;
+        const isUnverified = acc.verified === false;
+        return nameMatch && phoneMatch && isUnverified;
+      });
+    });
+    
+    return {
+      verified: dealers.length - pendingDealers.length,
+      pending: pendingDealers.length
+    };
+  }, [dealers, unverifiedAccounts]);
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
   const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
   const [isCreatingDealer, setIsCreatingDealer] = useState<boolean>(false);
@@ -550,6 +579,7 @@ const AdminPage: React.FC = () => {
     provinceOrCity: '',
     contactPerson: '',
     phone: '',
+    email: '',
     fullAddress: ''
   });
   const [newDealerErrors, setNewDealerErrors] = useState<Record<string, string>>({});
@@ -841,6 +871,7 @@ const AdminPage: React.FC = () => {
         const dealerList = await fetchDealers();
         setDealers(dealerList);
         console.log('✅ Loaded dealers:', dealerList);
+        console.log('🔍 First dealer structure:', dealerList[0]);
       } catch (error) {
         console.error('❌ Failed to load dealers:', error);
         setDealers([]);
@@ -1107,55 +1138,6 @@ const AdminPage: React.FC = () => {
 
       if (error.code === 'BILL_NOT_FOUND') {
         errorMessage = 'Đơn hàng này chưa có hóa đơn';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setNotification({
-        isVisible: true,
-        message: `❌ ${errorMessage}`,
-        type: 'error'
-      });
-    }
-  };
-
-  // Handle update order status
-  const handleUpdateOrderStatus = async (
-    orderId: number | string,
-    newStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED'
-  ) => {
-    try {
-      console.log('📦 Updating order status:', orderId, '→', newStatus);
-
-      setNotification({
-        isVisible: true,
-        message: '⏳ Đang cập nhật trạng thái đơn hàng...',
-        type: 'info'
-      });
-
-      await updateOrderStatus(orderId, newStatus);
-
-      // Update local state
-      setBookings(prev => prev.map(booking =>
-        booking.id === orderId
-          ? { ...booking, status: newStatus.toLowerCase() as any }
-          : booking
-      ));
-
-      setNotification({
-        isVisible: true,
-        message: '✅ Đã cập nhật trạng thái đơn hàng!',
-        type: 'success'
-      });
-
-      console.log('✅ Order status updated successfully');
-    } catch (error: any) {
-      console.error('❌ Error updating order status:', error);
-
-      let errorMessage = 'Không thể cập nhật trạng thái đơn hàng';
-
-      if (error.code === 'FORBIDDEN') {
-        errorMessage = 'Bạn không có quyền cập nhật đơn hàng này';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -1721,8 +1703,9 @@ const AdminPage: React.FC = () => {
         district: dealerData.district,
         provinceOrCity: dealerData.provinceOrCity,
         contactPerson: dealerData.contactPerson,
-        phone: dealerData.phone,
-        fullAddress: dealerData.fullAddress
+        phone: dealerData.phone || '',
+        email: dealerData.email || '',
+        fullAddress: dealerData.fullAddress || ''
       });
       
       setEditDealerErrors({});
@@ -1748,7 +1731,7 @@ const AdminPage: React.FC = () => {
       errors.provinceOrCity = validateDealerField('provinceOrCity', editDealer.provinceOrCity);
       errors.contactPerson = validateDealerField('contactPerson', editDealer.contactPerson);
       errors.phone = validateDealerField('phone', editDealer.phone);
-      errors.fullAddress = validateDealerField('fullAddress', editDealer.fullAddress);
+      errors.email = validateDealerField('email', editDealer.email || '');
 
       // Remove empty errors
       const finalErrors = Object.fromEntries(
@@ -1869,7 +1852,41 @@ const AdminPage: React.FC = () => {
     });
   };
 
-  const handleVerifyAccount = (userId: number, dealerName: string) => {
+  // Handle view business license by dealerId (OPTIMIZED - direct approach)
+  const handleViewBusinessLicenseByDealerId = async (dealerId: number, dealerName: string) => {
+    try {
+      setNotification({
+        isVisible: true,
+        message: '⏳ Đang tải giấy phép kinh doanh...',
+        type: 'info'
+      });
+
+      const { getBusinessLicenseByDealerId } = await import('../services/dealerApi');
+      const blob = await getBusinessLicenseByDealerId(dealerId);
+      const imageUrl = URL.createObjectURL(blob);
+      
+      // Open in new tab
+      window.open(imageUrl, '_blank');
+      
+      // Cleanup after 1 minute
+      setTimeout(() => URL.revokeObjectURL(imageUrl), 60000);
+
+      setNotification({
+        isVisible: true,
+        message: `✅ Đã mở giấy phép kinh doanh của ${dealerName}!`,
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('❌ Error loading business license:', error);
+      setNotification({
+        isVisible: true,
+        message: 'Không thể tải giấy phép kinh doanh. Có thể đại lý này chưa có giấy phép.',
+        type: 'error'
+      });
+    }
+  };
+
+  const handleVerifyAccount = (userId: number, dealerName: string, dealerId?: number) => {
     setConfirmDialog({
       isOpen: true,
       title: 'Xác minh tài khoản đại lý',
@@ -1877,7 +1894,7 @@ const AdminPage: React.FC = () => {
       type: 'success',
       onConfirm: async () => {
         try {
-          console.log('✅ Verifying account with user ID:', userId);
+          console.log('✅ Verifying account - userId:', userId, 'dealerId:', dealerId);
           
           // Set loading state
           setVerifyingUserId(userId);
@@ -1889,7 +1906,8 @@ const AdminPage: React.FC = () => {
             type: 'info'
           });
           
-          const result = await verifyAccount(userId);
+          // Pass dealerId if available (new backend), fallback to userId
+          const result = await verifyAccount(userId, dealerId);
 
           if (result.success) {
             console.log('✅ Account verified successfully, reloading data...');
@@ -2789,13 +2807,13 @@ const AdminPage: React.FC = () => {
                   className={`${styles.filterButton} ${dealerViewMode === 'verified' ? styles.active : ''}`}
                   onClick={() => setDealerViewMode('verified')}
                 >
-                  Đã xác minh ({dealers.length})
+                  Đã xác minh ({dealerCounts.verified})
                 </button>
                 <button 
                   className={`${styles.filterButton} ${dealerViewMode === 'unverified' ? styles.active : ''}`}
                   onClick={() => setDealerViewMode('unverified')}
                 >
-                  Chờ xác minh ({unverifiedAccounts.length})
+                  Chờ xác minh ({dealerCounts.pending})
               </button>
               </div>
             </div>
@@ -2812,51 +2830,128 @@ const AdminPage: React.FC = () => {
                     <th>Tỉnh/Thành phố</th>
                     <th>Người liên hệ</th>
                     <th>SĐT</th>
+                    <th>Giấy phép KD</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dealers.map(dealer => (
-                    <tr key={dealer.dealerId}>
-                      <td>#{dealer.dealerId}</td>
-                      <td>
-                        <div style={{fontWeight: 'bold'}}>{dealer.dealerName}</div>
-                      </td>
-                      <td>
-                        <div style={{fontSize: '13px'}}>{dealer.houseNumberAndStreet}</div>
-                        <div style={{fontSize: '11px', color: '#888'}}>{dealer.wardOrCommune}</div>
-                      </td>
-                      <td>{dealer.district}</td>
-                      <td>{dealer.provinceOrCity}</td>
-                      <td>{dealer.contactPerson}</td>
-                      <td>{dealer.phone}</td>
-                      <td>
-                        <div className={styles.tableActions}>
-                          <button 
-                            className={styles.viewButton} 
-                            title="Xem chi tiết"
-                            onClick={() => handleViewDealer(dealer.dealerId)}
-                          >
-                            <i className="fas fa-eye"></i>
-                          </button>
-                          <button 
-                            className={styles.editButton} 
-                            title="Chỉnh sửa"
-                            onClick={() => handleEditDealer(dealer.dealerId)}
-                          >
-                            <i className="fas fa-edit"></i>
-                          </button>
+                  {dealers.map(dealer => {
+                    // Check if dealer is pending verification and get phone from unverified account
+                    let isPending = false;
+                    let pendingPhone = dealer.phone;
+                    
+                    const matchedAccount = unverifiedAccounts.find(acc => {
+                      // Match by name
+                      const nameMatch = acc.dealerName && dealer.dealerName &&
+                        acc.dealerName.toLowerCase().trim() === dealer.dealerName.toLowerCase().trim();
+                      
+                      // Match by phone (if both have phone numbers)
+                      const phoneMatch = acc.phone && dealer.phone ?
+                        acc.phone.replace(/[\s\-\(\)]/g, '').toLowerCase() === 
+                        dealer.phone.replace(/[\s\-\(\)]/g, '').toLowerCase() : true;
+                      
+                      const isUnverified = acc.verified === false;
+                      
+                      // Match if name matches AND (phone matches OR dealer has no phone)
+                      return nameMatch && phoneMatch && isUnverified;
+                    });
+                    
+                    if (matchedAccount) {
+                      isPending = true;
+                      pendingPhone = matchedAccount.phone || dealer.phone;
+                    }
+
+                    return (
+                      <tr key={dealer.dealerId}>
+                        <td>#{dealer.dealerId}</td>
+                        <td>
+                          <div style={{fontWeight: 'bold'}}>{dealer.dealerName}</div>
+                        </td>
+                        <td>
+                          <div style={{fontSize: '13px'}}>{dealer.houseNumberAndStreet}</div>
+                          <div style={{fontSize: '11px', color: '#888'}}>{dealer.wardOrCommune}</div>
+                        </td>
+                        <td>{dealer.district}</td>
+                        <td>{dealer.provinceOrCity}</td>
+                        <td>{dealer.contactPerson}</td>
+                        <td>{pendingPhone || 'Chưa cập nhật'}</td>
+                        <td>
                           <button
-                            className={styles.deleteButton}
-                            title="Xóa"
-                            onClick={() => handleDeleteDealer(dealer.dealerId, dealer.dealerName)}
+                            title="Xem giấy phép kinh doanh"
+                            onClick={() => handleViewBusinessLicenseByDealerId(dealer.dealerId, dealer.dealerName)}
+                            style={{
+                              background: '#ff4d30',
+                              color: 'white',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              margin: '0 auto',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              boxShadow: '0 2px 8px rgba(255, 77, 48, 0.3)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 77, 48, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(255, 77, 48, 0.3)';
+                            }}
                           >
-                            <i className="fas fa-trash"></i>
+                            <i className="fas fa-file-contract" style={{fontSize: '14px'}}></i>
+                            
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td>
+                          {isPending ? (
+                            <div style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#fff3cd',
+                              color: '#856404',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              textAlign: 'center',
+                              border: '1px solid #ffc107'
+                            }}>
+                              <i className="fas fa-clock" style={{marginRight: '6px'}}></i>
+                              Đang chờ duyệt
+                            </div>
+                          ) : (
+                            <div className={styles.tableActions}>
+                              <button 
+                                className={styles.viewButton} 
+                                title="Xem chi tiết"
+                                onClick={() => handleViewDealer(dealer.dealerId)}
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button 
+                                className={styles.editButton} 
+                                title="Chỉnh sửa"
+                                onClick={() => handleEditDealer(dealer.dealerId)}
+                              >
+                                <i className="fas fa-edit"></i>
+                              </button>
+                              <button
+                                className={styles.deleteButton}
+                                title="Xóa"
+                                onClick={() => handleDeleteDealer(dealer.dealerId, dealer.dealerName)}
+                              >
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2867,7 +2962,7 @@ const AdminPage: React.FC = () => {
                     <tr>
                       <th>ID</th>
                       <th>Tên đại lý</th>
-                      <th colSpan={3}>Địa chỉ đầy đủ</th>
+                      <th colSpan={2}>Địa chỉ đầy đủ</th>
                       <th>Người liên hệ</th>
                       <th>SĐT</th>
                       <th>Thao tác</th>
@@ -2876,7 +2971,7 @@ const AdminPage: React.FC = () => {
                   <tbody>
                     {unverifiedAccounts.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
                           <i className="fas fa-inbox" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
                           <p>Không có tài khoản nào đang chờ xác minh</p>
                         </td>
@@ -2889,7 +2984,7 @@ const AdminPage: React.FC = () => {
                             <div style={{fontWeight: 'bold'}}>{account.dealerName}</div>
                             <div style={{fontSize: '11px', color: '#888'}}>@{account.username}</div>
                           </td>
-                          <td colSpan={3}>
+                          <td colSpan={2}>
                             <div style={{fontSize: '13px'}}>{account.dealerAddress}</div>
                             {account.registrationDate && (
                               <div style={{fontSize: '11px', color: '#888', marginTop: '4px'}}>
@@ -2905,15 +3000,9 @@ const AdminPage: React.FC = () => {
                           <td>
                             <div className={styles.tableActions}>
                               <button 
-                                className={styles.viewButton} 
-                                title="Xem chi tiết"
-                              >
-                                <i className="fas fa-eye"></i>
-                              </button>
-                              <button 
                                 className={styles.approveButton} 
                                 title="Xác minh"
-                                onClick={() => handleVerifyAccount(account.userId, account.dealerName)}
+                                onClick={() => handleVerifyAccount(account.userId, account.dealerName, account.dealerId)}
                                 disabled={verifyingUserId === account.userId}
                               >
                                 {verifyingUserId === account.userId ? (
@@ -7711,10 +7800,10 @@ const AdminPage: React.FC = () => {
         {/* View Dealer Modal */}
         {showViewDealerModal && selectedDealer && (
           <div className={styles.modalOverlay}>
-            <div className={styles.modal} style={{ maxWidth: '700px' }}>
+            <div className={styles.modal} style={{ maxWidth: '800px' }}>
               <div className={styles.modalHeader}>
                 <h2>
-                  <i className="fas fa-store"></i>
+                  <i className="fas fa-store" style={{marginRight: '10px', color: '#ff4d30'}}></i>
                   Chi tiết đại lý
                 </h2>
                 <button
@@ -7723,128 +7812,234 @@ const AdminPage: React.FC = () => {
                     setShowViewDealerModal(false);
                     setSelectedDealer(null);
                   }}
+                  aria-label="Đóng"
                 >
-                  <i className="fas fa-times"></i>
                 </button>
               </div>
 
               <div className={styles.modalBody}>
                 <div className={styles.carDetails}>
-                  {/* Dealer ID */}
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>
-                      <i className="fas fa-hashtag"></i>
-                      Mã đại lý
+                  {/* Header Info - 2 Columns */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '20px',
+                    marginBottom: '24px',
+                    padding: '20px',
+                    background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                    borderRadius: '12px',
+                    border: '1px solid #dee2e6'
+                  }}>
+                    <div>
+                      <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '4px', fontWeight: '500'}}>
+                        <i className="fas fa-hashtag" style={{marginRight: '6px'}}></i>
+                        Mã đại lý
+                      </div>
+                      <div style={{fontSize: '18px', fontWeight: 'bold', color: '#ff4d30'}}>
+                        #{selectedDealer.dealerId}
+                      </div>
                     </div>
-                    <div className={styles.detailValue}>#{selectedDealer.dealerId}</div>
+                    <div>
+                      <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '4px', fontWeight: '500'}}>
+                        <i className="fas fa-building" style={{marginRight: '6px'}}></i>
+                        Tên đại lý
+                      </div>
+                      <div style={{fontSize: '18px', fontWeight: 'bold', color: '#212529'}}>
+                        {selectedDealer.dealerName}
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Dealer Name */}
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>
-                      <i className="fas fa-building"></i>
-                      Tên đại lý
-                    </div>
-                    <div className={styles.detailValue} style={{fontWeight: 'bold', fontSize: '16px'}}>
-                      {selectedDealer.dealerName}
-                    </div>
-                  </div>
-
-                  <div className={styles.divider}></div>
 
                   {/* Address Section */}
-                  <div className={styles.sectionTitle}>
-                    <i className="fas fa-map-marker-alt"></i>
-                    Địa chỉ
-                  </div>
-
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>Số nhà và tên đường</div>
-                    <div className={styles.detailValue}>{selectedDealer.houseNumberAndStreet}</div>
-                  </div>
-
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>Phường/Xã</div>
-                    <div className={styles.detailValue}>{selectedDealer.wardOrCommune}</div>
-                  </div>
-
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>Quận/Huyện</div>
-                    <div className={styles.detailValue}>{selectedDealer.district}</div>
-                  </div>
-
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>Tỉnh/Thành phố</div>
-                    <div className={styles.detailValue}>{selectedDealer.provinceOrCity}</div>
-                  </div>
-
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>
-                      <i className="fas fa-location-arrow"></i>
-                      Địa chỉ đầy đủ
-                    </div>
-                    <div className={styles.detailValue} style={{
-                      padding: '12px',
-                      backgroundColor: '#f5f5f5',
-                      borderRadius: '6px',
-                      lineHeight: '1.6'
+                  <div style={{marginBottom: '24px'}}>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#495057',
+                      marginBottom: '16px',
+                      paddingBottom: '8px',
+                      borderBottom: '2px solid #ff4d30',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
-                      {selectedDealer.fullAddress}
+                      <i className="fas fa-map-marker-alt" style={{color: '#ff4d30'}}></i>
+                      Địa chỉ
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '16px'
+                    }}>
+                      <div>
+                        <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '6px'}}>Số nhà và đường</div>
+                        <div style={{fontSize: '14px', color: '#212529', fontWeight: '500'}}>{selectedDealer.houseNumberAndStreet}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '6px'}}>Phường/Xã</div>
+                        <div style={{fontSize: '14px', color: '#212529', fontWeight: '500'}}>{selectedDealer.wardOrCommune}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '6px'}}>Quận/Huyện</div>
+                        <div style={{fontSize: '14px', color: '#212529', fontWeight: '500'}}>{selectedDealer.district}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '6px'}}>Tỉnh/Thành phố</div>
+                        <div style={{fontSize: '14px', color: '#212529', fontWeight: '500'}}>{selectedDealer.provinceOrCity}</div>
+                      </div>
                     </div>
                   </div>
-
-                  <div className={styles.divider}></div>
 
                   {/* Contact Section */}
-                  <div className={styles.sectionTitle}>
-                    <i className="fas fa-address-card"></i>
-                    Thông tin liên hệ
-                  </div>
-
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>
-                      <i className="fas fa-user"></i>
-                      Người liên hệ
+                  <div>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#495057',
+                      marginBottom: '16px',
+                      paddingBottom: '8px',
+                      borderBottom: '2px solid #ff4d30',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <i className="fas fa-address-card" style={{color: '#ff4d30'}}></i>
+                      Thông tin liên hệ
                     </div>
-                    <div className={styles.detailValue}>{selectedDealer.contactPerson}</div>
-                  </div>
 
-                  <div className={styles.detailRow}>
-                    <div className={styles.detailLabel}>
-                      <i className="fas fa-phone"></i>
-                      Số điện thoại
-                    </div>
-                    <div className={styles.detailValue}>
-                      <a href={`tel:${selectedDealer.phone}`} style={{
-                        color: '#4CAF50',
-                        textDecoration: 'none',
-                        fontWeight: '500'
-                      }}>
-                        {selectedDealer.phone}
-                      </a>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '16px'
+                    }}>
+                      <div>
+                        <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '6px'}}>
+                          <i className="fas fa-user" style={{marginRight: '6px'}}></i>
+                          Người liên hệ
+                        </div>
+                        <div style={{fontSize: '14px', color: '#212529', fontWeight: '500'}}>{selectedDealer.contactPerson}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '6px'}}>
+                          <i className="fas fa-phone" style={{marginRight: '6px'}}></i>
+                          Số điện thoại
+                        </div>
+                        <div>
+                          <a href={`tel:${selectedDealer.phone}`} style={{
+                            fontSize: '14px',
+                            color: '#28a745',
+                            textDecoration: 'none',
+                            fontWeight: '600',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            backgroundColor: '#d4edda',
+                            borderRadius: '6px',
+                            border: '1px solid #c3e6cb'
+                          }}>
+                            <i className="fas fa-phone-alt" style={{fontSize: '12px'}}></i>
+                            {selectedDealer.phone}
+                          </a>
+                        </div>
+                      </div>
+                      {selectedDealer.email && (
+                        <div style={{gridColumn: 'span 2'}}>
+                          <div style={{fontSize: '12px', color: '#6c757d', marginBottom: '6px'}}>
+                            <i className="fas fa-envelope" style={{marginRight: '6px'}}></i>
+                            Email
+                          </div>
+                          <div>
+                            <a href={`mailto:${selectedDealer.email}`} style={{
+                              fontSize: '14px',
+                              color: '#007bff',
+                              textDecoration: 'none',
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '6px 12px',
+                              backgroundColor: '#cfe2ff',
+                              borderRadius: '6px',
+                              border: '1px solid #9ec5fe'
+                            }}>
+                              <i className="fas fa-envelope" style={{fontSize: '12px'}}></i>
+                              {selectedDealer.email}
+                            </a>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className={styles.modalActions}>
+              <div className={styles.modalActions} style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '12px',
+                padding: '16px 24px',
+                borderTop: '1px solid #dee2e6',
+                backgroundColor: '#f8f9fa'
+              }}>
                 <button
-                  className={styles.cancelButton}
                   onClick={() => {
                     setShowViewDealerModal(false);
                     setSelectedDealer(null);
                   }}
+                  style={{
+                    padding: '10px 24px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#6c757d',
+                    backgroundColor: '#fff',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e9ecef';
+                    e.currentTarget.style.borderColor = '#adb5bd';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fff';
+                    e.currentTarget.style.borderColor = '#dee2e6';
+                  }}
                 >
-                  <i className="fas fa-times"></i>
                   Đóng
                 </button>
                 <button
-                  className={styles.primaryButton}
                   onClick={() => {
                     if (selectedDealer) {
                       setShowViewDealerModal(false);
                       handleEditDealer(selectedDealer.dealerId);
                     }
+                  }}
+                  style={{
+                    padding: '10px 24px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#fff',
+                    backgroundColor: '#ff4d30',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e63946';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 77, 48, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ff4d30';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   <i className="fas fa-edit"></i>
@@ -8020,7 +8215,7 @@ const AdminPage: React.FC = () => {
                   <div className={styles.settingItem}>
                     <label>Số điện thoại <span style={{color: 'red'}}>*</span></label>
                     <input
-                      type="text"
+                      type="tel"
                       className={styles.settingInput}
                       value={editDealer.phone}
                       onChange={(e) => {
@@ -8039,25 +8234,25 @@ const AdminPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Full Address */}
-                  <div className={styles.settingItem} style={{ gridColumn: 'span 2' }}>
-                    <label>Địa chỉ đầy đủ <span style={{color: 'red'}}>*</span></label>
-                    <textarea
+                  {/* Email */}
+                  <div className={styles.settingItem}>
+                    <label>Email <span style={{color: 'red'}}>*</span></label>
+                    <input
+                      type="email"
                       className={styles.settingInput}
-                      value={editDealer.fullAddress}
+                      value={editDealer.email || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        setEditDealer({ ...editDealer, fullAddress: value });
-                        const error = validateDealerField('fullAddress', value);
-                        setEditDealerErrors(prev => ({ ...prev, fullAddress: error }));
+                        setEditDealer({ ...editDealer, email: value });
+                        const error = validateDealerField('email', value);
+                        setEditDealerErrors(prev => ({ ...prev, email: error }));
                       }}
-                      style={editDealerErrors.fullAddress ? { borderColor: 'red', minHeight: '80px' } : { minHeight: '80px' }}
-                      placeholder="VD: 123 Nguyễn Văn Trỗi, Phường Tân Bình, Quận 1, TP Hồ Chí Minh"
-                      rows={3}
+                      style={editDealerErrors.email ? { borderColor: 'red' } : {}}
+                      placeholder="VD: dealer@email.com"
                     />
-                    {editDealerErrors.fullAddress && (
+                    {editDealerErrors.email && (
                       <span style={{ color: 'red', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                        ⚠️ {editDealerErrors.fullAddress}
+                        ⚠️ {editDealerErrors.email}
                       </span>
                     )}
                   </div>
