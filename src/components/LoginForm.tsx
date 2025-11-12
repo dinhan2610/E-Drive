@@ -305,14 +305,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
             )}
           </button>
 
-          <div className="auth-divider">
-            <span>Hoặc</span>
-          </div>
-
-          <button type="button" className="google-auth-btn">
-            <i className="fab fa-google"></i>
-            Đăng nhập với Google
-          </button>
+          
 
           <div className="auth-switch">
             <p>
