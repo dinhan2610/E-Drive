@@ -357,20 +357,29 @@ const QuoteListPage: React.FC = () => {
       <div className={styles.wrap}>
         <div className={styles.container}>
           <div className={styles.header}>
-            <button 
-              className={styles.backButton}
-              onClick={() => navigate('/quote')}
-            >
-              <i className="fas fa-arrow-left"></i>
-              Quay lại
-            </button>
-            <div className={styles.headerContent}>
-              <h1>
-                <i className="fas fa-file-invoice"></i>
-                Danh sách báo giá
-              </h1>
-              <p>Quản lý và theo dõi các báo giá đã tạo</p>
+            <div className={styles.headerLeft}>
+              <button 
+                className={styles.backButton}
+                onClick={() => navigate('/quote')}
+              >
+                <i className="fas fa-arrow-left"></i>
+                Quay lại
+              </button>
+              <div className={styles.headerContent}>
+                <h1>
+                  <i className="fas fa-file-invoice"></i>
+                  Danh sách báo giá
+                </h1>
+                <p>Quản lý và theo dõi các báo giá đã tạo</p>
+              </div>
             </div>
+            <button 
+              className={styles.createButton}
+              onClick={() => navigate('/quotes/create')}
+            >
+              <i className="fas fa-plus-circle"></i>
+              Tạo báo giá mới
+            </button>
           </div>
 
           {/* Error Banner - Show if no token */}

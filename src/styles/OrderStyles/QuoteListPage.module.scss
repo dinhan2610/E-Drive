@@ -18,6 +18,18 @@
 .header {
   margin-bottom: 3rem;
   position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+
+  @include respond-to('md') {
+    flex-direction: column;
+  }
+
+  .headerLeft {
+    flex: 1;
+  }
 
   .backButton {
     display: inline-flex;
@@ -47,6 +59,43 @@
 
     @include respond-to('md') {
       padding: 0.8rem 1.5rem;
+      font-size: 1.4rem;
+    }
+  }
+
+  .createButton {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.4rem 2.8rem;
+    background: linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 77, 48, 0.3);
+    white-space: nowrap;
+
+    i {
+      font-size: 1.6rem;
+    }
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(255, 77, 48, 0.4);
+    }
+
+    &:active {
+      transform: translateY(-1px);
+    }
+
+    @include respond-to('md') {
+      width: 100%;
+      justify-content: center;
+      padding: 1.2rem 2rem;
       font-size: 1.4rem;
     }
   }
