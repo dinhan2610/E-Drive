@@ -1,9 +1,10 @@
 // ===== Professional Admin Dashboard Design =====
+@use "../global/typhography" as *;
 
 .adminPage {
   min-height: 100vh;
   background: transparent; // Bỏ background vì AdminLayout đã có
-  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: $text-font;
   padding: 0;
   margin: 0;
 }

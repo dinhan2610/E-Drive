@@ -1,3 +1,5 @@
+@use "../global/typhography" as *;
+
 .overlay {
   position: fixed;
   top: 0;
@@ -235,7 +237,7 @@
 
   /* Special styling for phone input */
   &[type="tel"] {
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: $text-font;
     letter-spacing: 1px;
     font-variant-numeric: tabular-nums;
     

@@ -241,4 +241,18 @@ body {
   background-color: #333333;
 }
 
+// Ensure all elements inherit Roboto font
+* {
+  font-family: $text-font;
+}
+
+button,
+input,
+textarea,
+select,
+.modal,
+.dialog {
+  font-family: inherit;
+}
+
 

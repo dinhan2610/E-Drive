@@ -762,7 +762,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           <div className="form-section">
             <h3 className="section-title">
               <i className="fas fa-file-contract"></i>
-              Giấy phép kinh doanh <span className="optional-label">(Không bắt buộc)</span>
+              Giấy phép kinh doanh <span className="optional-label"></span>
             </h3>
             
             <div className="form-group">
