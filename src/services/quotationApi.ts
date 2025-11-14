@@ -1,276 +1,145 @@
-import { apiClient } from './apiClient';
-import { getProfile } from './profileApi';
+import api from '../lib/apiClient';
 
-export interface QuotationRequest {
+// ==========================================
+// NEW API INTERFACES (matching backend)
+// ==========================================
+
+export interface QuotationCreateRequest {
   vehicleId: number;
-  dealerId?: number; // Optional - will be auto-filled from profile if not provided
-  includeInsurancePercent: boolean;
-  includeWarrantyExtension: boolean;
-  includeAccessories: boolean;
-  customerFullName: string;
-  phone: string;
-  email: string;
-  street: string;
-  ward: string;
-  district: string;
-  city: string;
-  notes: string;
+  customerId: number;
+  paymentMethod: 'TRẢ_THẲNG' | 'TRẢ_GÓP';
+  additionalServices: {
+    hasTintFilm: boolean;
+    hasWallboxCharger: boolean;
+    hasWarrantyExtension: boolean;
+    hasPPF: boolean;
+    hasCeramicCoating: boolean;
+    has360Camera: boolean;
+  };
 }
 
-// API Response wrapper for list
-export interface QuotationListApiResponse {
-  statusCode: number;
-  message: string;
-  data: QuotationResponseData[];
-}
-
-// API Response wrapper for single item
-export interface QuotationApiResponse {
-  statusCode: number;
-  message: string;
-  data: QuotationResponseData;
-}
-
-// Actual quotation data structure from API
-export interface QuotationResponseData {
-  quotationId: number;
-  vehicleId: number;
-  vehicleModel: string;
-  vehicleImageUrl: string;
-  unitPrice: number;
-  includeInsurancePercent: boolean;
-  includeWarrantyExtension: boolean;
-  includeAccessories: boolean;
-  discountRate: number;
-  discountAmount: number;
-  vehicleSubtotal: number;
-  serviceTotal: number;
-  subtotalAfterDiscount: number;
-  taxableBase: number;
-  vatRate: number;
-  vatAmount: number;
-  grandTotal: number;
-  customerFullName: string;
-  phone: string;
-  email: string;
-  fullAddress: string;
-  notes: string;
-}
-
-// Legacy interface for backward compatibility (kept for existing code)
 export interface QuotationResponse {
-  id: number;
-  quotationNumber: string;
+  quotationId: number;
+  dealerId: number;
+  dealerName?: string;
+  createdByUserName?: string;
   vehicleId: number;
-  vehicleName?: string;
-  vehiclePrice?: number;
-  includeInsurancePercent: boolean;
-  includeWarrantyExtension: boolean;
-  includeAccessories: boolean;
-  customerFullName: string;
-  phone: string;
-  email: string;
-  street: string;
-  ward: string;
-  district: string;
-  city: string;
-  notes: string;
-  totalPrice?: number;
-  insuranceCost?: number;
-  warrantyCost?: number;
-  accessoriesCost?: number;
+  modelName?: string;
+  version?: string;
+  batteryCapacityKwh?: number;
+  rangeKm?: number;
+  maxSpeedKmh?: number;
+  chargingTimeHours?: number;
+  seatingCapacity?: number;
+  motorPowerKw?: number;
+  weightKg?: number;
+  lengthMm?: number;
+  widthMm?: number;
+  heightMm?: number;
+  imageUrl?: string;
+  manufactureYear?: number;
+  vehicleStatus?: string;
+  customerId: number;
+  customerFullName?: string;
+  customerDob?: string;
+  customerGender?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  customerIdCardNo?: string;
+  paymentMethod: string;
+  quotationStatus?: string;
+  additionalServices: {
+    hasTintFilm: boolean;
+    tintFilmPrice?: number;
+    hasWallboxCharger: boolean;
+    wallboxChargerPrice?: number;
+    hasWarrantyExtension: boolean;
+    warrantyExtensionPrice?: number;
+    hasPPF: boolean;
+    ppfPrice?: number;
+    hasCeramicCoating: boolean;
+    ceramicCoatingPrice?: number;
+    has360Camera: boolean;
+    camera360Price?: number;
+    totalServicesPrice?: number;
+  };
+  unitPrice?: number;
+  promotionDiscountAmount?: number;
+  additionalServicesTotal?: number;
+  vatAmount?: number | null;
+  grandTotal?: number;
   createdAt?: string;
-  status?: string;
+  updatedAt?: string;
 }
 
-export interface QuotationPreviewResponse {
-  vehicleId: number;
-  vehicleName: string;
-  vehiclePrice: number;
-  includeInsurancePercent: boolean;
-  includeWarrantyExtension: boolean;
-  includeAccessories: boolean;
-  insuranceCost: number;
-  warrantyCost: number;
-  accessoriesCost: number;
-  totalPrice: number;
-  customerFullName: string;
-  phone: string;
-  email: string;
-  street: string;
-  ward: string;
-  district: string;
-  city: string;
-  notes: string;
+export interface ApiResponse<T> {
+  statusCode: number;
+  message: string;
+  data: T;
 }
 
 /**
- * Create a new quotation
+ * Create new quotation
  */
-export const createQuotation = async (data: QuotationRequest): Promise<QuotationResponseData> => {
+export async function createQuotation(request: QuotationCreateRequest): Promise<QuotationResponse> {
+  console.log('📝 Creating quotation:', request);
+  
   try {
-    // Auto-fill dealerId from profile if not provided
-    let requestData = { ...data };
-    if (!requestData.dealerId) {
-      try {
-        const profile = await getProfile();
-        requestData.dealerId = profile.dealerId;
-      } catch (error) {
-        console.warn('⚠️ Could not fetch dealerId from profile, continuing without it:', error);
-      }
-    }
-
-    const response = await apiClient.post('/quotations', requestData);
+    const { data } = await api.post<ApiResponse<QuotationResponse>>('/api/quotations/create', request);
     
-    if (!response.ok) {
-      // Handle 401 specifically
-      if (response.status === 401) {
-        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      }
-      if (response.status === 403) {
-        throw new Error('Bạn không có quyền tạo báo giá.');
-      }
-      
-      // Try to parse error message
-      try {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Lỗi ${response.status}: Không thể tạo báo giá`);
-      } catch {
-        throw new Error(`Lỗi ${response.status}: Không thể tạo báo giá`);
-      }
-    }
-    
-    const result: QuotationApiResponse = await response.json();
-    
-    // Extract and return data from wrapper
-    // Accept both 200 (OK) and 201 (Created)
-    if ((result.statusCode === 200 || result.statusCode === 201) && result.data) {
-      return result.data;
-    }
-    
-    throw new Error(result.message || 'Không thể tạo báo giá');
+    console.log('✅ Quotation created:', data);
+    return data.data;
   } catch (error: any) {
-    console.error('❌ Error creating quotation:', error);
+    console.error('❌ Create quotation error:', error.response?.data || error.message);
     throw error;
   }
-};
+}
 
 /**
- * Preview quotation before creating (to show calculated prices)
+ * Get all quotations
  */
-export const previewQuotation = async (data: QuotationRequest): Promise<QuotationPreviewResponse> => {
+export async function listQuotations(): Promise<QuotationResponse[]> {
+  console.log('📋 Fetching quotations list');
+  
   try {
-    // Auto-fill dealerId from profile if not provided
-    let requestData = { ...data };
-    if (!requestData.dealerId) {
-      try {
-        const profile = await getProfile();
-        requestData.dealerId = profile.dealerId;
-      } catch (error) {
-        console.warn('⚠️ Could not fetch dealerId from profile, continuing without it:', error);
-      }
-    }
-
-    const response = await apiClient.post('/quotations/preview', requestData);
+    const { data } = await api.get<ApiResponse<QuotationResponse[]>>('/api/quotations');
     
-    if (!response.ok) {
-      // Handle 401 specifically
-      if (response.status === 401) {
-        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      }
-      if (response.status === 403) {
-        throw new Error('Bạn không có quyền xem trước báo giá.');
-      }
-      
-      // Try to parse error message
-      try {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Lỗi ${response.status}: Không thể xem trước báo giá`);
-      } catch {
-        throw new Error(`Lỗi ${response.status}: Không thể xem trước báo giá`);
-      }
-    }
-    
-    return await response.json();
+    console.log('✅ Quotations fetched:', data);
+    return data.data;
   } catch (error: any) {
-    console.error('❌ Error previewing quotation:', error);
+    console.error('❌ List quotations error:', error.response?.data || error.message);
     throw error;
   }
-};
+}
 
 /**
- * Get all quotations (list)
- * GET /api/quotations
+ * Get quotation by ID
  */
-export const getAllQuotations = async (): Promise<QuotationResponseData[]> => {
+export async function getQuotation(id: number): Promise<QuotationResponse> {
+  console.log('🔍 Fetching quotation:', id);
+  
   try {
-    const response = await apiClient.get('/quotations');
+    const { data } = await api.get<ApiResponse<QuotationResponse>>(`/api/quotations/${id}`);
     
-    if (!response.ok) {
-      if (response.status === 403) {
-        console.warn('⚠️ 403 Forbidden - returning empty array');
-        return [];
-      }
-      if (response.status === 401) {
-        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      }
-      throw new Error(`Lỗi ${response.status}: Không thể tải danh sách báo giá`);
-    }
-    
-    const text = await response.text();
-    if (!text || text.trim() === '') {
-      console.warn('⚠️ Empty response');
-      return [];
-    }
-    
-    try {
-      const result: QuotationListApiResponse = JSON.parse(text);
-      
-      if (result.statusCode === 200 && Array.isArray(result.data)) {
-        return result.data;
-      }
-      
-      return [];
-    } catch (parseError) {
-      console.error('❌ Failed to parse JSON');
-      return [];
-    }
+    console.log('✅ Quotation fetched:', data);
+    return data.data;
   } catch (error: any) {
-    console.error('❌ Error fetching quotations:', error);
+    console.error('❌ Get quotation error:', error.response?.data || error.message);
     throw error;
   }
-};
+}
 
 /**
- * Get quotation by ID (for preview/detail view)
- * GET /api/quotations/{id}
+ * Map service IDs to boolean fields for API
  */
-export const getQuotationById = async (id: number): Promise<QuotationResponseData> => {
-  try {
-    const response = await apiClient.get(`/quotations/${id}`);
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      }
-      if (response.status === 403) {
-        throw new Error('Bạn không có quyền xem báo giá này.');
-      }
-      if (response.status === 404) {
-        throw new Error('Không tìm thấy báo giá.');
-      }
-      throw new Error(`Lỗi ${response.status}: Không thể tải báo giá`);
-    }
-    
-    const result: QuotationApiResponse = await response.json();
-    
-    if (result.statusCode === 200 && result.data) {
-      return result.data;
-    }
-    
-    throw new Error(result.message || 'Không thể tải báo giá');
-  } catch (error: any) {
-    console.error('❌ Error fetching quotation:', error);
-    throw error;
-  }
-};
+export function mapServicesToBoolean(serviceIds: string[]): QuotationCreateRequest['additionalServices'] {
+  return {
+    hasTintFilm: serviceIds.includes('tint-film'),
+    hasWallboxCharger: serviceIds.includes('wallbox-7kw'),
+    hasWarrantyExtension: serviceIds.includes('extended-warranty'),
+    hasPPF: serviceIds.includes('ppf-full'),
+    hasCeramicCoating: serviceIds.includes('ceramic-coating'),
+    has360Camera: serviceIds.includes('dashcam-360'),
+  };
+}

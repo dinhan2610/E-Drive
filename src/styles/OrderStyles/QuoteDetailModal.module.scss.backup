@@ -32,14 +32,14 @@
 // Modal Container
 .detailModal {
   background: white;
-  border-radius: 20px;
-  max-width: 750px;
+  border-radius: 24px;
+  max-width: 900px;
   width: 100%;
-  max-height: 88vh;
+  max-height: 90vh;
   overflow-y: auto;
   position: relative;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
-  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   @keyframes slideUp {
     from {
@@ -124,41 +124,41 @@
 // Modal Header
 .modalHeader {
   background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
-  padding: 2.5rem 2.5rem 2.5rem;
-  border-radius: 20px 20px 0 0;
+  padding: 3.5rem 3rem 3rem;
+  border-radius: 24px 24px 0 0;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2rem;
   position: relative;
 
   @include respond-to('md') {
-    padding: 2rem 1.5rem 2rem;
+    padding: 3rem 2rem 2.5rem;
     border-radius: 16px 16px 0 0;
   }
 }
 
 .headerIcon {
-  width: 56px;
-  height: 56px;
+  width: 70px;
+  height: 70px;
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
-  border-radius: 12px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 
   i {
-    font-size: 2.6rem;
+    font-size: 3.2rem;
     color: white;
   }
 
   @include respond-to('md') {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
 
     i {
-      font-size: 2.4rem;
+      font-size: 2.8rem;
     }
   }
 }
@@ -167,24 +167,24 @@
   flex: 1;
 
   h2 {
-    font-size: 2.2rem;
+    font-size: 2.8rem;
     font-weight: 700;
     color: white;
-    margin: 0 0 0.4rem;
+    margin: 0 0 0.5rem;
     font-family: $titles-font;
 
     @include respond-to('md') {
-      font-size: 2rem;
+      font-size: 2.2rem;
     }
   }
 
   p {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     color: rgba(255, 255, 255, 0.9);
     margin: 0;
 
     @include respond-to('md') {
-      font-size: 1.3rem;
+      font-size: 1.4rem;
     }
   }
 }
@@ -209,7 +209,7 @@
 
 // Modal Body
 .modalBody {
-  padding: 2.5rem;
+  padding: 3rem;
 
   @include respond-to('md') {
     padding: 2rem 1.5rem;
@@ -218,7 +218,7 @@
 
 // Section
 .section {
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
 
   &:last-child {
     margin-bottom: 0;
@@ -255,11 +255,11 @@
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  gap: 2rem;
 
   @include respond-to('md') {
     grid-template-columns: 1fr;
-    gap: 1.2rem;
+    gap: 1.5rem;
   }
 }
 
@@ -406,40 +406,40 @@
 
 // Modal Footer
 .modalFooter {
-  padding: 2rem 2.5rem;
+  padding: 2.5rem 3rem;
   background: #f8f9fa;
   border-top: 2px solid #e9ecef;
   display: flex;
-  gap: 1.2rem;
-  border-radius: 0 0 20px 20px;
+  gap: 1.5rem;
+  border-radius: 0 0 24px 24px;
 
   @include respond-to('md') {
-    padding: 1.8rem 1.5rem;
+    padding: 2rem 1.5rem;
     flex-direction: column;
     border-radius: 0 0 16px 16px;
   }
 
   button {
     flex: 1;
-    padding: 1.2rem 1.8rem;
+    padding: 1.4rem 2rem;
     border: none;
-    border-radius: 10px;
-    font-size: 1.5rem;
+    border-radius: 12px;
+    font-size: 1.6rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.8rem;
+    gap: 1rem;
 
     i {
-      font-size: 1.6rem;
+      font-size: 1.7rem;
     }
 
     @include respond-to('md') {
-      padding: 1.2rem 1.4rem;
-      font-size: 1.4rem;
+      padding: 1.3rem 1.5rem;
+      font-size: 1.5rem;
     }
   }
 }
@@ -472,336 +472,5 @@
 
   &:active {
     transform: scale(0.98);
-  }
-}
-
-// ==========================================
-// NEW CLASSES FOR ENHANCED MODAL
-// ==========================================
-
-// Quote Summary (Top stats)
-.quoteSummary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.2rem;
-  padding: 1.2rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 10px;
-  margin-bottom: 2rem;
-
-  @include respond-to('md') {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  > div {
-    text-align: center;
-  }
-
-  .label {
-    display: block;
-    font-size: 1.1rem;
-    color: #6c757d;
-    font-weight: 500;
-    margin-bottom: 0.3rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .value {
-    display: block;
-    font-size: 1.5rem;
-    color: #212529;
-    font-weight: 700;
-    font-family: $titles-font;
-  }
-
-  .quoteNumber .value {
-    color: #ff4d30;
-  }
-}
-
-// Section Header
-.sectionHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 1.2rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 2px solid #e9ecef;
-
-  i {
-    font-size: 1.8rem;
-    color: #ff4d30;
-  }
-
-  h3 {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #212529;
-    margin: 0;
-    font-family: $titles-font;
-  }
-}
-
-.sectionBody {
-  padding-left: 1rem;
-}
-
-// Info Item (re-styled)
-.infoItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: #e9ecef;
-    transform: translateY(-2px);
-  }
-
-  > i {
-    font-size: 1.6rem;
-    color: #ff4d30;
-    margin-top: 0.2rem;
-    flex-shrink: 0;
-  }
-
-  > div {
-    flex: 1;
-  }
-
-  .infoLabel {
-    display: block;
-    font-size: 1.1rem;
-    color: #6c757d;
-    font-weight: 500;
-    margin-bottom: 0.3rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .infoValue {
-    display: block;
-    font-size: 1.4rem;
-    color: #212529;
-    font-weight: 600;
-  }
-}
-
-// Vehicle Card (enhanced)
-.vehicleCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
-  color: white;
-  gap: 1.2rem;
-
-  @include respond-to('md') {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-.vehicleMain {
-  flex: 1;
-
-  h4 {
-    font-size: 1.7rem;
-    font-weight: 700;
-    margin: 0 0 1rem;
-    font-family: $titles-font;
-  }
-}
-
-.vehicleDetails {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-
-  @include respond-to('md') {
-    justify-content: center;
-  }
-
-  span {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    font-size: 1.5rem;
-    color: rgba(255, 255, 255, 0.9);
-  }
-}
-
-.vehiclePrice {
-  text-align: right;
-
-  @include respond-to('md') {
-    text-align: center;
-  }
-
-  .priceLabel {
-    display: block;
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 0.4rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .priceValue {
-    display: block;
-    font-size: 2rem;
-    font-weight: 700;
-    color: white;
-    font-family: $titles-font;
-  }
-}
-
-// Services Grid
-.servicesGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.2rem;
-
-  @include respond-to('md') {
-    grid-template-columns: 1fr;
-  }
-}
-
-.serviceItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.2rem;
-  background: #f8f9fa;
-  border-radius: 10px;
-  border-left: 3px solid #ff4d30;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: #e9ecef;
-    transform: translateX(4px);
-  }
-}
-
-.serviceInfo {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-
-  i {
-    font-size: 1.6rem;
-    color: #ff4d30;
-  }
-
-  span {
-    font-size: 1.3rem;
-    color: #212529;
-    font-weight: 600;
-  }
-}
-
-.servicePrice {
-  font-size: 1.4rem;
-  color: #ff4d30;
-  font-weight: 700;
-  font-family: $titles-font;
-}
-
-.noServices {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 2.5rem;
-  color: #6c757d;
-
-  i {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    color: #adb5bd;
-  }
-
-  span {
-    display: block;
-    font-size: 1.6rem;
-  }
-}
-
-// Price Breakdown
-.priceBreakdown {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 1.2rem;
-
-  .priceRow {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.8rem 0;
-    font-size: 1.4rem;
-    color: #495057;
-
-    &:not(:last-child) {
-      border-bottom: 1px solid #dee2e6;
-    }
-
-    span:last-child {
-      font-weight: 600;
-      font-family: $titles-font;
-    }
-
-    &.discount {
-      color: #28a745;
-
-      span:last-child {
-        color: #28a745;
-      }
-    }
-
-    &.total {
-      font-size: 1.6rem;
-      font-weight: 700;
-      padding-top: 1.2rem;
-      margin-top: 0.6rem;
-
-      span:last-child {
-        color: #ff4d30;
-        font-size: 2rem;
-      }
-    }
-
-    &.deposit {
-      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-      margin: 0.8rem -1.2rem 0;
-      padding: 1rem 1.2rem;
-      border-radius: 0 0 10px 10px;
-      color: #e65100;
-      font-weight: 600;
-
-      span:last-child {
-        color: #e65100;
-        font-size: 1.6rem;
-        font-weight: 700;
-      }
-    }
-  }
-}
-
-// Notes Box
-.notesBox {
-  background: #fff3cd;
-  border-left: 3px solid #ffc107;
-  padding: 1.2rem;
-  border-radius: 8px;
-
-  p {
-    font-size: 1.3rem;
-    color: #856404;
-    line-height: 1.8;
-    margin: 0;
   }
 }

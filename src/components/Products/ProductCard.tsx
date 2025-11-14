@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Product, ColorVariant } from '../../types/product';
 import { formatPrice } from '../../utils/productUtils';
 import { isLightColor, getBorderColor } from '../../utils/colorMapping';
+import { shouldShowQuoteButton } from '../../utils/roleUtils';
 import styles from '../../styles/ProductsStyles/ProductCard.module.scss';
 
 interface ProductCardProps {
@@ -211,6 +212,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             className={`${styles.button} ${styles.ghost}`}
             onClick={handleViewDetails}
           >
+            <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
             Chi tiết
           </button>
           <button 
@@ -219,7 +221,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onClick={handleContactDealer}
             disabled={!item.inStock}
           >
-            {item.inStock ? 'Đặt hàng' : 'Hết hàng'}
+            {item.inStock ? (
+              <>
+                <i className={shouldShowQuoteButton() ? "fas fa-file-invoice-dollar" : "fas fa-shopping-cart"} style={{ marginRight: '6px' }}></i>
+                {shouldShowQuoteButton() ? 'Báo giá' : 'Đặt hàng'}
+              </>
+            ) : (
+              <>
+                <i className="fas fa-times-circle" style={{ marginRight: '6px' }}></i>
+                Hết hàng
+              </>
+            )}
           </button>
         </div>
       </div>

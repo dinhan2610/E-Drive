@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import Logo from "../images/logo/logo.png";
 import AuthManager from "./AuthManager";
+import { canManagePromotions, canCreateOrder } from "../utils/roleUtils";
 import "../styles/NavbarStyles/_navbar.scss";
 
 interface NavLink {
@@ -99,26 +100,52 @@ const Navbar: React.FC = () => {
 
   
 
-  const navLinks: NavLink[] = [
-    { to: "/", label: "Trang chủ", className: "home-link" },
-    { to: "/products", label: "Mẫu xe", className: "products-link" },
-    
-    { 
-      to: "/customers", 
-      label: "Quản lý", 
+  // Build navigation links based on user role
+  const buildNavLinks = (): NavLink[] => {
+    const baseLinks: NavLink[] = [
+      { to: "/", label: "Trang chủ", className: "home-link" },
+      { to: "/products", label: "Mẫu xe", className: "products-link" }
+    ];
+
+    // Build dropdown items based on permissions
+    const dropdownItems: Array<{ to: string; label: string; icon: string }> = [
+      { to: "/customers", label: "Khách hàng", icon: "fa-users" },
+      { to: "/drive", label: "Quản lý lái thử", icon: "fa-car-side" },
+      { to: "/quotes", label: "Quản lý báo giá", icon: "fa-file-invoice-dollar" }
+    ];
+
+    // Only add Promotions if user has permission (admin/manager only, not staff)
+    if (canManagePromotions()) {
+      dropdownItems.push({ to: "/promotions", label: "Khuyến mãi", icon: "fa-tags" });
+    }
+
+    // Only add Orders if user has permission (admin/manager only, not staff)
+    if (canCreateOrder()) {
+      dropdownItems.push({ to: "/delivery-status", label: "Đơn hàng", icon: "fa-truck" });
+    }
+
+    // Add remaining items
+    dropdownItems.push(
+      { to: "/installment", label: "Trả góp", icon: "fa-credit-card" },
+      { to: "/feedback", label: "Phản hồi và xử lý khiếu nại", icon: "fa-comments" }
+    );
+
+    const managementLink: NavLink = {
+      to: "/customers",
+      label: "Quản lý",
       className: "customers-link dropdown-parent",
-      dropdown: [
-        { to: "/customers", label: "Khách hàng", icon: "fa-users" },
-        { to: "/drive", label: "Quản lý lái thử", icon: "fa-car-side" },
-        { to: "/promotions", label: "Khuyến mãi", icon: "fa-tags" },
-        { to: "/delivery-status", label: "Đơn hàng", icon: "fa-truck" },
-        { to: "/installment", label: "Trả góp", icon: "fa-credit-card" },
-        { to: "/feedback", label: "Phản hồi và xử lý khiếu nại", icon: "fa-comments" }
-      ]
-    },
-    { to: "/compare-slots", label: "So sánh xe", className: "compare-link" },
-    { to: "/contact", label: "Liên hệ", className: "contact-link" }
-  ];
+      dropdown: dropdownItems
+    };
+
+    return [
+      ...baseLinks,
+      managementLink,
+      { to: "/compare-slots", label: "So sánh xe", className: "compare-link" },
+      { to: "/contact", label: "Liên hệ", className: "contact-link" }
+    ];
+  };
+
+  const navLinks = buildNavLinks();
 
   return (
     <nav className="nav-wrapper">

@@ -1,10 +1,79 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllQuotations, getQuotationById, type QuotationResponseData } from '../services/quotationApi';
-import styles from '../styles/OrderStyles/QuoteListPage.module.scss';
-import modalStyles from '../styles/OrderStyles/QuoteDetailModal.module.scss';
+import { listQuotations, getQuotation, type QuotationResponse } from '../services/quotationApi';
+import { getProfile } from '../services/profileApi';
+import styles from '../styles/OrderStyles/QuoteManagement.module.scss';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import ReactDOM from 'react-dom/client';
+import QuotePDFTemplate from '../components/QuotePDFTemplate';
+
+// ==========================================
+// INTERFACES - Đầy đủ cho PDF & Modal
+// ==========================================
+
+/**
+ * Interface mở rộng chứa TẤT CẢ thông tin cần thiết
+ * Kế thừa từ QuotationResponse và bổ sung các field từ Vehicle, Customer, Pricing
+ */
+export interface QuotationDetailData extends QuotationResponse {
+  // Thông tin báo giá
+  quotationNumber?: string;
+  quotationDate?: string;
+  status?: 'pending' | 'sent' | 'accepted' | 'rejected';
+  validUntil?: string;
+  
+  // Thông tin khách hàng
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  customerCity?: string;
+  
+  // Thông tin xe
+  vehicleName?: string;        // VF 5 Plus
+  vehicleModel?: string;        // VF 5
+  vehicleVersion?: string;      // Plus
+  vehicleColor?: string;
+  vehicleYear?: number;
+  
+  // Giá cơ bản
+  basePrice?: number;           // Giá niêm yết
+  quantity?: number;            // Số lượng
+  subtotal?: number;            // Tổng giá xe (basePrice * quantity)
+  
+  // Dịch vụ bổ sung
+  tintFilmPrice?: number;
+  wallboxChargerPrice?: number;
+  warrantyExtensionPrice?: number;
+  ppfPrice?: number;
+  ceramicCoatingPrice?: number;
+  camera360Price?: number;
+  servicesTotal?: number;       // Tổng dịch vụ
+  
+  // Khuyến mãi & Thuế
+  promotionName?: string;
+  promotionDiscount?: number;   // Số tiền giảm
+  discountPercent?: number;     // % giảm giá
+  
+  taxableAmount?: number;       // Số tiền chịu thuế
+  vatRate?: number;             // Thuế VAT %
+  vatAmount?: number | null;    // Số tiền VAT (có thể null từ API)
+  
+  // Tổng kết
+  grandTotal?: number;          // TỔNG CỘNG
+  depositRequired?: number;     // Tiền đặt cọc
+  
+  // Ghi chú
+  notes?: string;
+  termsAndConditions?: string;
+  
+  // Thông tin đại lý
+  dealerName?: string;
+  dealerAddress?: string;
+  dealerPhone?: string;
+  dealerEmail?: string;
+}
 
 interface Quote {
   id: string;
@@ -23,11 +92,42 @@ const QuoteListPage: React.FC = () => {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [selectedQuote, setSelectedQuote] = useState<QuotationResponseData | null>(null);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
+
+  // Get dealer info from profile API
+  useEffect(() => {
+    const fetchDealerInfo = async () => {
+      try {
+        console.log('🔍 Fetching dealer info from /api/profile/me...');
+        const profile = await getProfile();
+        console.log('✅ Profile data:', profile);
+        console.log('🏢 Dealer ID from profile:', profile.dealerId);
+        
+        setDealerInfo({
+          id: profile.dealerId,
+          name: profile.agencyName || `Đại lý #${profile.dealerId}`
+        });
+      } catch (error) {
+        console.error('❌ Failed to fetch profile:', error);
+        // Fallback to token if profile fails
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const dealerId = payload.dealerId || payload.dealer_id || 1;
+            setDealerInfo({ id: dealerId, name: `Đại lý #${dealerId}` });
+          } catch {
+            setDealerInfo({ id: 1, name: 'Đại lý #1' });
+          }
+        } else {
+          setDealerInfo({ id: 1, name: 'Đại lý #1' });
+        }
+      }
+    };
+    
+    fetchDealerInfo();
+  }, []);
 
   useEffect(() => {
     // Check if user is logged in
@@ -50,7 +150,7 @@ const QuoteListPage: React.FC = () => {
     setErrorMessage('');
     
     try {
-      const quotations = await getAllQuotations();
+      const quotations = await listQuotations();
       
       // Check if empty (user might not have permission or no quotes yet)
       if (quotations.length === 0) {
@@ -61,14 +161,15 @@ const QuoteListPage: React.FC = () => {
       }
       
       // Map API response to local Quote interface
-      const mappedQuotes: Quote[] = quotations.map((q: QuotationResponseData) => ({
+      // Note: New API has minimal fields, so we use fallback values
+      const mappedQuotes: Quote[] = quotations.map((q: QuotationResponse) => ({
         id: String(q.quotationId),
         quoteNumber: `BG-${q.quotationId}`,
-        date: new Date().toISOString().split('T')[0], // Since createdAt is not in API response
-        customerName: q.customerFullName,
-        productName: q.vehicleModel || 'Xe điện E-Drive',
+        date: q.createdAt ? new Date(q.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        customerName: `Khách hàng #${q.customerId}`, // API doesn't return customer name
+        productName: `Xe #${q.vehicleId}`, // API doesn't return vehicle name
         productVariant: '',
-        totalPrice: q.grandTotal || 0,
+        totalPrice: 0, // API doesn't return price
         quantity: 1,
         status: 'pending' // Default status since it's not in API response
       }));
@@ -86,7 +187,10 @@ const QuoteListPage: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined | null): string => {
+    if (price === undefined || price === null || isNaN(price)) {
+      return '0 ₫';
+    }
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'
@@ -110,43 +214,325 @@ const QuoteListPage: React.FC = () => {
 
   const filteredQuotes = quotes.filter(quote => {
     const matchesStatus = filterStatus === 'all' || quote.status === filterStatus;
-    const matchesSearch = quote.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quote.quoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quote.productName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+    return matchesStatus;
   });
 
-  const handleViewQuote = async (quoteId: string) => {
-    setIsLoadingDetail(true);
-    setShowDetailModal(true);
+  /**
+   * Enrich API data với thông tin đầy đủ
+   * TODO: Khi backend cung cấp đủ data, bỏ phần mock này
+   */
+  const enrichQuotationData = async (baseData: QuotationResponse): Promise<QuotationDetailData> => {
+    // TODO: Gọi API để lấy thêm thông tin Vehicle và Customer
+    // const vehicle = await getVehicle(baseData.vehicleId);
+    // const customer = await getCustomer(baseData.customerId);
     
+    // Tạm thời mock data để UI hoạt động
+    const enriched: QuotationDetailData = {
+      ...baseData,
+      
+      // Thông tin báo giá
+      quotationNumber: `BG-${String(baseData.quotationId).padStart(6, '0')}`,
+      quotationDate: baseData.createdAt || new Date().toISOString(),
+      status: 'pending',
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      
+      // Mock thông tin khách hàng
+      customerName: 'Nguyễn Văn An',
+      customerPhone: '0901234567',
+      customerEmail: 'nguyenvanan@email.com',
+      customerAddress: '123 Đường Lê Lợi, Phường Bến Nghé',
+      customerCity: 'TP. Hồ Chí Minh',
+      
+      // Mock thông tin xe
+      vehicleName: 'VinFast VF 5 Plus',
+      vehicleModel: 'VF 5',
+      vehicleVersion: 'Plus',
+      vehicleColor: 'Xanh Đại Dương',
+      vehicleYear: 2024,
+      
+      // Giá cơ bản
+      basePrice: 468000000,
+      quantity: 1,
+      subtotal: 468000000,
+      
+      // Dịch vụ bổ sung (tính theo additionalServices)
+      tintFilmPrice: baseData.additionalServices.hasTintFilm ? 5000000 : 0,
+      wallboxChargerPrice: baseData.additionalServices.hasWallboxCharger ? 15000000 : 0,
+      warrantyExtensionPrice: baseData.additionalServices.hasWarrantyExtension ? 20000000 : 0,
+      ppfPrice: baseData.additionalServices.hasPPF ? 35000000 : 0,
+      ceramicCoatingPrice: baseData.additionalServices.hasCeramicCoating ? 12000000 : 0,
+      camera360Price: baseData.additionalServices.has360Camera ? 8000000 : 0,
+      
+      // Khuyến mãi
+      promotionName: 'Khuyến mãi mua xe tháng 11',
+      promotionDiscount: 10000000,
+      discountPercent: 2.1,
+      
+      // Thuế
+      vatRate: 10,
+    };
+    
+    // Tính tổng dịch vụ
+    enriched.servicesTotal = (
+      (enriched.tintFilmPrice || 0) +
+      (enriched.wallboxChargerPrice || 0) +
+      (enriched.warrantyExtensionPrice || 0) +
+      (enriched.ppfPrice || 0) +
+      (enriched.ceramicCoatingPrice || 0) +
+      (enriched.camera360Price || 0)
+    );
+    
+    // Tính số tiền chịu thuế
+    enriched.taxableAmount = (
+      (enriched.subtotal || 0) + 
+      (enriched.servicesTotal || 0) - 
+      (enriched.promotionDiscount || 0)
+    );
+    
+    // Tính VAT
+    enriched.vatAmount = Math.round((enriched.taxableAmount || 0) * (enriched.vatRate || 0) / 100);
+    
+    // Tính tổng cộng
+    enriched.grandTotal = (enriched.taxableAmount || 0) + (enriched.vatAmount || 0);
+    
+    // Tiền đặt cọc (10%)
+    enriched.depositRequired = Math.round((enriched.grandTotal || 0) * 0.1);
+    
+    // Ghi chú
+    enriched.notes = 'Giá chưa bao gồm chi phí đăng ký và bảo hiểm xe. Vui lòng liên hệ để được tư vấn chi tiết.';
+    enriched.termsAndConditions = 'Báo giá có hiệu lực trong 30 ngày kể từ ngày phát hành.';
+    
+    // Thông tin đại lý
+    enriched.dealerName = dealerInfo?.name || 'VinFast E-Drive';
+    enriched.dealerAddress = '458 Minh Khai, Hai Bà Trưng, Hà Nội';
+    enriched.dealerPhone = '1900 23 23 89';
+    enriched.dealerEmail = 'contact@vinfastedrive.vn';
+    
+    return enriched;
+  };
+
+  // Handler: Send email to customer
+  const handleSendEmail = async (quoteId: string) => {
     try {
-      const detail = await getQuotationById(Number(quoteId));
-      setSelectedQuote(detail);
+      // TODO: Implement send email functionality
+      // This could generate PDF and send via email API
+      const baseData = await getQuotation(Number(quoteId));
+      const enrichedData = await enrichQuotationData(baseData);
+      
+      // For now, just show success message
+      alert(`✉️ Gửi báo giá #${enrichedData.quotationNumber} đến ${enrichedData.customerEmail || enrichedData.customerName}`);
+      
+      // TODO: Call email API
+      // await sendQuotationEmail(quoteId, enrichedData.customerEmail);
     } catch (error: any) {
-      console.error('❌ Error loading quote detail:', error);
-      alert(error.message || 'Không thể tải chi tiết báo giá');
-      setShowDetailModal(false);
-    } finally {
-      setIsLoadingDetail(false);
+      console.error('❌ Error sending email:', error);
+      alert('Không thể gửi email. Vui lòng thử lại.');
     }
   };
 
-  const closeDetailModal = () => {
-    setShowDetailModal(false);
-    setSelectedQuote(null);
+  // Helper function - will be needed when PDF generation is updated
+  // const removeVietnameseAccents = (str: string): string => {
+  //   return str
+  //     .normalize('NFD')
+  //     .replace(/[\u0300-\u036f]/g, '')
+  //     .replace(/đ/g, 'd')
+  //     .replace(/Đ/g, 'D');
+  // };
+
+  /**
+   * Generate multi-page PDF từ HTML sử dụng html2canvas
+   * Tối ưu: Gọi API /api/quotations/{id} để lấy dữ liệu đầy đủ và chính xác nhất
+   */
+  const generatePDF = async (quoteData: QuotationDetailData) => {
+    try {
+      console.log('🔄 Fetching latest quotation data from API...');
+      
+      // Gọi API để lấy dữ liệu chi tiết mới nhất
+      const latestData = await getQuotation(quoteData.quotationId);
+      console.log('✅ Latest quotation data:', latestData);
+      
+      // Map dữ liệu từ API sang QuotationDetailData
+      const pdfData: QuotationDetailData = {
+        ...latestData,
+        quotationNumber: `QUOTE-${latestData.quotationId}`,
+        quotationDate: latestData.createdAt,
+        status: latestData.quotationStatus?.toLowerCase() as any || 'pending',
+        validUntil: latestData.createdAt ? new Date(new Date(latestData.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+        
+        // Customer info
+        customerName: latestData.customerFullName,
+        customerPhone: latestData.customerPhone,
+        customerEmail: latestData.customerEmail,
+        customerAddress: latestData.customerAddress,
+        
+        // Vehicle info
+        vehicleName: `${latestData.modelName} ${latestData.version}`,
+        vehicleModel: latestData.modelName,
+        vehicleVersion: latestData.version,
+        vehicleYear: latestData.manufactureYear,
+        
+        // Pricing
+        basePrice: latestData.unitPrice,
+        quantity: 1,
+        subtotal: latestData.unitPrice,
+        
+        // Services
+        tintFilmPrice: latestData.additionalServices.hasTintFilm ? latestData.additionalServices.tintFilmPrice : 0,
+        wallboxChargerPrice: latestData.additionalServices.hasWallboxCharger ? latestData.additionalServices.wallboxChargerPrice : 0,
+        warrantyExtensionPrice: latestData.additionalServices.hasWarrantyExtension ? latestData.additionalServices.warrantyExtensionPrice : 0,
+        ppfPrice: latestData.additionalServices.hasPPF ? latestData.additionalServices.ppfPrice : 0,
+        ceramicCoatingPrice: latestData.additionalServices.hasCeramicCoating ? latestData.additionalServices.ceramicCoatingPrice : 0,
+        camera360Price: latestData.additionalServices.has360Camera ? latestData.additionalServices.camera360Price : 0,
+        servicesTotal: latestData.additionalServices.totalServicesPrice || 0,
+        
+        // Discount & Total
+        promotionDiscount: latestData.promotionDiscountAmount || 0,
+        promotionName: latestData.promotionDiscountAmount ? 'Khuyến mãi' : undefined,
+        discountPercent: undefined, // API không trả về %
+        
+        // VAT calculation
+        taxableAmount: latestData.grandTotal ? latestData.grandTotal / 1.1 : 0,
+        vatRate: 10,
+        vatAmount: latestData.vatAmount || (latestData.grandTotal ? latestData.grandTotal - (latestData.grandTotal / 1.1) : 0),
+        grandTotal: latestData.grandTotal,
+        depositRequired: latestData.grandTotal ? latestData.grandTotal * 0.1 : 0,
+        
+        // Dealer info
+        dealerName: latestData.dealerName,
+        dealerPhone: '1900 23 23 89',
+        dealerEmail: 'contact@vinfastedrive.vn',
+        dealerAddress: '458 Minh Khai, Hai Bà Trưng, Hà Nội',
+      };
+      
+      console.log('📝 Starting multi-page PDF generation with html2canvas...');
+      
+      // Tạo container ẩn cho PDF template
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      document.body.appendChild(tempDiv);
+      
+      // Render React component vào container
+      const root = ReactDOM.createRoot(tempDiv);
+      root.render(<QuotePDFTemplate data={pdfData} />);
+      
+      // Đợi 500ms để component render xong
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const pdfElement = document.getElementById('pdf-content');
+      if (!pdfElement) {
+        throw new Error('Không tìm thấy PDF template element');
+      }
+      
+      console.log('📸 Capturing PDF content as image...');
+      
+      // Capture HTML thành canvas với chất lượng cao
+      const canvas = await html2canvas(pdfElement, {
+        scale: 2, // Tăng độ phân giải gấp đôi
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794, // Chiều rộng A4 (210mm) tại 96 DPI
+      });
+      
+      console.log('📝 Creating multi-page PDF from canvas...');
+      
+      // Tạo PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Kích thước A4: 210mm x 297mm
+      const pageWidth = 210;
+      const pageHeight = 297;
+      
+      // Tính toán kích thước ảnh
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      
+      // Tính số trang cần thiết
+      const totalPages = Math.ceil(imgHeight / pageHeight);
+      
+      console.log(`📄 Content height: ${imgHeight.toFixed(2)}mm, splitting into ${totalPages} page(s)`);
+      
+      // Chia canvas thành nhiều trang
+      for (let i = 0; i < totalPages; i++) {
+        // Thêm trang mới (trừ trang đầu tiên)
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        // Tạo canvas tạm cho từng trang
+        const pageCanvas = document.createElement('canvas');
+        const pageCtx = pageCanvas.getContext('2d');
+        
+        if (!pageCtx) continue;
+        
+        // Tính kích thước canvas cho trang này
+        const scale = canvas.width / imgWidth;
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.min(pageHeight * scale, canvas.height - i * pageHeight * scale);
+        
+        // Vẽ phần canvas tương ứng với trang này
+        pageCtx.drawImage(
+          canvas,
+          0, // sourceX
+          i * pageHeight * scale, // sourceY
+          canvas.width, // sourceWidth
+          pageCanvas.height, // sourceHeight
+          0, // destX
+          0, // destY
+          canvas.width, // destWidth
+          pageCanvas.height // destHeight
+        );
+        
+        // Convert sang image data và thêm vào PDF
+        const pageImgData = pageCanvas.toDataURL('image/png');
+        const actualHeight = Math.min(pageHeight, imgHeight - i * pageHeight);
+        
+        pdf.addImage(pageImgData, 'PNG', 0, 0, imgWidth, actualHeight);
+        
+        console.log(`✅ Added page ${i + 1}/${totalPages}`);
+      }
+      
+      // Xóa container tạm
+      document.body.removeChild(tempDiv);
+      
+      // Tạo tên file
+      const fileName = `BaoGia_${pdfData.quotationNumber}_${pdfData.customerName?.replace(/\s+/g, '_') || 'KhachHang'}.pdf`;
+      
+      console.log(`✅ Multi-page PDF generated successfully: ${fileName} (${totalPages} page(s))`);
+      pdf.save(fileName);
+      
+    } catch (error) {
+      console.error('❌ Error generating PDF:', error);
+      alert('Có lỗi xảy ra khi tạo file PDF. Vui lòng thử lại.');
+    }
   };
 
-  // Helper function to remove Vietnamese accents for PDF
-  const removeVietnameseAccents = (str: string): string => {
-    return str
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'D');
+  const handleDownloadPDF = async (quoteId: string) => {
+    try {
+      // Fetch full quote details first
+      const baseData = await getQuotation(Number(quoteId));
+      const enrichedData = await enrichQuotationData(baseData);
+      await generatePDF(enrichedData);
+    } catch (error: any) {
+      console.error('❌ Error downloading PDF:', error);
+      alert(error.message || 'Không thể tải PDF. Vui lòng thử lại.');
+    }
   };
 
-  const generatePDF = async (quoteData: QuotationResponseData) => {
+  /* OLD PDF CODE - Commented out because API structure changed
+  const generatePDF_OLD = async (quoteData: QuotationResponse) => {
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
     try {
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -340,420 +726,172 @@ const QuoteListPage: React.FC = () => {
       alert('Có lỗi xảy ra khi tạo file PDF. Vui lòng thử lại.');
     }
   };
-
-  const handleDownloadPDF = async (quoteId: string) => {
-    try {
-      // Fetch full quote details first
-      const quoteDetail = await getQuotationById(Number(quoteId));
-      await generatePDF(quoteDetail);
-    } catch (error: any) {
-      console.error('❌ Error downloading PDF:', error);
-      alert(error.message || 'Không thể tải PDF. Vui lòng thử lại.');
-    }
-  };
+  */ // End of OLD PDF CODE
 
   return (
     <>
-      <div className={styles.wrap}>
+      <div className={styles.pageWrapper}>
         <div className={styles.container}>
           <div className={styles.header}>
-            <div className={styles.headerLeft}>
-              <button 
-                className={styles.backButton}
-                onClick={() => navigate('/quote')}
-              >
-                <i className="fas fa-arrow-left"></i>
-                Quay lại
-              </button>
-              <div className={styles.headerContent}>
-                <h1>
-                  <i className="fas fa-file-invoice"></i>
-                  Danh sách báo giá
-                </h1>
-                <p>Quản lý và theo dõi các báo giá đã tạo</p>
+            <div className={styles.headerContent}>
+              <div className={styles.headerIcon}>
+                <i className="fas fa-file-invoice-dollar"></i>
               </div>
+              <div className={styles.headerText}>
+                <h1>Quản lý báo giá xe điện</h1>
+                <p>
+                  Theo dõi và quản lý toàn bộ báo giá cho khách hàng
+                  {dealerInfo && (
+                    <span className={styles.dealerBadge}>
+                      <i className="fas fa-store"></i>
+                      Đại lý #{dealerInfo.id}
+                      {dealerInfo.name && ` - ${dealerInfo.name}`}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button 
+                className={styles.createButton}
+                onClick={() => navigate('/quotes/create')}
+                title="Tạo báo giá mới"
+              >
+                <i className="fas fa-plus-circle"></i>
+                <span>Tạo báo giá mới</span>
+              </button>
             </div>
-            <button 
-              className={styles.createButton}
-              onClick={() => navigate('/quotes/create')}
-            >
-              <i className="fas fa-plus-circle"></i>
-              Tạo báo giá mới
-            </button>
           </div>
 
-          {/* Error Banner - Show if no token */}
-          {errorMessage && (
-            <div className={styles.errorBanner}>
-              <i className="fas fa-exclamation-triangle"></i>
-              <span>{errorMessage}</span>
+          <div className={styles.filterSection}>
+            <div className={styles.filterButtons}>
               <button 
-                className={styles.loginButton}
-                onClick={() => {
-                  // Clear old session data
-                  localStorage.clear();
-                  // Redirect to home (where login form is)
-                  navigate('/');
-                }}
+                className={`${styles.filterButton} ${filterStatus === 'all' ? styles.active : ''}`}
+                onClick={() => setFilterStatus('all')}
               >
+                Tất cả ({quotes.length})
+              </button>
+              <button 
+                className={`${styles.filterButton} ${filterStatus === 'pending' ? styles.active : ''}`}
+                onClick={() => setFilterStatus('pending')}
+              >
+                Chờ gửi ({quotes.filter(q => q.status === 'pending').length})
+              </button>
+              <button 
+                className={`${styles.filterButton} ${filterStatus === 'sent' ? styles.active : ''}`}
+                onClick={() => setFilterStatus('sent')}
+              >
+                Đã gửi ({quotes.filter(q => q.status === 'sent').length})
+              </button>
+              <button 
+                className={`${styles.filterButton} ${filterStatus === 'accepted' ? styles.active : ''}`}
+                onClick={() => setFilterStatus('accepted')}
+              >
+                Đã chấp nhận ({quotes.filter(q => q.status === 'accepted').length})
+              </button>
+              <button 
+                className={`${styles.filterButton} ${filterStatus === 'rejected' ? styles.active : ''}`}
+                onClick={() => setFilterStatus('rejected')}
+              >
+                Đã từ chối ({quotes.filter(q => q.status === 'rejected').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Error State */}
+          {errorMessage ? (
+            <div className={styles.errorState}>
+              <i className="fas fa-exclamation-triangle"></i>
+              <h3>Không thể tải dữ liệu</h3>
+              <p>{errorMessage}</p>
+              <button onClick={() => {
+                localStorage.clear();
+                navigate('/');
+              }}>
                 <i className="fas fa-sign-in-alt"></i>
-                Đăng nhập ngay
+                Đăng nhập lại
               </button>
             </div>
-          )}
-
-          {/* Filters */}
-          <div className={styles.filters}>
-            <div className={styles.searchBox}>
-              <i className="fas fa-search"></i>
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo tên khách hàng, số báo giá, sản phẩm..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className={styles.statusFilter}>
-              <label>Trạng thái:</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                <option value="all">Tất cả</option>
-                <option value="pending">Chờ gửi</option>
-                <option value="sent">Đã gửi</option>
-                <option value="accepted">Đã chấp nhận</option>
-                <option value="rejected">Đã từ chối</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Error Message */}
-          {errorMessage && (
-            <div className={styles.errorBanner}>
-              <i className="fas fa-exclamation-triangle"></i>
-              <div>
-                <strong>Lỗi tải dữ liệu</strong>
-                <p>{errorMessage}</p>
-              </div>
-              <button onClick={loadQuotes} className={styles.retryButton}>
-                <i className="fas fa-sync-alt"></i>
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {/* Stats */}
-          <div className={styles.stats}>
-            <div className={styles.statCard}>
-              <i className="fas fa-file-alt"></i>
-              <div>
-                <h3>{quotes.length}</h3>
-                <p>Tổng báo giá</p>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <i className="fas fa-paper-plane"></i>
-              <div>
-                <h3>{quotes.filter(q => q.status === 'sent').length}</h3>
-                <p>Đã gửi</p>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <i className="fas fa-check-circle"></i>
-              <div>
-                <h3>{quotes.filter(q => q.status === 'accepted').length}</h3>
-                <p>Đã chấp nhận</p>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <i className="fas fa-clock"></i>
-              <div>
-                <h3>{quotes.filter(q => q.status === 'pending').length}</h3>
-                <p>Chờ xử lý</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quote List */}
-          {isLoading ? (
+          ) : isLoading ? (
             <div className={styles.loading}>
               <i className="fas fa-spinner fa-spin"></i>
-              <p>Đang tải dữ liệu...</p>
-            </div>
-          ) : filteredQuotes.length === 0 ? (
-            <div className={styles.empty}>
-              <i className="fas fa-inbox"></i>
-              <h3>Không tìm thấy báo giá</h3>
-              <p>
-                {searchTerm || filterStatus !== 'all'
-                  ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
-                  : quotes.length === 0 
-                    ? 'Bạn chưa tạo báo giá nào. Hãy tạo báo giá đầu tiên!'
-                    : 'Chưa có báo giá nào phù hợp với bộ lọc'}
-              </p>
-              {quotes.length === 0 && (
-                <button 
-                  className={styles.createButton}
-                  onClick={() => navigate('/quote')}
-                >
-                  <i className="fas fa-plus"></i>
-                  Tạo báo giá mới
-                </button>
-              )}
+              <p>Đang tải...</p>
             </div>
           ) : (
-            <div className={styles.quoteGrid}>
-              {filteredQuotes.map((quote) => (
-                <div key={quote.id} className={styles.quoteCard}>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.quoteNumber}>
-                      <i className="fas fa-hashtag"></i>
-                      {quote.quoteNumber}
-                    </div>
-                    {getStatusBadge(quote.status)}
-                  </div>
-
-                  <div className={styles.cardBody}>
-                    <div className={styles.infoRow}>
-                      <i className="fas fa-user"></i>
-                      <div>
-                        <span className={styles.label}>Khách hàng</span>
-                        <span className={styles.value}>{quote.customerName}</span>
-                      </div>
-                    </div>
-
-                    <div className={styles.infoRow}>
-                      <i className="fas fa-car"></i>
-                      <div>
-                        <span className={styles.label}>Sản phẩm</span>
-                        <span className={styles.value}>
-                          {quote.productName} - {quote.productVariant}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className={styles.infoRow}>
-                      <i className="fas fa-boxes"></i>
-                      <div>
-                        <span className={styles.label}>Số lượng</span>
-                        <span className={styles.value}>{quote.quantity} xe</span>
-                      </div>
-                    </div>
-
-                    <div className={styles.infoRow}>
-                      <i className="fas fa-calendar-alt"></i>
-                      <div>
-                        <span className={styles.label}>Ngày tạo</span>
-                        <span className={styles.value}>{formatDate(quote.date)}</span>
-                      </div>
-                    </div>
-
-                    <div className={styles.priceRow}>
-                      <span>Tổng giá trị</span>
-                      <span className={styles.price}>{formatPrice(quote.totalPrice)}</span>
-                    </div>
-                  </div>
-
-                  <div className={styles.cardFooter}>
-                    <button 
-                      className={styles.viewButton}
-                      onClick={() => handleViewQuote(quote.id)}
-                    >
-                      <i className="fas fa-eye"></i>
-                      Xem chi tiết
-                    </button>
-                    <button 
-                      className={styles.downloadButton}
-                      onClick={() => handleDownloadPDF(quote.id)}
-                    >
-                      <i className="fas fa-download"></i>
-                      Tải PDF
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className={styles.tableContainer}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Khách hàng</th>
+                    <th>Xe</th>
+                    <th>Ngày tạo</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredQuotes.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className={styles.emptyState}>
+                        <i className="fas fa-inbox"></i>
+                        <p>Không có dữ liệu</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredQuotes.map((quote) => (
+                      <tr key={quote.id}>
+                        <td>#{quote.quoteNumber}</td>
+                        <td>
+                          <div className={styles.customerInfo}>
+                            <div className={styles.customerName}>{quote.customerName}</div>
+                            <div className={styles.customerPhone}>
+                              <i className="fas fa-phone"></i>
+                              ID: {quote.id}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className={styles.vehicleInfo}>
+                            <div className={styles.vehicleName}>{quote.productName}</div>
+                            {quote.productVariant && (
+                              <div className={styles.vehiclePrice}>{quote.productVariant}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className={styles.dateInfo}>
+                            <div className={styles.date}>{formatDate(quote.date)}</div>
+                          </div>
+                        </td>
+                        <td>
+                          {getStatusBadge(quote.status)}
+                        </td>
+                        <td>
+                          <div className={styles.actions}>
+                            <button 
+                              className={`${styles.actionButton} ${styles.download}`}
+                              title="Tải PDF"
+                              onClick={() => handleDownloadPDF(quote.id)}
+                            >
+                              <i className="fas fa-download"></i>
+                            </button>
+                            <button 
+                              className={`${styles.actionButton} ${styles.email}`}
+                              title="Gửi email cho khách hàng"
+                              onClick={() => handleSendEmail(quote.id)}
+                            >
+                              <i className="fas fa-envelope"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       </div>
-
-      {/* Quote Detail Modal */}
-      {showDetailModal && (
-        <div className={modalStyles.modalOverlay} onClick={closeDetailModal}>
-          <div className={modalStyles.detailModal} onClick={(e) => e.stopPropagation()}>
-            <button className={modalStyles.closeButton} onClick={closeDetailModal}>
-              <i className="fas fa-times"></i>
-            </button>
-
-            {isLoadingDetail ? (
-              <div className={modalStyles.loading}>
-                <i className="fas fa-spinner fa-spin"></i>
-                <p>Đang tải chi tiết báo giá...</p>
-              </div>
-            ) : selectedQuote ? (
-              <>
-                <div className={modalStyles.modalHeader}>
-                  <div className={modalStyles.headerIcon}>
-                    <i className="fas fa-file-invoice-dollar"></i>
-                  </div>
-                  <div className={modalStyles.headerContent}>
-                    <h2>Chi tiết báo giá #{selectedQuote.quotationId}</h2>
-                    <p>Thông tin đầy đủ về báo giá</p>
-                  </div>
-                </div>
-
-                <div className={modalStyles.modalBody}>
-                  {/* Customer Info */}
-                  <section className={modalStyles.section}>
-                    <div className={modalStyles.sectionTitle}>
-                      <i className="fas fa-user-tie"></i>
-                      <h3>Thông tin khách hàng</h3>
-                    </div>
-                    <div className={modalStyles.infoGrid}>
-                      <div className={modalStyles.infoItem}>
-                        <span className={modalStyles.label}>Họ tên:</span>
-                        <span className={modalStyles.value}>{selectedQuote.customerFullName}</span>
-                      </div>
-                      <div className={modalStyles.infoItem}>
-                        <span className={modalStyles.label}>Số điện thoại:</span>
-                        <span className={modalStyles.value}>{selectedQuote.phone}</span>
-                      </div>
-                      <div className={modalStyles.infoItem}>
-                        <span className={modalStyles.label}>Email:</span>
-                        <span className={modalStyles.value}>{selectedQuote.email}</span>
-                      </div>
-                      <div className={modalStyles.infoItem}>
-                        <span className={modalStyles.label}>Địa chỉ:</span>
-                        <span className={modalStyles.value}>
-                          {selectedQuote.fullAddress}
-                        </span>
-                      </div>
-                      {selectedQuote.notes && (
-                        <div className={`${modalStyles.infoItem} ${modalStyles.fullWidth}`}>
-                          <span className={modalStyles.label}>Ghi chú:</span>
-                          <span className={modalStyles.value}>{selectedQuote.notes}</span>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-
-                  {/* Vehicle Info */}
-                  <section className={modalStyles.section}>
-                    <div className={modalStyles.sectionTitle}>
-                      <i className="fas fa-car"></i>
-                      <h3>Thông tin xe</h3>
-                    </div>
-                    <div className={modalStyles.vehicleCard}>
-                      <div className={modalStyles.vehicleInfo}>
-                        <h4>{selectedQuote.vehicleModel}</h4>
-                        <p className={modalStyles.vehiclePrice}>
-                          Đơn giá: {formatPrice(selectedQuote.unitPrice)}
-                        </p>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Pricing Breakdown */}
-                  <section className={modalStyles.section}>
-                    <div className={modalStyles.sectionTitle}>
-                      <i className="fas fa-calculator"></i>
-                      <h3>Chi tiết giá</h3>
-                    </div>
-                    <div className={modalStyles.pricingTable}>
-                      <div className={modalStyles.priceRow}>
-                        <span>Giá xe (đơn giá)</span>
-                        <span className={modalStyles.amount}>{formatPrice(selectedQuote.unitPrice)}</span>
-                      </div>
-                      
-                      <div className={modalStyles.priceRow}>
-                        <span>Tổng giá trị xe</span>
-                        <span className={modalStyles.amount}>{formatPrice(selectedQuote.vehicleSubtotal)}</span>
-                      </div>
-                      
-                      {selectedQuote.includeInsurancePercent && (
-                        <div className={modalStyles.priceRow}>
-                          <span>
-                            <i className="fas fa-shield-alt"></i>
-                            Bảo hiểm
-                          </span>
-                          <span className={modalStyles.amount}>Đã bao gồm</span>
-                        </div>
-                      )}
-                      
-                      {selectedQuote.includeWarrantyExtension && (
-                        <div className={modalStyles.priceRow}>
-                          <span>
-                            <i className="fas fa-tools"></i>
-                            Bảo hành mở rộng
-                          </span>
-                          <span className={modalStyles.amount}>Đã bao gồm</span>
-                        </div>
-                      )}
-                      
-                      {selectedQuote.includeAccessories && (
-                        <div className={modalStyles.priceRow}>
-                          <span>
-                            <i className="fas fa-puzzle-piece"></i>
-                            Phụ kiện
-                          </span>
-                          <span className={modalStyles.amount}>Đã bao gồm</span>
-                        </div>
-                      )}
-
-                      <div className={modalStyles.priceRow}>
-                        <span>Tổng dịch vụ</span>
-                        <span className={modalStyles.amount}>{formatPrice(selectedQuote.serviceTotal)}</span>
-                      </div>
-                      
-                      {selectedQuote.discountAmount > 0 && (
-                        <div className={`${modalStyles.priceRow} ${modalStyles.discount}`}>
-                          <span>
-                            <i className="fas fa-tag"></i>
-                            Giảm giá ({selectedQuote.discountRate}%)
-                          </span>
-                          <span className={modalStyles.amount}>-{formatPrice(selectedQuote.discountAmount)}</span>
-                        </div>
-                      )}
-                      
-                      <div className={modalStyles.divider}></div>
-                      
-                      <div className={`${modalStyles.priceRow} ${modalStyles.subtotal}`}>
-                        <span>Tạm tính</span>
-                        <span className={modalStyles.amount}>{formatPrice(selectedQuote.taxableBase)}</span>
-                      </div>
-                      
-                      <div className={modalStyles.priceRow}>
-                        <span>Thuế VAT ({selectedQuote.vatRate}%)</span>
-                        <span className={modalStyles.amount}>{formatPrice(selectedQuote.vatAmount)}</span>
-                      </div>
-                      
-                      <div className={modalStyles.divider}></div>
-                      
-                      <div className={`${modalStyles.priceRow} ${modalStyles.total}`}>
-                        <span>Tổng cộng</span>
-                        <span className={modalStyles.totalAmount}>{formatPrice(selectedQuote.grandTotal)}</span>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-
-                <div className={modalStyles.modalFooter}>
-                  <button 
-                    className={modalStyles.downloadButton}
-                    onClick={() => selectedQuote && generatePDF(selectedQuote)}
-                  >
-                    <i className="fas fa-download"></i>
-                    Tải PDF
-                  </button>
-                  <button className={modalStyles.closeFooterButton} onClick={closeDetailModal}>
-                    <i className="fas fa-times"></i>
-                    Đóng
-                  </button>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      )}
     </>
   );
 };

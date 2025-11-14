@@ -75,9 +75,9 @@ export const SuccessModal: FC<ModalProps> = ({
 
   const content = getModalContent();
 
-  // Add CSS animations
+  // Add CSS animations - memoize to avoid recreation
   React.useEffect(() => {
-    if (!document.head.querySelector('#success-modal-animations')) {
+    if (isOpen && !document.head.querySelector('#success-modal-animations')) {
       const style = document.createElement('style');
       style.id = 'success-modal-animations';
       style.textContent = `
@@ -199,7 +199,7 @@ export const SuccessModal: FC<ModalProps> = ({
       `;
       document.head.appendChild(style);
     }
-  }, []);
+  }, [isOpen]);
 
   const modalContent = (
     <div style={{

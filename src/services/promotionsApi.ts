@@ -2,21 +2,37 @@ import api from "../lib/apiClient";
 import type { Promotion, ListParams } from "../types/promotion";
 
 export async function listPromotions(dealerId: number, params?: ListParams) {
+  console.log('🎯 promotionsApi.listPromotions called with dealerId:', dealerId, 'params:', params);
+  
   try {
-    const { data } = await api.get<any>(`/api/promotions/dealer/${dealerId}`, { params });
+    const endpoint = `/api/promotions/dealer/${dealerId}`;
+    console.log('📡 Calling API endpoint:', endpoint);
+    
+    const { data } = await api.get<any>(endpoint, { params });
+    
+    console.log('✅ API Success - Raw response:', data);
+    console.log('✅ Response type:', typeof data);
+    console.log('✅ Response keys:', Object.keys(data || {}));
     
     if (data && data.data && Array.isArray(data.data)) {
+      console.log('✅ Format 1: data.data array with', data.data.length, 'items');
       return { items: data.data, total: data.data.length };
     }
     
     if (Array.isArray(data)) {
+      console.log('✅ Format 2: direct array with', data.length, 'items');
       return { items: data, total: data.length };
     }
     
-    console.warn('Unexpected response format:', data);
+    console.warn('⚠️ Unexpected response format:', data);
     return { items: [], total: 0 };
   } catch (error: any) {
-    console.error(`Failed to load promotions for dealer ${dealerId}:`, error.response?.data || error.message);
+    console.error('❌ promotionsApi.listPromotions ERROR:');
+    console.error('   - DealerId:', dealerId);
+    console.error('   - Status:', error.response?.status);
+    console.error('   - Status Text:', error.response?.statusText);
+    console.error('   - Error Data:', error.response?.data);
+    console.error('   - Error Message:', error.message);
     return { items: [], total: 0 };
   }
 }

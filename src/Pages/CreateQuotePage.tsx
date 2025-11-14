@@ -1,26 +1,25 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchVehiclesFromApi, groupVehiclesByModel } from '../services/vehicleApi';
 import { listPromotions } from '../services/promotionsApi';
 import { fetchDealers } from '../services/dealerApi';
+import { createQuotation, mapServicesToBoolean } from '../services/quotationApi';
+import { listCustomers } from '../services/customersApi';
+import type { Customer } from '../types/customer';
 import type { Product, ColorVariant } from '../types/product';
 import type { Promotion } from '../types/promotion';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import ReactDOM from 'react-dom/client';
+import QuotePDFTemplate from '../components/QuotePDFTemplate';
+import type { QuotationDetailData } from './QuoteListPage';
 import './_CreateQuote.scss';
 
 // ============================================
 // TYPESCRIPT INTERFACES
 // ============================================
 
-interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  type: 'individual' | 'business';
-  idCardFront?: string; // Base64 or URL
-  idCardBack?: string; // Base64 or URL
-}
+// Customer type imported from customerApi
 
 interface VehicleConfig {
   vehicleId: number; // ID from API
@@ -33,14 +32,6 @@ interface VehicleConfig {
   basePrice: number; // priceRetail or finalPrice
 }
 
-interface PaymentDetails {
-  method: 'full' | 'installment';
-  downPayment: number;
-  loanTerm: number; // months
-  interestRate: number;
-  monthlyPayment: number;
-}
-
 interface ServiceItem {
   id: string;
   name: string;
@@ -51,23 +42,18 @@ interface ServiceItem {
 }
 
 interface QuoteState {
-  customer: Customer | null;
+  customerId: number | null; // Changed: Use customerId instead of Customer object
   vehicle: VehicleConfig;
   promotions: number[]; // Array of promoId
-  payment: PaymentDetails;
+  paymentMethod: 'TRẢ_THẲNG'; // Hardcoded - no installment
   notes: string;
-  validityDays: number;
+  validityDays: 7; // Hardcoded 7 days
   addedServices: ServiceItem[];
 }
 
 // ============================================
 // CONSTANTS
 // ============================================
-
-const LOAN_TERMS = [12, 18, 24, 36, 48, 60];
-const MIN_DOWN_PAYMENT_PERCENT = 15;
-const MAX_DOWN_PAYMENT_PERCENT = 80;
-const MOCK_ON_ROAD_FEE = 20000000; // 20 triệu VND - Phí lăn bánh tạm tính
 
 const MOCK_ADDON_SERVICES: ServiceItem[] = [
   {
@@ -138,6 +124,8 @@ const QUOTATION_TERMS: string[] = [
 
 const CreateQuotePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preSelectedProduct = location.state?.product as Product | undefined;
   
   // Check authentication on mount
   useEffect(() => {
@@ -151,7 +139,7 @@ const CreateQuotePage: React.FC = () => {
   
   // State Management
   const [quote, setQuote] = useState<QuoteState>({
-    customer: null,
+    customerId: null, // Changed from customer object to customerId
     vehicle: {
       vehicleId: 0,
       model: '',
@@ -163,37 +151,30 @@ const CreateQuotePage: React.FC = () => {
       basePrice: 0,
     },
     promotions: [],
-    payment: {
-      method: 'full',
-      downPayment: 0,
-      loanTerm: 12,
-      interestRate: 8.5,
-      monthlyPayment: 0,
-    },
+    paymentMethod: 'TRẢ_THẲNG', // Hardcoded
     notes: '',
-    validityDays: 30,
+    validityDays: 7, // Hardcoded 7 days
     addedServices: [],
   });
   
-  // Down payment percentage (15-80%)
-  const [downPaymentPercent, setDownPaymentPercent] = useState<number>(0);
+  // Customer list state
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
 
   // Accordion states for sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    customer: true,
-    vehicle: true,
+    customer: !preSelectedProduct, // Collapse if vehicle pre-selected
+    vehicle: true, // Always expand vehicle section
     promotions: false,
     services: false,
-    payment: false,
-    notes: false,
+    notes: false, // Removed payment accordion
   });
 
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [idCardFrontPreview, setIdCardFrontPreview] = useState<string>('');
-  const [idCardBackPreview, setIdCardBackPreview] = useState<string>('');
+  const [createdQuotationId, setCreatedQuotationId] = useState<number | null>(null);
 
   // API Data States
   const [products, setProducts] = useState<Product[]>([]);
@@ -204,49 +185,57 @@ const CreateQuotePage: React.FC = () => {
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [dealerId, setDealerId] = useState<number | null>(null);
 
-  // Refs
-  const fileInputFrontRef = useRef<HTMLInputElement>(null);
-  const fileInputBackRef = useRef<HTMLInputElement>(null);
-
   // Fetch dealerId from username (JWT token)
   useEffect(() => {
     const fetchDealerId = async () => {
       try {
         const userStr = localStorage.getItem('e-drive-user');
-        if (!userStr) return;
-        
-        const user = JSON.parse(userStr);
-        const dealers = await fetchDealers();
-        
-        if (dealers.length === 0) {
-          console.error('❌ No dealers found');
+        if (!userStr) {
+          console.warn('⚠️ No user in localStorage');
           return;
         }
         
-        // Try multiple matching strategies
-        let matchedDealer = dealers.find(d => d.dealerEmail === user.email)
-          || dealers.find(d => d.dealerName === user.username)
-          || (user.sub && dealers.find(d => d.dealerId.toString() === user.sub))
-          || null;
+        const user = JSON.parse(userStr);
+        console.log('👤 Current user:', user.username, '- Role:', user.role);
         
-        // For dealer_manager role: extract dealerId from username pattern (d1_manager)
-        if (!matchedDealer && user.role === 'dealer_manager') {
-          const match = user.username.match(/^d(\d+)_/);
-          if (match) {
-            const extractedDealerId = parseInt(match[1]);
-            matchedDealer = dealers.find(d => d.dealerId === extractedDealerId) || null;
-          }
+        // Extract dealerId from username pattern (d1_manager, d1_staff, etc.)
+        // Pattern: d{dealerId}_{role}
+        const usernameMatch = user.username?.match(/^d(\d+)_/);
+        if (usernameMatch) {
+          const extractedDealerId = parseInt(usernameMatch[1]);
+          console.log('✅ Dealer ID extracted from username:', extractedDealerId);
+          setDealerId(extractedDealerId);
+          return;
         }
         
-        if (matchedDealer) {
-          console.log('✅ Dealer matched:', matchedDealer.dealerId, '-', matchedDealer.dealerName);
-          setDealerId(matchedDealer.dealerId);
-        } else {
-          console.error('❌ No dealer found for user:', user.username);
+        // Fallback: Try to fetch from dealers API (may fail with 400 for non-admin users)
+        try {
+          const dealers = await fetchDealers();
+          
+          if (dealers.length === 0) {
+            console.warn('⚠️ No dealers found from API');
+            return;
+          }
+          
+          // Try multiple matching strategies
+          let matchedDealer = dealers.find(d => d.dealerEmail === user.email)
+            || dealers.find(d => d.dealerName === user.username)
+            || (user.sub && dealers.find(d => d.dealerId.toString() === user.sub))
+            || null;
+          
+          if (matchedDealer) {
+            console.log('✅ Dealer matched from API:', matchedDealer.dealerId, '-', matchedDealer.dealerName);
+            setDealerId(matchedDealer.dealerId);
+          } else {
+            console.warn('⚠️ No dealer found for user:', user.username);
+          }
+        } catch (apiError: any) {
+          // API call failed (likely 400/403) - use username extraction as fallback
+          console.warn('⚠️ Dealers API failed (expected for staff/dealer roles):', apiError.message);
+          console.log('💡 Using username pattern extraction as fallback');
         }
       } catch (err: any) {
-        console.error('❌ Error fetching dealerId:', err);
-        console.error('❌ Error details:', err.message, err.stack);
+        console.error('❌ Error fetching dealerId:', err.message);
       }
     };
     
@@ -279,6 +268,83 @@ const CreateQuotePage: React.FC = () => {
 
     fetchData();
   }, []);
+  
+  // Fetch customers for dropdown (must have dealerId first)
+  useEffect(() => {
+    const loadCustomers = async () => {
+      if (!dealerId) {
+        console.log('⏳ Waiting for dealerId to load customers...');
+        return;
+      }
+      
+      try {
+        setIsLoadingCustomers(true);
+        const response = await listCustomers(dealerId, {});
+        console.log('👥 Raw API response:', response);
+        
+        // Handle different response formats
+        const customerData = response.data || response || [];
+        setCustomers(Array.isArray(customerData) ? customerData : []);
+        console.log('👥 Fetched customers for dealer', dealerId, ':', customerData.length);
+      } catch (err) {
+        console.error('❌ Error fetching customers:', err);
+        setCustomers([]); // Set empty array on error
+      } finally {
+        setIsLoadingCustomers(false);
+      }
+    };
+    
+    loadCustomers();
+  }, [dealerId]); // Re-fetch when dealerId changes
+
+  // Auto-select vehicle from navigation state (when clicking "Báo giá" from product page)
+  useEffect(() => {
+    if (!preSelectedProduct || products.length === 0) return;
+    
+    console.log('🎯 Auto-selecting product from navigation:', preSelectedProduct.name);
+    
+    // Find matching product in loaded products
+    const matchedProduct = products.find(p => p.id === preSelectedProduct.id);
+    if (!matchedProduct) {
+      console.warn('⚠️ Pre-selected product not found in loaded products');
+      return;
+    }
+    
+    setSelectedProduct(matchedProduct);
+    
+    // Auto-select color variant if specified
+    const selectedColorVariant = matchedProduct.colorVariants?.find(
+      cv => cv.color === preSelectedProduct.selectedColor
+    ) || matchedProduct.colorVariants?.[0];
+    
+    if (selectedColorVariant) {
+      setQuote(prev => ({
+        ...prev,
+        vehicle: {
+          vehicleId: selectedColorVariant.vehicleId,
+          model: matchedProduct.name,
+          variant: matchedProduct.variant,
+          color: selectedColorVariant.color,
+          colorId: selectedColorVariant.vehicleId, // Use vehicleId as colorId
+          colorHex: selectedColorVariant.colorHex,
+          imageUrl: selectedColorVariant.imageUrl || matchedProduct.image,
+          basePrice: selectedColorVariant.finalPrice > 0 
+            ? selectedColorVariant.finalPrice 
+            : selectedColorVariant.priceRetail,
+        },
+      }));
+      
+      console.log('✅ Vehicle auto-selected:', {
+        model: matchedProduct.name,
+        color: selectedColorVariant.color,
+        price: selectedColorVariant.finalPrice || selectedColorVariant.priceRetail
+      });
+      
+      // Show success notification
+      setSuccessMessage(`🚗 Đã chọn xe: ${matchedProduct.name} - Màu ${selectedColorVariant.color}`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    }
+  }, [preSelectedProduct, products]);
 
   // Fetch promotions based on dealerId (fetched from dealers API)
   useEffect(() => {
@@ -288,6 +354,14 @@ const CreateQuotePage: React.FC = () => {
     }
     
     console.log('🚀 useEffect: Starting promotions fetch...');
+    console.log('🔑 Current dealerId:', dealerId);
+    
+    // Log current user info for debugging
+    const userStr = localStorage.getItem('e-drive-user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      console.log('👤 Fetching promotions as:', user.username, '- Role:', user.role);
+    }
     
     const fetchPromotionsData = async () => {
       try {
@@ -295,7 +369,10 @@ const CreateQuotePage: React.FC = () => {
         
         console.log('🎁 Fetching promotions for dealer:', dealerId);
         const response = await listPromotions(dealerId);
-        console.log('📦 Raw API Response:', response);        const items = response?.items || (response as any)?.data?.items || response;
+        console.log('📦 Raw API Response:', response);
+        
+        // listPromotions returns { items: [], total: 0 }
+        const items = response?.items || [];
         console.log('📋 Extracted items:', items);
         console.log('📋 Total promotions from API:', items?.length || 0);
         
@@ -359,152 +436,59 @@ const CreateQuotePage: React.FC = () => {
       }
     });
 
-    const totalDiscount = promoDiscount; // Only promotion discounts
-    const subtotal = listPrice - totalDiscount;
-    
     // Calculate total service cost
     const totalServiceCost = quote.addedServices.reduce((sum, item) => sum + item.price, 0);
     
-    // Subtotal before on-road fee
-    const subTotal = Math.max(0, subtotal + totalServiceCost);
-    
-    // On-road fee (lăn bánh)
-    const onRoadFee = quote.vehicle.vehicleId > 0 ? MOCK_ON_ROAD_FEE : 0;
-    
-    // Final on-road total
-    const finalOnRoadTotal = subTotal + onRoadFee;
-    
-    // For payment calculation (without on-road fee)
-    const finalTotal = subTotal;
-
-    // Calculate installment details
-    let monthlyPayment = 0;
-    let totalInterest = 0;
-    let totalPayment = 0;
-    
-    if (quote.payment.method === 'installment') {
-      const loanAmount = finalTotal - quote.payment.downPayment;
-      const numPayments = quote.payment.loanTerm; // Number of months
-      
-      if (loanAmount > 0 && numPayments > 0) {
-        // Since there's no actual interest rate yet, just divide evenly
-        monthlyPayment = loanAmount / numPayments;
-        totalPayment = loanAmount; // No interest, so total = loan amount
-        totalInterest = 0;
-        
-        // Round up to ensure full loan is covered
-        monthlyPayment = Math.ceil(monthlyPayment);
-      }
-    }
+    // Tính toán theo đúng logic thuế:
+    // 1. Tạm tính (chưa VAT) = basePrice + services - discount
+    // 2. VAT = Tạm tính × 10%
+    // 3. Grand Total = Tạm tính + VAT
+    const taxableAmount = listPrice + totalServiceCost - promoDiscount;
+    const vatAmount = taxableAmount * 0.1;
+    const grandTotal = taxableAmount + vatAmount;
+    const depositRequired = grandTotal * 0.1; // Đặt cọc 10%
 
     return {
       listPrice,
       promoDiscount,
-      totalDiscount,
-      subtotal,
       totalServiceCost,
-      subTotal,
-      onRoadFee,
-      finalOnRoadTotal,
-      finalTotal,
-      monthlyPayment,
-      totalInterest,
-      totalPayment,
+      taxableAmount,
+      vatAmount,
+      grandTotal,
+      depositRequired,
     };
   }, [quote, promotions]);
 
-  // Auto-adjust down payment when total changes
-  useEffect(() => {
-    if (quote.payment.method === 'installment' && costSummary.subtotal > 0) {
-      const minDownPayment = costSummary.subtotal * (MIN_DOWN_PAYMENT_PERCENT / 100);
-      const maxDownPayment = costSummary.subtotal * (MAX_DOWN_PAYMENT_PERCENT / 100);
-      
-      // If down payment is 0, set to minimum (first time switching to installment)
-      if (quote.payment.downPayment === 0) {
-        setQuote(prev => ({
-          ...prev,
-          payment: { ...prev.payment, downPayment: minDownPayment }
-        }));
-        setDownPaymentPercent(MIN_DOWN_PAYMENT_PERCENT);
-      } else {
-        // Update percent state based on current down payment
-        const currentPercent = Math.round((quote.payment.downPayment / costSummary.subtotal) * 100);
-        
-        // Only adjust if outside valid range
-        if (quote.payment.downPayment < minDownPayment) {
-          setQuote(prev => ({
-            ...prev,
-            payment: { ...prev.payment, downPayment: minDownPayment }
-          }));
-          setDownPaymentPercent(MIN_DOWN_PAYMENT_PERCENT);
-        } else if (quote.payment.downPayment > maxDownPayment) {
-          setQuote(prev => ({
-            ...prev,
-            payment: { ...prev.payment, downPayment: maxDownPayment }
-          }));
-          setDownPaymentPercent(MAX_DOWN_PAYMENT_PERCENT);
-        } else {
-          setDownPaymentPercent(currentPercent);
+  // Display Data - Dùng trực tiếp costSummary với thêm promotion name và percent
+  const displayData = useMemo(() => {
+    // Thêm promotion name và discount percent
+    let promotionName = 'Khuyến mãi';
+    let discountPercent: number | undefined = undefined;
+    
+    if (costSummary.promoDiscount > 0 && quote.promotions.length > 0) {
+      const promo = promotions.find(p => quote.promotions.includes(p.promoId));
+      if (promo) {
+        promotionName = promo.title;
+        if (promo.discountType === 'PERCENTAGE') {
+          discountPercent = promo.discountValue;
         }
       }
-    } else if (quote.payment.method === 'full') {
-      // Reset when switching back to full payment
-      if (quote.payment.downPayment !== 0) {
-        setQuote(prev => ({
-          ...prev,
-          payment: { ...prev.payment, downPayment: 0 }
-        }));
-        setDownPaymentPercent(0);
-      }
     }
-  }, [costSummary.subtotal, quote.payment.method, quote.payment.downPayment]);
+    
+    return {
+      ...costSummary,
+      promotionName,
+      discountPercent,
+    };
+  }, [costSummary, quote.promotions, promotions]);
 
   // Event Handlers
-  const handleCustomerInputChange = useCallback((field: keyof Customer, value: string) => {
+  const handleCustomerInputChange = useCallback((customerId: number) => {
     setQuote(prev => ({
       ...prev,
-      customer: prev.customer ? { ...prev.customer, [field]: value } : null,
+      customerId,
     }));
-    setValidationErrors(prev => ({ ...prev, [field]: '' }));
-  }, []);
-
-  const handleImageUpload = useCallback((type: 'front' | 'back', file: File) => {
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        if (type === 'front') {
-          setIdCardFrontPreview(base64String);
-          setQuote(prev => ({
-            ...prev,
-            customer: prev.customer ? { ...prev.customer, idCardFront: base64String } : null,
-          }));
-        } else {
-          setIdCardBackPreview(base64String);
-          setQuote(prev => ({
-            ...prev,
-            customer: prev.customer ? { ...prev.customer, idCardBack: base64String } : null,
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const handleRemoveImage = useCallback((type: 'front' | 'back') => {
-    if (type === 'front') {
-      setIdCardFrontPreview('');
-      setQuote(prev => ({
-        ...prev,
-        customer: prev.customer ? { ...prev.customer, idCardFront: '' } : null,
-      }));
-    } else {
-      setIdCardBackPreview('');
-      setQuote(prev => ({
-        ...prev,
-        customer: prev.customer ? { ...prev.customer, idCardBack: '' } : null,
-      }));
-    }
+    setValidationErrors(prev => ({ ...prev, customer: '' }));
   }, []);
 
   const handleModelChange = useCallback((productId: string) => {
@@ -585,40 +569,12 @@ const CreateQuotePage: React.FC = () => {
     }));
   }, []);
 
-  // Handle down payment percentage change
-  const handleDownPaymentPercentChange = useCallback((percent: number) => {
-    const clampedPercent = Math.max(MIN_DOWN_PAYMENT_PERCENT, Math.min(MAX_DOWN_PAYMENT_PERCENT, percent));
-    setDownPaymentPercent(clampedPercent);
-    // Calculate based on subtotal (after promotions, before registration fee)
-    const amount = Math.round((costSummary.subtotal * clampedPercent) / 100);
-    setQuote(prev => ({
-      ...prev,
-      payment: { ...prev.payment, downPayment: amount }
-    }));
-  }, [costSummary.subtotal]);
-
   const validateQuote = useCallback((): boolean => {
     const errors: Record<string, string> = {};
 
-    // Validate customer fields
-    if (!quote.customer?.name || quote.customer.name.trim() === '') {
-      errors.name = 'Vui lòng nhập tên khách hàng';
-    }
-
-    if (!quote.customer?.phone || quote.customer.phone.trim() === '') {
-      errors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!/^[0-9]{10,11}$/.test(quote.customer.phone.replace(/\s/g, ''))) {
-      errors.phone = 'Số điện thoại không hợp lệ';
-    }
-
-    if (!quote.customer?.email || quote.customer.email.trim() === '') {
-      errors.email = 'Vui lòng nhập email';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quote.customer.email)) {
-      errors.email = 'Email không hợp lệ';
-    }
-
-    if (!quote.customer?.address || quote.customer.address.trim() === '') {
-      errors.address = 'Vui lòng nhập địa chỉ';
+    // Validate customer selection
+    if (!quote.customerId) {
+      errors.customer = 'Vui lòng chọn khách hàng';
     }
 
     if (!quote.vehicle.model) {
@@ -648,25 +604,35 @@ const CreateQuotePage: React.FC = () => {
   }, [quote]);
 
   const handleSave = useCallback(async (action: 'draft' | 'send') => {
-    // Validate for send action
-    if (action === 'send' && !validateQuote()) {
+    // Validate quote
+    if (!validateQuote()) {
       return;
     }
 
-    // For draft, only require customer basic info
-    if (action === 'draft' && (!quote.customer?.name || !quote.customer?.phone)) {
-      setValidationErrors({ 
-        name: !quote.customer?.name ? 'Cần có tên để lưu nháp' : '',
-        phone: !quote.customer?.phone ? 'Cần có SĐT để lưu nháp' : ''
-      });
+    // Check dealerId
+    if (!dealerId) {
+      alert('Không tìm thấy thông tin dealer. Vui lòng đăng nhập lại.');
       return;
     }
 
     setIsSaving(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Prepare the request data
+      const request = {
+        vehicleId: quote.vehicle.vehicleId,
+        customerId: quote.customerId!,
+        paymentMethod: 'TRẢ_THẲNG' as const,
+        additionalServices: mapServicesToBoolean(quote.addedServices.map(s => s.id)),
+      };
+      
+      // Call the API
+      const response = await createQuotation(request);
+      
+      console.log('✅ Quotation created:', response);
+      
+      // Lưu quotationId để có thể tạo PDF
+      setCreatedQuotationId(response.quotationId);
       
       const message = action === 'draft' 
         ? 'Đã lưu nháp báo giá thành công!' 
@@ -674,18 +640,185 @@ const CreateQuotePage: React.FC = () => {
       
       setSuccessMessage(message);
       setShowSuccessModal(true);
-      
-      // Auto close modal and redirect after 2 seconds
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        navigate('/quotes');
-      }, 2000);
     } catch (error) {
-      alert('Có lỗi xảy ra. Vui lòng thử lại!');
+      console.error('❌ Error creating quotation:', error);
+      alert('Có lỗi xảy ra khi tạo báo giá. Vui lòng thử lại!');
     } finally {
       setIsSaving(false);
     }
-  }, [quote, validateQuote, navigate]);
+  }, [quote, validateQuote, navigate, dealerId]);
+
+  const handleGeneratePDF = useCallback(async () => {
+    if (!createdQuotationId) {
+      alert('Không tìm thấy ID báo giá!');
+      return;
+    }
+
+    try {
+      console.log('📝 Generating PDF from current form data...');
+      
+      // Tìm thông tin customer
+      const selectedCustomer = customers.find(c => c.customerId === quote.customerId);
+      
+      // Tạo dữ liệu PDF trực tiếp từ form và displayData
+      const pdfData: QuotationDetailData = {
+        quotationId: createdQuotationId,
+        dealerId: dealerId || 0,
+        quotationNumber: `QUOTE-${createdQuotationId}`,
+        quotationDate: new Date().toISOString(),
+        status: 'pending',
+        validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        
+        // Customer info từ form
+        customerId: quote.customerId!,
+        customerName: selectedCustomer?.fullName || 'N/A',
+        customerPhone: selectedCustomer?.phone || 'N/A',
+        customerEmail: selectedCustomer?.email || 'N/A',
+        customerAddress: selectedCustomer?.address || 'N/A',
+        
+        // Vehicle info từ form
+        vehicleId: quote.vehicle.vehicleId,
+        vehicleName: `${quote.vehicle.model} ${quote.vehicle.variant}`,
+        vehicleModel: quote.vehicle.model,
+        vehicleVersion: quote.vehicle.variant,
+        vehicleColor: quote.vehicle.color,
+        vehicleYear: new Date().getFullYear(),
+        paymentMethod: 'TRẢ_THẲNG',
+        
+        // Pricing từ displayData (đã tính toán chính xác)
+        basePrice: displayData.listPrice,
+        quantity: 1,
+        subtotal: displayData.listPrice,
+        
+        // Services từ form
+        additionalServices: {
+          hasTintFilm: quote.addedServices.some(s => s.id === 'tint-film'),
+          hasWallboxCharger: quote.addedServices.some(s => s.id === 'wallbox-7kw'),
+          hasWarrantyExtension: quote.addedServices.some(s => s.id === 'extended-warranty'),
+          hasPPF: quote.addedServices.some(s => s.id === 'ppf-full'),
+          hasCeramicCoating: quote.addedServices.some(s => s.id === 'ceramic-coating'),
+          has360Camera: quote.addedServices.some(s => s.id === 'dashcam-360'),
+        },
+        tintFilmPrice: quote.addedServices.find(s => s.id === 'tint-film')?.price || 0,
+        wallboxChargerPrice: quote.addedServices.find(s => s.id === 'wallbox-7kw')?.price || 0,
+        warrantyExtensionPrice: quote.addedServices.find(s => s.id === 'extended-warranty')?.price || 0,
+        ppfPrice: quote.addedServices.find(s => s.id === 'ppf-full')?.price || 0,
+        ceramicCoatingPrice: quote.addedServices.find(s => s.id === 'ceramic-coating')?.price || 0,
+        camera360Price: quote.addedServices.find(s => s.id === 'dashcam-360')?.price || 0,
+        servicesTotal: displayData.totalServiceCost,
+        
+        // Discount & Total từ displayData
+        promotionDiscount: displayData.promoDiscount,
+        promotionName: displayData.promotionName,
+        discountPercent: displayData.discountPercent,
+        
+        // VAT calculation từ displayData
+        taxableAmount: displayData.taxableAmount,
+        vatRate: 10,
+        vatAmount: displayData.vatAmount,
+        grandTotal: displayData.grandTotal,
+        depositRequired: displayData.depositRequired,
+        
+        // Notes
+        notes: quote.notes,
+        
+        // Terms & Conditions
+        termsAndConditions: QUOTATION_TERMS.join('\n'),
+        
+        // Dealer info
+        dealerName: 'VinFast E-Drive',
+        dealerPhone: '1900 23 23 89',
+        dealerEmail: 'contact@vinfastedrive.vn',
+        dealerAddress: '458 Minh Khai, Hai Bà Trưng, Hà Nội',
+      };
+      
+      console.log('📊 PDF Data:', pdfData);
+      
+      console.log('📝 Starting PDF generation...');
+      
+      // Tạo container ẩn cho PDF template
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      document.body.appendChild(tempDiv);
+      
+      // Render React component vào container
+      const root = ReactDOM.createRoot(tempDiv);
+      root.render(<QuotePDFTemplate data={pdfData} />);
+      
+      // Đợi 500ms để component render xong
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const pdfElement = document.getElementById('pdf-content');
+      if (!pdfElement) {
+        throw new Error('Không tìm thấy PDF template element');
+      }
+      
+      console.log('📸 Capturing PDF content as image...');
+      
+      // Capture HTML thành canvas
+      const canvas = await html2canvas(pdfElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794,
+      });
+      
+      console.log('📝 Creating multi-page PDF...');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      const totalPages = Math.ceil(imgHeight / pageHeight);
+      
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) pdf.addPage();
+        
+        const pageCanvas = document.createElement('canvas');
+        const pageCtx = pageCanvas.getContext('2d');
+        if (!pageCtx) continue;
+        
+        const scale = canvas.width / imgWidth;
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.min(pageHeight * scale, canvas.height - i * pageHeight * scale);
+        
+        pageCtx.drawImage(
+          canvas,
+          0,
+          i * pageHeight * scale,
+          canvas.width,
+          pageCanvas.height,
+          0,
+          0,
+          canvas.width,
+          pageCanvas.height
+        );
+        
+        const pageImgData = pageCanvas.toDataURL('image/png');
+        const actualHeight = Math.min(pageHeight, imgHeight - i * pageHeight);
+        pdf.addImage(pageImgData, 'PNG', 0, 0, imgWidth, actualHeight);
+      }
+      
+      document.body.removeChild(tempDiv);
+      
+      const fileName = `BaoGia_${pdfData.quotationNumber}_${pdfData.customerName?.replace(/\s+/g, '_') || 'KhachHang'}.pdf`;
+      pdf.save(fileName);
+      
+      console.log(`✅ PDF generated: ${fileName}`);
+    } catch (error) {
+      console.error('❌ Error generating PDF:', error);
+      alert('Có lỗi xảy ra khi tạo PDF!');
+    }
+  }, [createdQuotationId, dealerId, quote, displayData, customers]);
 
   const handleBack = useCallback(() => {
     if (window.confirm('Bạn có chắc muốn quay lại? Các thay đổi chưa lưu sẽ bị mất.')) {
@@ -749,7 +882,7 @@ const CreateQuotePage: React.FC = () => {
           <button
             className="btn-primary"
             onClick={() => handleSave('send')}
-            disabled={isSaving || !quote.customer || !quote.vehicle.model}
+            disabled={isSaving || !quote.customerId || !quote.vehicle.model}
           >
             {isSaving ? (
               <>
@@ -785,154 +918,37 @@ const CreateQuotePage: React.FC = () => {
             <div className={`card-body accordion-body ${expandedSections.customer ? 'expanded' : 'collapsed'}`}>
               <div className="customer-form">
                 <div className="detail-row">
-                  <div className="detail-item">
-                    <label>Tên khách hàng <span className="required">*</span></label>
-                    {validationErrors.name && (
+                  <div className="detail-item" style={{ width: '100%' }}>
+                    <label>Chọn khách hàng <span className="required">*</span></label>
+                    {validationErrors.customer && (
                       <div className="validation-error">
                         <i className="fas fa-exclamation-circle"></i>
-                        {validationErrors.name}
+                        {validationErrors.customer}
                       </div>
                     )}
-                    <input
-                      type="text"
-                      className={`form-input ${validationErrors.name ? 'error' : ''}`}
-                      placeholder="Nhập họ tên đầy đủ"
-                      value={quote.customer?.name || ''}
-                      onChange={(e) => handleCustomerInputChange('name', e.target.value)}
-                    />
-                  </div>
-                  <div className="detail-item">
-                    <label>Số điện thoại <span className="required">*</span></label>
-                    {validationErrors.phone && (
-                      <div className="validation-error">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {validationErrors.phone}
+                    {isLoadingCustomers ? (
+                      <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+                        <i className="fas fa-spinner fa-spin"></i> Đang tải danh sách khách hàng...
                       </div>
+                    ) : (
+                      <select
+                        className={`form-input ${validationErrors.customer ? 'error' : ''}`}
+                        value={quote.customerId || ''}
+                        onChange={(e) => handleCustomerInputChange(Number(e.target.value))}
+                        style={{ width: '100%', padding: '0.75rem', fontSize: '1rem' }}
+                      >
+                        <option value="">-- Chọn khách hàng --</option>
+                        {customers && customers.length > 0 ? (
+                          customers.map(customer => (
+                            <option key={customer.customerId} value={customer.customerId}>
+                              {customer.fullName} - {customer.phone} ({customer.email})
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled>Không có khách hàng nào</option>
+                        )}
+                      </select>
                     )}
-                    <input
-                      type="tel"
-                      className={`form-input ${validationErrors.phone ? 'error' : ''}`}
-                      placeholder="Nhập số điện thoại"
-                      value={quote.customer?.phone || ''}
-                      onChange={(e) => handleCustomerInputChange('phone', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="detail-row">
-                  <div className="detail-item">
-                    <label>Email <span className="required">*</span></label>
-                    {validationErrors.email && (
-                      <div className="validation-error">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {validationErrors.email}
-                      </div>
-                    )}
-                    <input
-                      type="email"
-                      className={`form-input ${validationErrors.email ? 'error' : ''}`}
-                      placeholder="Nhập địa chỉ email"
-                      value={quote.customer?.email || ''}
-                      onChange={(e) => handleCustomerInputChange('email', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Địa chỉ <span className="required">*</span></label>
-                  {validationErrors.address && (
-                    <div className="validation-error">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {validationErrors.address}
-                    </div>
-                  )}
-                  <textarea
-                    className={`form-textarea ${validationErrors.address ? 'error' : ''}`}
-                    rows={2}
-                    placeholder="Nhập địa chỉ đầy đủ"
-                    value={quote.customer?.address || ''}
-                    onChange={(e) => handleCustomerInputChange('address', e.target.value)}
-                  />
-                </div>
-
-                {/* ID Card Upload */}
-                <div className="id-card-section">
-                  <label className="section-label">
-                    <i className="fas fa-id-card"></i>
-                    CCCD/CMND (2 mặt)
-                  </label>
-                  <div className="id-card-grid">
-                    {/* Front Side */}
-                    <div className="id-card-upload">
-                      <input
-                        type="file"
-                        ref={fileInputFrontRef}
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload('front', file);
-                        }}
-                        style={{ display: 'none' }}
-                      />
-                      {idCardFrontPreview ? (
-                        <div className="image-preview">
-                          <img src={idCardFrontPreview} alt="CCCD mặt trước" />
-                          <button
-                            type="button"
-                            className="remove-image-btn"
-                            onClick={() => handleRemoveImage('front')}
-                          >
-                            <i className="fas fa-times"></i>
-                          </button>
-                          <div className="image-label">Mặt trước</div>
-                        </div>
-                      ) : (
-                        <div
-                          className="upload-placeholder"
-                          onClick={() => fileInputFrontRef.current?.click()}
-                        >
-                          <i className="fas fa-cloud-upload-alt"></i>
-                          <span>Tải ảnh mặt trước</span>
-                          <small>Kéo thả hoặc click để chọn</small>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Back Side */}
-                    <div className="id-card-upload">
-                      <input
-                        type="file"
-                        ref={fileInputBackRef}
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload('back', file);
-                        }}
-                        style={{ display: 'none' }}
-                      />
-                      {idCardBackPreview ? (
-                        <div className="image-preview">
-                          <img src={idCardBackPreview} alt="CCCD mặt sau" />
-                          <button
-                            type="button"
-                            className="remove-image-btn"
-                            onClick={() => handleRemoveImage('back')}
-                          >
-                            <i className="fas fa-times"></i>
-                          </button>
-                          <div className="image-label">Mặt sau</div>
-                        </div>
-                      ) : (
-                        <div
-                          className="upload-placeholder"
-                          onClick={() => fileInputBackRef.current?.click()}
-                        >
-                          <i className="fas fa-cloud-upload-alt"></i>
-                          <span>Tải ảnh mặt sau</span>
-                          <small>Kéo thả hoặc click để chọn</small>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1204,152 +1220,7 @@ const CreateQuotePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Card 4: Payment */}
-          <div className="card">
-            <div 
-              className={`card-header accordion-header ${expandedSections.payment ? 'expanded' : ''}`}
-              onClick={() => toggleSection('payment')}
-            >
-              <div className="header-left">
-                <i className="fas fa-credit-card"></i>
-                <h4>Hình Thức Thanh Toán</h4>
-              </div>
-              <i className={`fas fa-chevron-${expandedSections.payment ? 'up' : 'down'} toggle-icon`}></i>
-            </div>
-            <div className={`card-body accordion-body ${expandedSections.payment ? 'expanded' : 'collapsed'}`}>
-              <div className="payment-methods">
-                <label className={`radio-card ${quote.payment.method === 'full' ? 'active' : ''}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="full"
-                    checked={quote.payment.method === 'full'}
-                    onChange={() => setQuote(prev => ({ ...prev, payment: { ...prev.payment, method: 'full' } }))}
-                  />
-                  <div className="radio-content">
-                    <i className="fas fa-money-bill-wave"></i>
-                    <span>Trả Thẳng</span>
-                    <small>Thanh toán 100%</small>
-                  </div>
-                </label>
-
-                <label className={`radio-card ${quote.payment.method === 'installment' ? 'active' : ''}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="installment"
-                    checked={quote.payment.method === 'installment'}
-                    onChange={() => setQuote(prev => ({ ...prev, payment: { ...prev.payment, method: 'installment' } }))}
-                  />
-                  <div className="radio-content">
-                    <i className="fas fa-calendar-check"></i>
-                    <span>Trả Góp</span>
-                    <small>Linh hoạt kỳ hạn</small>
-                  </div>
-                </label>
-              </div>
-
-              {quote.payment.method === 'installment' && (
-                <div className="installment-options">
-                  {/* Down Payment Percentage */}
-                  <div className="form-group">
-                    <label>
-                      Thanh toán trả góp
-                      <span className="label-hint">(Tỷ lệ trả trước: {MIN_DOWN_PAYMENT_PERCENT}% - {MAX_DOWN_PAYMENT_PERCENT}%)</span>
-                    </label>
-                    
-                    <div className="payment-input-row">
-                      <div className="input-box">
-                        <label className="input-label">Tỷ lệ trả trước</label>
-                        <div className="input-with-unit-compact">
-                          <input
-                            type="number"
-                            className="form-input percent-input-compact"
-                            min={MIN_DOWN_PAYMENT_PERCENT}
-                            max={MAX_DOWN_PAYMENT_PERCENT}
-                            step={5}
-                            value={downPaymentPercent}
-                            onChange={(e) => handleDownPaymentPercentChange(Number(e.target.value))}
-                          />
-                          <span className="input-unit-compact">%</span>
-                        </div>
-                      </div>
-                      
-                      <div className="amount-box">
-                        <label className="input-label">Số tiền trả trước</label>
-                        <div className="amount-value-compact">{formatCurrency(quote.payment.downPayment)}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Loan Term */}
-                  <div className="form-group">
-                    <label>Kỳ hạn vay</label>
-                    <div className="loan-term-grid">
-                      {LOAN_TERMS.map(term => {
-                        const isActive = quote.payment.loanTerm === term;
-                        const years = term / 12;
-                        const displayText = term < 24 ? `${term} tháng` : `${years} năm`;
-                        return (
-                          <button
-                            key={term}
-                            type="button"
-                            className={`term-btn ${isActive ? 'active' : ''}`}
-                            onClick={() => setQuote(prev => ({
-                              ...prev,
-                              payment: { ...prev.payment, loanTerm: term }
-                            }))}
-                          >
-                            <i className="fas fa-calendar-check"></i>
-                            <span>{displayText}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="installment-summary">
-                    <div className="summary-header">
-                      <i className="fas fa-calculator"></i>
-                      <span>Tóm tắt thanh toán</span>
-                    </div>
-                    <div className="summary-row">
-                      <span>
-                        <i className="fas fa-money-bill-wave"></i>
-                        Số tiền vay
-                      </span>
-                      <strong>{formatCurrency(costSummary.finalTotal - quote.payment.downPayment)}</strong>
-                    </div>
-                    <div className="summary-row">
-                      <span>
-                        <i className="fas fa-percent"></i>
-                        Lãi suất 
-                      </span>
-                      <strong className="rate-text">Theo quy định của Ngân hàng tại thời điểm giải ngân</strong>
-                    </div>
-                    
-                    <div className="summary-row total-all">
-                      <span>
-                        <i className="fas fa-calculator"></i>
-                        Tổng thanh toán dự tính (Chưa gồm lãi suất)
-                      </span>
-                      <strong className="grand-total">{formatCurrency(costSummary.totalPayment || 0)}</strong>
-                    </div>
-                    <div className="summary-row highlight">
-                      <span>
-                        <i className="fas fa-hand-holding-dollar"></i>
-                        Trả hàng tháng
-                      </span>
-                      <strong className="amount">{formatCurrency(costSummary.monthlyPayment)}</strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card 5: Additional Info */}
+          {/* Card 4: Additional Info */}
           <div className="card">
             <div 
               className={`card-header accordion-header ${expandedSections.notes ? 'expanded' : ''}`}
@@ -1389,134 +1260,167 @@ const CreateQuotePage: React.FC = () => {
                 {/* Header */}
                 <div className="preview-header">
                   <div className="preview-logo">
-                    <i className="fas fa-bolt-lightning"></i>
-                    <span className="logo-text">E-DRIVE</span>
+                    <i className="fas fa-car-side"></i>
+                    <div className="logo-text">
+                      <h1>VinFast E-Drive</h1>
+                      <p>Đại lý ủy quyền chính thức</p>
+                    </div>
                   </div>
-                  <h3 className="preview-title">BÁO GIÁ XE ĐIỆN</h3>
+                  <div className="preview-company-info">
+                    <p><strong>VinFast E-Drive</strong></p>
+                    <p>458 Minh Khai, Hai Bà Trưng, Hà Nội</p>
+                    <p>Điện thoại: 1900 23 23 89</p>
+                    <p>Email: contact@vinfastedrive.vn</p>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="preview-title-section">
+                  <h2>BÁO GIÁ XE ĐIỆN</h2>
+                  <p className="quote-number">Số: {`QUOTE-${new Date().getTime()}`}</p>
+                </div>
+
+                {/* Quote Info */}
+                <div className="preview-quote-info">
+                  <div className="info-row">
+                    <span className="label">Ngày báo giá:</span>
+                    <span className="value">{new Date().toLocaleDateString('vi-VN')}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="label">Hiệu lực đến:</span>
+                    <span className="value">{new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')}</span>
+                  </div>
                 </div>
 
                 {/* Customer Info */}
                 <div className="preview-section customer-info">
-                  <h4>THÔNG TIN KHÁCH HÀNG</h4>
+                  <h4>
+                    <i className="fas fa-user-circle"></i>
+                    Thông tin khách hàng
+                  </h4>
                   <div className="info-grid">
-                    <span>Khách hàng:</span>
-                    <span>{quote.customer?.name || 'Chưa nhập'}</span>
-                    <span>Điện thoại:</span>
-                    <span>{quote.customer?.phone || 'Chưa nhập'}</span>
-                    <span>Email:</span>
-                    <span>{quote.customer?.email || 'Chưa nhập'}</span>
-                    <span>Ngày báo giá:</span>
-                    <span>{new Date().toLocaleDateString('vi-VN')}</span>
+                    <div className="grid-item">
+                      <span className="label">Họ và tên:</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.fullName || 'N/A'}</span>
+                    </div>
+                    <div className="grid-item">
+                      <span className="label">Số điện thoại:</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.phone || 'N/A'}</span>
+                    </div>
+                    <div className="grid-item">
+                      <span className="label">Email:</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.email || 'N/A'}</span>
+                    </div>
+                    <div className="grid-item">
+                      <span className="label">Địa chỉ:</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.address || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Vehicle Info */}
                 <div className="preview-section vehicle-info">
-                  <h4>THÔNG TIN XE</h4>
-                  <div className="info-grid">
-                    <span>Model:</span>
-                    <span>{quote.vehicle.model || 'Chưa chọn'}</span>
-                    <span>Phiên bản:</span>
-                    <span>{quote.vehicle.variant || 'Chưa chọn'}</span>
-                    <span>Màu sắc:</span>
-                    <span>{quote.vehicle.color || 'Chưa chọn'}</span>
-                  </div>
-                </div>
-
-                {/* Pricing */}
-                <div className="preview-section price-summary">
-                  <h4>CHI TIẾT GIÁ</h4>
-                  <div className="price-lines">
-                    <div className="line-item">
+                  <h4>
+                    <i className="fas fa-car"></i>
+                    Thông tin xe
+                  </h4>
+                  <div className="vehicle-box">
+                    <div className="vehicle-name">{quote.vehicle.model || 'N/A'}</div>
+                    <div className="vehicle-details">
+                      <span><i className="fas fa-palette"></i> Màu sắc: {quote.vehicle.color || 'N/A'}</span>
+                      <span><i className="fas fa-calendar"></i> Năm sản xuất: {new Date().getFullYear()}</span>
+                      {quote.vehicle.model && <span><i className="fas fa-car-side"></i> Model: {quote.vehicle.model}</span>}
+                      {quote.vehicle.variant && <span><i className="fas fa-tag"></i> Phiên bản: {quote.vehicle.variant}</span>}
+                    </div>
+                    
+                    <div className="base-price">
                       <span>Giá niêm yết:</span>
-                      <span>{formatCurrency(costSummary.listPrice)}</span>
+                      <span>{formatCurrency(displayData.listPrice)}</span>
                     </div>
-                    
-                    {costSummary.promoDiscount > 0 && (
-                      <div className="line-item discount">
-                        <span>Giảm giá khuyến mãi ({quote.promotions.length}):</span>
-                        <span>-{formatCurrency(costSummary.promoDiscount)}</span>
-                      </div>
-                    )}
-                    
-                    {quote.addedServices.length > 0 && (
-                      <>
-                        <div className="service-section-header">
-                          <span>Dịch vụ cộng thêm ({quote.addedServices.length}):</span>
-                        </div>
-                        {quote.addedServices.map((service) => (
-                          <div key={service.id} className="line-item service-detail">
-                            <span>• {service.name}</span>
-                            <span>+{formatCurrency(service.price)}</span>
-                          </div>
-                        ))}
-                        <div className="line-item service-total">
-                          <span>Tổng dịch vụ:</span>
-                          <span>+{formatCurrency(costSummary.totalServiceCost)}</span>
-                        </div>
-                      </>
-                    )}
-
-                    <hr className="line-divider" />
-                    
-                    <div className="line-item sub-total">
-                      <strong>TỔNG CỘNG (Chưa lăn bánh):</strong>
-                      <strong>{formatCurrency(costSummary.subTotal)}</strong>
-                    </div>
-
-                    {costSummary.onRoadFee > 0 && (
-                      <div className="line-item on-road-fee">
-                        <span>Phí lăn bánh (tạm tính):</span>
-                        <span>{formatCurrency(costSummary.onRoadFee)}</span>
-                      </div>
-                    )}
-
-                    <hr className="line-divider" />
-
-                    <div className="line-item final-total">
-                      <strong>TỔNG GIÁ (TẠM TÍNH):</strong>
-                      <strong>{formatCurrency(costSummary.finalOnRoadTotal)}</strong>
-                    </div>
-                  </div>
-                  
-                  <div className="price-note">
-                    <i className="fas fa-info-circle"></i>
-                    <span>Phí lăn bánh bao gồm: Trước bạ, đăng ký, đăng kiểm, biển số, bảo hiểm</span>
                   </div>
                 </div>
 
-                {/* Installment Info */}
-                {quote.payment.method === 'installment' && quote.payment.downPayment > 0 && (
-                  <div className="preview-section installment-info">
-                    <h4>THÔNG TIN TRẢ GÓP</h4>
-                    <div className="installment-grid">
-                      <div className="installment-item">
-                        <span className="label">Trả trước:</span>
-                        <span className="value">{formatCurrency(quote.payment.downPayment)}</span>
-                      </div>
-                      <div className="installment-item">
-                        <span className="label">Số tiền vay:</span>
-                        <span className="value">{formatCurrency(costSummary.finalOnRoadTotal - quote.payment.downPayment)}</span>
-                      </div>
-                      <div className="installment-item">
-                        <span className="label">Kỳ hạn:</span>
-                        <span className="value">{quote.payment.loanTerm} tháng</span>
-                      </div>
-                      <div className="installment-item">
-                        <span className="label">Lãi suất:</span>
-                        <span className="value">Theo quy định của Ngân hàng</span>
-                      </div>
-                      <div className="installment-item highlight">
-                        <span className="label">Trả hàng tháng (dự tính):</span>
-                        <span className="value">{formatCurrency(costSummary.monthlyPayment)}</span>
-                      </div>
-                    </div>
-                    <div className="installment-note">
-                      <i className="fas fa-exclamation-triangle"></i>
-                      <span>Số tiền trả góp hàng tháng là ước tính, chưa bao gồm lãi suất. Lãi suất thực tế sẽ do ngân hàng quyết định tại thời điểm giải ngân.</span>
-                    </div>
+                {/* Services */}
+                {quote.addedServices.length > 0 && (
+                  <div className="preview-section services">
+                    <h4>
+                      <i className="fas fa-plus-circle"></i>
+                      Dịch vụ bổ sung
+                    </h4>
+                    <table className="services-table">
+                      <tbody>
+                        {quote.addedServices.map((service) => (
+                          <tr key={service.id}>
+                            <td>
+                              {service.name === 'Dán phim cách nhiệt' && <i className="fas fa-tint"></i>}
+                              {service.name === 'Wallbox sạc 7kW' && <i className="fas fa-charging-station"></i>}
+                              {service.name === 'Bảo hành mở rộng' && <i className="fas fa-shield-alt"></i>}
+                              {service.name === 'Dán PPF toàn xe' && <i className="fas fa-layer-group"></i>}
+                              {service.name === 'Phủ Ceramic' && <i className="fas fa-gem"></i>}
+                              {service.name === 'Camera 360 độ' && <i className="fas fa-video"></i>}
+                              {' '}{service.name}
+                            </td>
+                            <td className="price">{formatCurrency(service.price)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
+
+                {/* Price Breakdown */}
+                <div className="preview-section price-summary">
+                  <h4>
+                    <i className="fas fa-calculator"></i>
+                    Chi tiết giá
+                  </h4>
+                  <table className="price-table">
+                    <tbody>
+                      <tr>
+                        <td>Giá xe cơ bản</td>
+                        <td className="price">{formatCurrency(displayData.listPrice)}</td>
+                      </tr>
+                      {displayData.totalServiceCost > 0 && (
+                        <tr>
+                          <td>Tổng dịch vụ bổ sung</td>
+                          <td className="price">{formatCurrency(displayData.totalServiceCost)}</td>
+                        </tr>
+                      )}
+                      {displayData.promoDiscount > 0 && (
+                        <tr className="discount">
+                          <td>
+                            <i className="fas fa-tag"></i>{' '}
+                            {displayData.promotionName}
+                            {displayData.discountPercent && ` (-${displayData.discountPercent}%)`}
+                          </td>
+                          <td className="price">-{formatCurrency(displayData.promoDiscount)}</td>
+                        </tr>
+                      )}
+                      <tr className="divider">
+                        <td colSpan={2}></td>
+                      </tr>
+                      <tr>
+                        <td>Tạm tính (chưa VAT)</td>
+                        <td className="price">{formatCurrency(displayData.taxableAmount)}</td>
+                      </tr>
+                      <tr>
+                        <td>Thuế VAT (10%)</td>
+                        <td className="price">{formatCurrency(displayData.vatAmount)}</td>
+                      </tr>
+                      <tr className="divider">
+                        <td colSpan={2}></td>
+                      </tr>
+                      <tr className="total">
+                        <td><strong>TỔNG CỘNG</strong></td>
+                        <td className="price"><strong>{formatCurrency(displayData.grandTotal)}</strong></td>
+                      </tr>
+                      <tr className="deposit">
+                        <td><i className="fas fa-hand-holding-usd"></i> Tiền đặt cọc (10%)</td>
+                        <td className="price">{formatCurrency(displayData.depositRequired)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
                 {/* Customer Notes */}
                 {quote.notes && quote.notes.trim() !== '' && (
@@ -1562,17 +1466,51 @@ const CreateQuotePage: React.FC = () => {
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="modal-overlay" onClick={() => setShowSuccessModal(false)}>
+        <div className="modal-overlay" onClick={() => {
+          setShowSuccessModal(false);
+          navigate('/quotes');
+        }}>
           <div className="success-modal" onClick={(e) => e.stopPropagation()}>
             <div className="success-icon">
               <i className="fas fa-check-circle"></i>
             </div>
             <h3>Thành công!</h3>
             <p>{successMessage}</p>
-            <div className="modal-loader">
-              <div className="loader-bar"></div>
+            <div className="modal-actions">
+              <button 
+                className="btn-generate-pdf"
+                onClick={handleGeneratePDF}
+              >
+                <i className="fas fa-file-pdf"></i>
+                Tạo PDF
+              </button>
+              <button 
+                className="btn-view-list"
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  navigate('/quotes');
+                }}
+              >
+                <i className="fas fa-list"></i>
+                Xem danh sách
+              </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Auto-select Success Toast */}
+      {successMessage && !showSuccessModal && (
+        <div className="toast-notification success">
+          <div className="toast-icon">
+            <i className="fas fa-check-circle"></i>
+          </div>
+          <div className="toast-content">
+            <div className="toast-message">{successMessage}</div>
+          </div>
+          <button className="toast-close" onClick={() => setSuccessMessage('')}>
+            <i className="fas fa-times"></i>
+          </button>
         </div>
       )}
     </div>

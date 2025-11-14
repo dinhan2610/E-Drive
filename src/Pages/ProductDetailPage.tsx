@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import type { Product, VehicleApiResponse } from '../types/product';
 import { convertVehicleToProduct } from '../services/vehicleApi';
 import { formatPrice } from '../utils/productUtils';
+import { shouldShowQuoteButton } from '../utils/roleUtils';
 import styles from '../styles/ProductsStyles/ProductDetail.module.scss';
 
 const ProductDetailPage: React.FC = () => {
@@ -81,8 +82,14 @@ const ProductDetailPage: React.FC = () => {
   };
 
   const handleOrder = () => {
-    // Navigate to dealer order page with product info
-    navigate('/dealer-order', { state: { product } });
+    // Staff → Navigate to quote creation page (Báo giá)
+    if (shouldShowQuoteButton()) {
+      navigate('/quotes/create', { state: { product } });
+    } else {
+      // Dealer → Navigate to dealer order page (Đặt hàng)
+      // Admin → Has separate interface, shouldn't reach here
+      navigate('/dealer-order', { state: { product } });
+    }
   };
 
   const handleTestDrive = () => {
@@ -288,8 +295,8 @@ const ProductDetailPage: React.FC = () => {
                   onClick={handleOrder}
                   disabled={!product.inStock}
                 >
-                  <i className="fas fa-shopping-cart"></i>
-                  {product.inStock ? 'Đặt hàng ngay' : 'Hết hàng'}
+                  <i className={shouldShowQuoteButton() ? "fas fa-file-invoice-dollar" : "fas fa-shopping-cart"}></i>
+                  {product.inStock ? (shouldShowQuoteButton() ? 'Báo giá' : 'Đặt hàng ngay') : 'Hết hàng'}
                 </button>
                 <button 
                   className={styles.secondaryButton}

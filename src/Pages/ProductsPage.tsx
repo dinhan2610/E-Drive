@@ -159,9 +159,33 @@ const ProductsPage: React.FC = () => {
   };
 
   const handleContactDealer = (product: Product) => {
-    // Navigate to dealer order page with product info
-    console.log('Dealer order product:', product);
-    navigate('/dealer-order', { state: { product } });
+    // Check user role to determine navigation
+    const userData = localStorage.getItem('e-drive-user');
+    let userRole = 'dealer'; // Default
+    
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        userRole = user.role ? user.role.toLowerCase().replace('role_', '') : 'dealer';
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+    
+    // Staff → Navigate to quote creation (Báo giá)
+    // Dealer → Navigate to dealer order (Đặt hàng)
+    // Admin → Should not reach here (has separate interface at /admin)
+    if (userRole === 'staff') {
+      console.log('Staff - Navigate to quote creation');
+      navigate('/quotes/create', { state: { product } });
+    } else if (userRole === 'dealer') {
+      console.log('Dealer - Navigate to dealer order');
+      navigate('/dealer-order', { state: { product } });
+    } else {
+      // Admin fallback (shouldn't happen normally)
+      console.warn('Admin should use /admin interface');
+      navigate('/dealer-order', { state: { product } });
+    }
   };
 
   return (

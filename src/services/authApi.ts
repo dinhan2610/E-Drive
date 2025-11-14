@@ -182,7 +182,8 @@ export const authApi = {
         // Parse role từ JWT - có thể là 'role', 'roles', hoặc 'authorities'
         let role = payload.role || payload.roles?.[0] || payload.authorities?.[0] || 'dealer';
         
-        // Chuẩn hóa role: "ROLE_ADMIN" -> "admin", "ROLE_DEALER" -> "dealer"
+        // Chuẩn hóa role: "ROLE_DEALER_MANAGER" -> "dealer_manager"
+        // Frontend sẽ normalize thêm: "dealer_manager" -> "dealer"
         if (role && typeof role === 'string') {
           role = role.replace('ROLE_', '').toLowerCase();
         }
