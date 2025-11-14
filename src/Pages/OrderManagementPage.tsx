@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   getOrdersByDealer,
   formatOrderStatus,
@@ -10,7 +11,8 @@ import {
   OrderApiError 
 } from '../services/orderApi';
 import { getProfile } from '../services/profileApi';
-import { downloadContractPdf } from '../services/contractsApi';
+import { downloadContractPdf, getAllContracts } from '../services/contractsApi';
+import type { Contract } from '../types/contract';
 import { useContractCheck } from '../hooks/useContractCheck';
 import styles from '../styles/OrderStyles/OrderManagement.module.scss';
 
@@ -53,6 +55,8 @@ const formatDateTime = (dateString: string | null | undefined): string => {
 };
 
 const OrderManagementPage: React.FC = () => {
+  const navigate = useNavigate();
+  
   // Order data state
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,6 +79,15 @@ const OrderManagementPage: React.FC = () => {
   
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId } = useContractCheck();
+  
+  // Contracts state to check status
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  
+  // Helper function to get contract status
+  const getContractStatus = (orderId: number | string): string | null => {
+    const contract = contracts.find(c => c.orderId === String(orderId));
+    return contract?.status || null;
+  };
 
   // ===== LOAD DEALER PROFILE =====
   useEffect(() => {
@@ -133,8 +146,21 @@ const OrderManagementPage: React.FC = () => {
   useEffect(() => {
     if (currentDealerId) {
       loadOrders();
+      loadContracts();
     }
   }, [currentDealerId, loadOrders]);
+  
+  // Load all contracts to check status
+  const loadContracts = async () => {
+    try {
+      const allContracts = await getAllContracts();
+      setContracts(allContracts);
+      console.log('✅ Contracts loaded:', allContracts.length);
+    } catch (error) {
+      console.error('❌ Error loading contracts:', error);
+      setContracts([]);
+    }
+  };
 
   // ===== HANDLERS =====
   const handleViewDetail = async (order: Order) => {
@@ -442,6 +468,28 @@ const OrderManagementPage: React.FC = () => {
                               <i className={hasContract(String(order.orderId)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
                             )}
                           </button>
+                          
+                          {/* Ký hợp đồng - Show when status is SIGNING */}
+                          {hasContract(String(order.orderId)) && getContractStatus(order.orderId) === 'SIGNING' && (
+                            <button
+                              className={styles.signButton}
+                              title="✍️ Ký hợp đồng điện tử"
+                              onClick={() => {
+                                const contractId = getContractId(String(order.orderId));
+                                if (contractId) {
+                                  navigate(`/contracts/sign/${contractId}`);
+                                } else {
+                                  alert('Không tìm thấy mã hợp đồng');
+                                }
+                              }}
+                              style={{
+                                backgroundColor: '#0ea5e9',
+                                color: 'white'
+                              }}
+                            >
+                              <i className="fas fa-signature"></i>
+                            </button>
+                          )}
                           
                           {/* Upload hóa đơn */}
                           <button

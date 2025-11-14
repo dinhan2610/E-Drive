@@ -162,6 +162,11 @@ const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload,
                       const vehicleModel = vehicleParts.slice(0, 2).join(' '); // VF 8, VF 5, etc.
                       const vehicleVersion = vehicleParts.slice(2).join(' ') || 'Standard';
                       
+                      // Calculate price with VAT (item.itemTotal already includes discount deducted)
+                      const priceAfterDiscount = item.itemSubtotal - item.itemDiscount;
+                      const unitPriceWithVAT = (item.unitPrice - (item.itemDiscount / item.quantity)) * (1 + (payload.order?.money.taxPercent || 10) / 100);
+                      const totalWithVAT = priceAfterDiscount * (1 + (payload.order?.money.taxPercent || 10) / 100);
+                      
                       return (
                         <tr key={index}>
                           <td>{(index + 1).toString().padStart(2, '0')}</td>
@@ -178,8 +183,8 @@ const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload,
                             </div>
                           </td>
                           <td className={styles.centerText}>{item.quantity.toString().padStart(2, '0')}</td>
-                          <td className={styles.rightText}>{formatCurrency(item.unitPrice)}</td>
-                          <td className={styles.rightText}>{formatCurrency(item.itemSubtotal)}</td>
+                          <td className={styles.rightText}>{formatCurrency(unitPriceWithVAT)}</td>
+                          <td className={styles.rightText}>{formatCurrency(totalWithVAT)}</td>
                         </tr>
                       );
                     })}
@@ -191,7 +196,7 @@ const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload,
                         </strong>
                       </td>
                       <td className={styles.rightText}><strong></strong></td>
-                      <td className={styles.rightText}><strong>{formatCurrency(payload.pricing.subtotal)}</strong></td>
+                      <td className={styles.rightText}><strong>{formatCurrency(payload.pricing.total)}</strong></td>
                     </tr>
                   </>
                 ) : (
@@ -226,7 +231,7 @@ const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload,
             </table>
             
             <p className={styles.note}>
-              <em>Bằng chữ: {numberToVietnameseWords(payload.pricing.subtotal)} (Đã gồm toàn bộ mọi khoản thuế phí theo pháp luật hiện hành /,/.</em>
+              <em>Bằng chữ: {numberToVietnameseWords(payload.pricing.total)} (Đã gồm toàn bộ mọi khoản thuế phí theo pháp luật hiện hành /,/.</em>
             </p>
           </div>
 

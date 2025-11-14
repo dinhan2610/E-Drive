@@ -15,6 +15,7 @@ import PromotionsPage from "./Pages/PromotionsPage";
 import FinancingPage from "./Pages/FinancingPage";
 import TicketsPage from "./Pages/TicketsPage";
 import ContractCreatePageNew from "./Pages/ContractCreatePage_new";
+import ContractSignPage from "./Pages/ContractSignPage";
 import CreateQuotePage from "./Pages/CreateQuotePage";
 import Navbar from "../src/components/Navbar";
 import Footer from "../src/components/Footer";
@@ -142,6 +143,19 @@ function App() {
         <Route path="/admin/contracts/new" element={
           <ProtectedRoute requiredRole="admin">
             <ContractCreatePageNew />
+          </ProtectedRoute>
+        } />
+        
+        {/* Contract signing - accessible by both admin and dealer */}
+        <Route path="/admin/contracts/sign/:contractId" element={
+          <ProtectedRoute requiredRole="admin">
+            <ContractSignPage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/contracts/sign/:contractId" element={
+          <ProtectedRoute>
+            <ContractSignPage />
           </ProtectedRoute>
         } />
       </Routes>

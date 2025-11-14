@@ -58,6 +58,15 @@ export const useContractCheck = () => {
     return contract?.id;
   };
 
+  /**
+   * Get contract status by orderId
+   * Returns status if contract exists, undefined otherwise
+   */
+  const getContractStatus = (orderId: string | number): string | undefined => {
+    const contract = contractMap.get(String(orderId));
+    return contract?.status;
+  };
+
   return {
     contractMap,
     loading,
@@ -65,6 +74,7 @@ export const useContractCheck = () => {
     hasContract,
     getContract,
     getContractId, // Direct contractId lookup
+    getContractStatus, // Direct status lookup
     reload: loadContracts,
   };
 };

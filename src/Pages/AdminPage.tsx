@@ -649,10 +649,9 @@ const AdminPage: React.FC = () => {
   const [editDiscountErrors, setEditDiscountErrors] = useState<Record<string, string>>({});
 
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [updateTrigger, setUpdateTrigger] = useState(0); // Force re-render trigger
 
   // Use contract check hook for optimized one-contract-per-order lookup
-  const { hasContract, getContractId, reload: reloadContractMap } = useContractCheck();
+  const { hasContract, getContractId, getContractStatus, reload: reloadContractMap } = useContractCheck();
 
   // Reload contract map when navigating back from contract creation
   // Use ref to track if we've already reloaded for this timestamp
@@ -3172,6 +3171,22 @@ const AdminPage: React.FC = () => {
                           >
                             <i className={hasContract(String(booking.id)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
                           </button>
+                          {hasContract(String(booking.id)) && getContractStatus(String(booking.id)) !== 'ACTIVE' && (
+                            <button 
+                              className={styles.signButton}
+                              title="✍️ Ký hợp đồng điện tử"
+                              onClick={() => {
+                                const contractId = getContractId(String(booking.id));
+                                window.location.href = `/admin/contracts/sign/${contractId}`;
+                              }}
+                              style={{
+                                backgroundColor: '#0ea5e9',
+                                color: 'white'
+                              }}
+                            >
+                              <i className="fas fa-signature"></i>
+                            </button>
+                          )}
                           <button 
                             className={styles.billButton}
                             title="Xem hóa đơn"

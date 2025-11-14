@@ -22,6 +22,8 @@ export interface ContractPayload {
     address?: string;
     taxCode?: string;
     representative?: string;
+    signatureData?: string;
+    signedAt?: string;
   };
   manufacturer?: {
     name: string;
@@ -30,6 +32,8 @@ export interface ContractPayload {
     address?: string;
     taxCode?: string;
     representative?: string;
+    signatureData?: string;
+    signedAt?: string;
   };
   vehicle: { 
     model: string; 
@@ -62,6 +66,12 @@ export interface Contract extends ContractPayload {
   signRequestId?: string;
   createdAt: string;
   updatedAt: string;
+  
+  // Backend returns flat structure, not nested
+  manufacturerSignatureData?: string;
+  manufacturerSignedAt?: string;
+  dealerSignatureData?: string;
+  dealerSignedAt?: string;
 }
 
 // Legacy types for backward compatibility with old ContractCreatePage

@@ -425,7 +425,8 @@
 .deleteButton,
 .approveButton,
 .contractButton,
-.billButton {
+.billButton,
+.signButton {
   width: 32px;
   height: 32px;
   border: none;
@@ -472,6 +473,15 @@
 
   &:hover {
     background: #f59e0b;
+    transform: scale(1.1);
+  }
+}
+
+.signButton {
+  background: rgba(14, 165, 233, 0.9);
+
+  &:hover {
+    background: #0ea5e9;
     transform: scale(1.1);
   }
 }
@@ -823,6 +833,7 @@
   .editButton,
   .contractButton,
   .billButton,
+  .signButton,
   .deleteButton,
   .approveButton {
     width: 32px;
@@ -875,6 +886,15 @@
     
     &:hover {
       background: #d97706;
+    }
+  }
+  
+  .signButton {
+    background: #0ea5e9;
+    color: white;
+    
+    &:hover {
+      background: #0284c7;
     }
   }
   

@@ -161,7 +161,7 @@ export const uploadContractPdf = async (
 
     const token = localStorage.getItem('token');
     const response = await fetch(
-      `http://localhost:8080/api/contracts/${contractId}/upload-pdf`,
+      `http://localhost:8080/api/contracts/${contractId}/upload-pdf-new`,
       {
         method: 'POST',
         headers: {
@@ -221,3 +221,41 @@ export const downloadContractPdf = async (
     throw new Error(error.message || 'Không thể tải PDF từ server');
   }
 };
+
+// Save manufacturer signature
+export async function saveManufacturerSignature(
+  contractId: string, 
+  signatureData: string
+): Promise<Contract> {
+  try {
+    console.log('📝 Saving manufacturer signature for contract:', contractId);
+    const response = await apiClient.put<Contract>(
+      `/api/contracts/${contractId}/sign/manufacturer`,
+      { signatureData }
+    );
+    console.log('✅ Signature saved successfully');
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Save signature error:', error);
+    throw new Error(error?.response?.data?.message || 'Không thể lưu chữ ký');
+  }
+}
+
+// Save dealer signature
+export async function saveDealerSignature(
+  contractId: string, 
+  signatureData: string
+): Promise<Contract> {
+  try {
+    console.log('📝 Saving dealer signature for contract:', contractId);
+    const response = await apiClient.put<Contract>(
+      `/api/contracts/${contractId}/sign/dealer`,
+      { signatureData }
+    );
+    console.log('✅ Dealer signature saved successfully');
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Save dealer signature error:', error);
+    throw new Error(error?.response?.data?.message || 'Không thể lưu chữ ký đại lý');
+  }
+}
