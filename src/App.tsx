@@ -15,6 +15,7 @@ import PromotionsPage from "./Pages/PromotionsPage";
 import FinancingPage from "./Pages/FinancingPage";
 import TicketsPage from "./Pages/TicketsPage";
 import ContractCreatePageNew from "./Pages/ContractCreatePage_new";
+import CreateQuotePage from "./Pages/CreateQuotePage";
 import Navbar from "../src/components/Navbar";
 import Footer from "../src/components/Footer";
 import ChatBox from "../src/components/ChatBox";
@@ -88,6 +89,11 @@ function App() {
         <Route path="/quotes" element={
           <ProtectedRoute requiredRole="dealer">
             <QuoteListPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/quotes/create" element={
+          <ProtectedRoute requiredRole="dealer">
+            <CreateQuotePage />
           </ProtectedRoute>
         } />
         <Route path="/dealer-order" element={
