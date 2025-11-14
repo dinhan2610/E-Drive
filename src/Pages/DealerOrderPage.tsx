@@ -12,7 +12,6 @@ import styles from '../styles/OrderStyles/DealerOrderPage.module.scss';
 interface DealerOrderForm {
   // Dealer Info
   dealerName: string;
-  dealerCode: string;
   contactPerson: string;
   email: string;
   phone: string;
@@ -76,7 +75,6 @@ const DealerOrderPage: React.FC = () => {
   
   const [formData, setFormData] = useState<DealerOrderForm>({
     dealerName: '',
-    dealerCode: '',
     contactPerson: '',
     email: '',
     phone: '',
@@ -118,7 +116,7 @@ const DealerOrderPage: React.FC = () => {
         setFormData(prev => ({
           ...prev,
           dealerName: dealerData.agencyName || dealerData.fullName || '',
-          dealerCode: dealerData.dealerId ? `DL${String(dealerData.dealerId).padStart(6, '0')}` : '',
+
           contactPerson: dealerData.contactPerson || dealerData.fullName || '',
           email: dealerData.email || '',
           phone: dealerData.agencyPhone || dealerData.phoneNumber || '',
@@ -141,7 +139,7 @@ const DealerOrderPage: React.FC = () => {
             setFormData(prev => ({
               ...prev,
               dealerName: user.fullName || user.dealerName || '',
-              dealerCode: user.dealerCode || '',
+
               contactPerson: user.fullName || user.name || '',
               email: user.email || '',
               phone: user.phone || '',
@@ -423,7 +421,6 @@ const DealerOrderPage: React.FC = () => {
       // Reset form and switch to orders list
       setFormData({
         dealerName: '',
-        dealerCode: '',
         contactPerson: '',
         email: '',
         phone: '',
@@ -492,18 +489,8 @@ const DealerOrderPage: React.FC = () => {
                     </div>
 
                     <div className={styles.infoItem}>
-                      <label><i className="fas fa-id-card"></i> Mã đại lý</label>
-                      <div className={styles.infoValue}>{formData.dealerCode || '---'}</div>
-                    </div>
-
-                    <div className={styles.infoItem}>
                       <label><i className="fas fa-user"></i> Người liên hệ</label>
                       <div className={styles.infoValue}>{formData.contactPerson || '---'}</div>
-                    </div>
-
-                    <div className={styles.infoItem}>
-                      <label><i className="fas fa-phone"></i> Số điện thoại</label>
-                      <div className={styles.infoValue}>{formData.phone || '---'}</div>
                     </div>
 
                     <div className={styles.infoItem}>
@@ -524,7 +511,6 @@ const DealerOrderPage: React.FC = () => {
 
                 {/* Hidden inputs to maintain form data */}
                 <input type="hidden" name="dealerName" value={formData.dealerName} />
-                <input type="hidden" name="dealerCode" value={formData.dealerCode} />
                 <input type="hidden" name="contactPerson" value={formData.contactPerson} />
                 <input type="hidden" name="phone" value={formData.phone} />
                 <input type="hidden" name="email" value={formData.email} />
@@ -806,7 +792,7 @@ const DealerOrderPage: React.FC = () => {
                   </option>
                   {availableVehicles.map(vehicle => (
                     <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.name} - {vehicle.variant}
+                      {vehicle.name}
                     </option>
                   ))}
                 </select>
@@ -844,9 +830,6 @@ const DealerOrderPage: React.FC = () => {
                               <span className={styles.outOfStockBadge}>Hết hàng</span>
                             )}
                           </div>
-                          {isSelected && (
-                            <i className="fas fa-check-circle"></i>
-                          )}
                         </div>
                       );
                     })}

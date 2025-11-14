@@ -33,8 +33,7 @@ const ProfilePage: React.FC = () => {
     phone: '',
     address: '',
     company: '',
-    dealerName: '',
-    dealerCode: ''
+    dealerName: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -103,8 +102,7 @@ const ProfilePage: React.FC = () => {
             phone: dealerProfile.phoneNumber,
             address: dealerProfile.fullAddress || '',
             company: dealerProfile.agencyName || '',
-            dealerName: dealerProfile.agencyName || '',
-            dealerCode: dealerProfile.dealerId ? `DL${String(dealerProfile.dealerId).padStart(6, '0')}` : ''
+            dealerName: dealerProfile.agencyName || ''
           });
           setAvatarPreview(uiProfile.avatar);
           return;
@@ -137,8 +135,7 @@ const ProfilePage: React.FC = () => {
           phone: apiProfile.phoneNumber,
           address: apiProfile.fullAddress || '',
           company: apiProfile.agencyName || '',
-          dealerName: apiProfile.agencyName || '',
-          dealerCode: apiProfile.dealerId ? `DL${String(apiProfile.dealerId).padStart(6, '0')}` : ''
+          dealerName: apiProfile.agencyName || ''
         });
         setAvatarPreview(uiProfile.avatar);
       } catch (error) {
@@ -169,8 +166,7 @@ const ProfilePage: React.FC = () => {
             phone: mockUserProfile.phone,
             address: mockUserProfile.address,
             company: mockUserProfile.company,
-            dealerName: mockUserProfile.dealerName,
-            dealerCode: parsedUser.dealerCode || ''
+            dealerName: mockUserProfile.dealerName
           });
           setAvatarPreview(mockUserProfile.avatar);
         }
@@ -497,18 +493,6 @@ const ProfilePage: React.FC = () => {
                           onChange={handleInputChange}
                           disabled={!isEditing}
                           placeholder="Nhập tên đại lý"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Mã đại lý</label>
-                      <input
-                          type="text"
-                          name="dealerCode"
-                          value={formData.dealerCode}
-                          onChange={handleInputChange}
-                          disabled={!isEditing}
-                          placeholder="Nhập mã đại lý"
                       />
                     </div>
 

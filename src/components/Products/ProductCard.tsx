@@ -112,11 +112,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Color Selector */}
-        {item.colorVariants && item.colorVariants.length > 1 && (
+        {item.colorVariants && item.colorVariants.length > 0 && (
           <div className={styles.colorSelector}>
             <div className={styles.colorLabel}>
               <span>Màu xe: <strong>{selectedColorVariant?.color || item.selectedColor}</strong></span>
-              <span className={styles.colorCount}>({item.colorVariants.length} màu)</span>
+              {item.colorVariants.length > 1 && (
+                <span className={styles.colorCount}>({item.colorVariants.length} màu)</span>
+              )}
             </div>
             <div className={styles.colorOptions}>
               {item.colorVariants.map((variant) => {

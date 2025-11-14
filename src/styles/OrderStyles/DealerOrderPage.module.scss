@@ -2425,10 +2425,6 @@
       color: #ff4d30;
       font-weight: 700;
     }
-    
-    .fas.fa-check-circle {
-      display: block;
-    }
   }
   
   &.outOfStock {
@@ -2440,22 +2436,6 @@
       transform: none;
       box-shadow: none;
       border-color: #e9ecef;
-    }
-  }
-  
-  .fas.fa-check-circle {
-    display: none;
-    position: absolute;
-    top: 1.2rem;
-    right: 1.2rem;
-    font-size: 2rem;
-    color: #ff4d30;
-    animation: scaleIn 0.3s ease;
-    
-    @media (max-width: 768px) {
-      font-size: 1.8rem;
-      top: 1rem;
-      right: 1rem;
     }
   }
 }
