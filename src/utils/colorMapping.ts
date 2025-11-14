@@ -113,6 +113,10 @@ export const COLOR_MAP: Record<string, { solid: string; gradient?: string }> = {
     solid: '#1E90FF',
     gradient: 'linear-gradient(135deg, #4A9EFF 0%, #0066CC 100%)'
   },
+  'Xanh Lam': { 
+    solid: '#1E90FF',
+    gradient: 'linear-gradient(135deg, #4A9EFF 0%, #0066CC 100%)'
+  },
   'Xanh navy': { 
     solid: '#000080',
     gradient: 'linear-gradient(135deg, #1A1AAD 0%, #000060 100%)'
