@@ -80,6 +80,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ orderData }) => {
               <thead>
                 <tr>
                   <th>Tên xe</th>
+                  <th>Màu sắc</th>
                   <th>Số lượng</th>
                   <th>Đơn giá</th>
                   <th>Tạm tính</th>
@@ -88,16 +89,34 @@ const ContractForm: React.FC<ContractFormProps> = ({ orderData }) => {
                 </tr>
               </thead>
               <tbody>
-                {orderData.orderItems.map((item, index) => (
-                  <tr key={index}>
-                    <td>{item.vehicleName}</td>
-                    <td className={styles.textCenter}>{item.quantity}</td>
-                    <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
-                    <td className={styles.textRight}>{formatCurrency(item.itemSubtotal)}</td>
-                    <td className={styles.textRight}>-{formatCurrency(item.itemDiscount)}</td>
-                    <td className={styles.textRight}><strong>{formatCurrency(item.itemTotal)}</strong></td>
-                  </tr>
-                ))}
+                {orderData.orderItems.map((item, index) => {
+                  // Parse vehicle name and version for display
+                  const displayName = item.vehicleName || 'N/A';
+                  const vehicleVersion = item.vehicleVersion || '';
+                  const fullVehicleName = vehicleVersion 
+                    ? `${displayName} - ${vehicleVersion}`
+                    : displayName;
+                  
+                  // Debug log
+                  console.log('🎨 ContractForm item:', {
+                    vehicleName: item.vehicleName,
+                    vehicleVersion: item.vehicleVersion,
+                    color: item.color,
+                    fullVehicleName
+                  });
+                  
+                  return (
+                    <tr key={index}>
+                      <td>{fullVehicleName}</td>
+                      <td className={styles.textCenter}>{item.color || 'Chưa xác định'}</td>
+                      <td className={styles.textCenter}>{item.quantity}</td>
+                      <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
+                      <td className={styles.textRight}>{formatCurrency(item.itemSubtotal)}</td>
+                      <td className={styles.textRight}>-{formatCurrency(item.itemDiscount)}</td>
+                      <td className={styles.textRight}><strong>{formatCurrency(item.itemTotal)}</strong></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

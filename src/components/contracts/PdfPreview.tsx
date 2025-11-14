@@ -9,311 +9,263 @@ interface PdfPreviewProps {
 
 const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload, contractNo }, ref) => {
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(value);
+    return new Intl.NumberFormat('vi-VN').format(value);
   };
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '—';
     try {
-      return new Date(dateStr).toLocaleDateString('vi-VN');
+      const date = new Date(dateStr);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
     } catch {
       return dateStr;
     }
   };
 
+  // Convert number to Vietnamese words
+  const numberToVietnameseWords = (num: number): string => {
+    if (num === 0) return 'Không đồng';
+    
+    const ones = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    const teens = ['mười', 'mười một', 'mười hai', 'mười ba', 'mười bốn', 'mười lăm', 'mười sáu', 'mười bảy', 'mười tám', 'mười chín'];
+    const tens = ['', '', 'hai mươi', 'ba mươi', 'bốn mươi', 'năm mươi', 'sáu mươi', 'bảy mươi', 'tám mươi', 'chín mươi'];
+    const thousands = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ'];
+
+    const convertThreeDigits = (n: number): string => {
+      if (n === 0) return '';
+      
+      const hundred = Math.floor(n / 100);
+      const remainder = n % 100;
+      const ten = Math.floor(remainder / 10);
+      const one = remainder % 10;
+      
+      let result = '';
+      
+      if (hundred > 0) {
+        result += ones[hundred] + ' trăm';
+        if (remainder > 0 && remainder < 10) {
+          result += ' lẻ';
+        }
+      }
+      
+      if (ten === 0 && one > 0) {
+        result += ' ' + ones[one];
+      } else if (ten === 1) {
+        result += ' ' + teens[remainder - 10];
+      } else if (ten > 1) {
+        result += ' ' + tens[ten];
+        if (one === 1) {
+          result += ' mốt';
+        } else if (one === 5 && ten > 1) {
+          result += ' lăm';
+        } else if (one > 0) {
+          result += ' ' + ones[one];
+        }
+      }
+      
+      return result.trim();
+    };
+
+    // Split number into groups of 3 digits
+    const groups: number[] = [];
+    let tempNum = Math.floor(num);
+    while (tempNum > 0) {
+      groups.unshift(tempNum % 1000);
+      tempNum = Math.floor(tempNum / 1000);
+    }
+
+    let result = '';
+    for (let i = 0; i < groups.length; i++) {
+      if (groups[i] > 0) {
+        const groupText = convertThreeDigits(groups[i]);
+        const thousandText = thousands[groups.length - i - 1];
+        result += groupText + (thousandText ? ' ' + thousandText : '') + ' ';
+      }
+    }
+
+    return result.trim().charAt(0).toUpperCase() + result.trim().slice(1) + ' đồng chẵn';
+  };
+
+  // Calculate pricing
+  const quantity = payload.order?.orderItems?.[0]?.quantity || 1;
+  const unitPrice = payload.pricing.subtotal / quantity;
+
+  // Get order code
+  const orderCode = payload.order?.code || 'N/A';
+
   return (
     <div className={styles.preview}>
       <div className={styles.previewArea}>
         <div ref={ref} className={styles.printArea}>
-          {/* Header - Company Info */}
-          <div className={styles.docHeader}>
-            <div className={styles.leftSection}>
-              <h2 className={styles.companyName}>CÔNG TY E-DRIVE VIỆT NAM</h2>
-              <div className={styles.companyDetails}>
-                <p>{payload.manufacturer?.address || '123 Đường Xe Điện, Quận 1, TP.HCM'}</p>
-                <p>Điện thoại: {payload.manufacturer?.phone || '(0123) 456 789'}</p>
-                <p>Email: {payload.manufacturer?.email || 'contact@e-drive.vn'}</p>
-                <p>Mã số thuế: {payload.manufacturer?.taxCode || '0123456789'}</p>
+          {/* Header */}
+          <div className={styles.contractHeader}>
+            <div className={styles.leftColumn}>
+              <div className={styles.companyInfo}>
+                <h3>CÔNG TY E-DRIVE VIỆT NAM</h3>
+                <p><strong>MSDN:</strong> {payload.manufacturer?.taxCode || '0123456789'}</p>
+                <p><strong>Địa chỉ:</strong> {payload.manufacturer?.address || '123 Đường Điện Biên Phủ, Quận 1, TP.HCM'}</p>
+                <p><strong>Điện thoại:</strong> {payload.manufacturer?.phone || '(0123) 456 789'}</p>
+                <p>Kết nối giữa các bên:</p>
+              </div>
+              
+              <div className={styles.partyInfo}>
+                <p><strong>BÊN A: MUA (Đại lý)</strong></p>
+                <p><strong>Tên người đại diện:</strong> {payload.dealer.representative || '__________'}</p>
+                <p><strong>Đại diện:</strong> {payload.dealer.name}</p>
+                <p><strong>Địa chỉ:</strong> {payload.dealer.address || 'Chưa cập nhật'}</p>
+                <p><strong>Số điện thoại:</strong> {payload.dealer.phone || 'Chưa cập nhật'}</p>
+                <p><strong>Chức vụ:</strong> Quản lý</p>
+              </div>
+              
+              <div className={styles.partyInfo}>
+                <p><strong>BÊN B: BÁN (Hãng sản xuất)</strong></p>
+                <p><strong>Văn phòng:</strong> Tại các Trưởng Phòng Kinh Doanh Trưng Bày, Tư vấn</p>
+                <p><strong>Đại diện:</strong> {payload.manufacturer?.name || 'E-DRIVE VIETNAM'}</p>
+                <p><strong>Tên người đại diện:</strong> Thân Trọng An</p>
+                <p><strong>Số điện thoại:</strong> 0912345678</p>
+                <p><strong>Chức vụ:</strong> Giám đốc</p>
               </div>
             </div>
             
-            <div className={styles.centerSection}>
-              <h1 className={styles.contractTitle}>HỢP ĐỒNG MUA BÁN<br/>XE Ô TÔ ĐIỆN</h1>
-              <div className={styles.contractNumber}>
-                <span>Số:</span> <strong>{contractNo || 'CT-DRAFT'}</strong>
-              </div>
+            <div className={styles.rightColumn}>
+              <h1 className={styles.mainTitle}>HỢP ĐỒNG MUA BÁN XE</h1>
+              <p className={styles.contractNo}>Số: <strong>{contractNo || 'CT-DRAFT'}</strong> - BMW/VL</p>
+              <p className={styles.contractDate}>Ký vào ngày {formatDate(payload.order?.orderDate)} tại</p>
+              <p className={styles.note}>Ký với giấy các bên:</p>
             </div>
           </div>
 
-          {/* Parties */}
-          <section className={styles.docSection}>
-            <h5>BÊN BÁN (BÊN A) - HÃNG SẢN XUẤT</h5>
-            {payload.manufacturer ? (
-              <>
-                <p><strong>Tên công ty:</strong> {payload.manufacturer.name || 'E-DRIVE VIETNAM'}</p>
-                <p><strong>Địa chỉ:</strong> {payload.manufacturer.address || '123 Đường Xe Điện, Quận 1, TP.HCM'}</p>
-                <p><strong>Điện thoại:</strong> {payload.manufacturer.phone || '(0123) 456 789'}</p>
-                <p><strong>Email:</strong> {payload.manufacturer.email || 'contact@e-drive.vn'}</p>
-                <p><strong>Mã số thuế:</strong> {payload.manufacturer.taxCode || '0123456789'}</p>
-              </>
-            ) : (
-              <>
-                <p><strong>Tên công ty:</strong> E-DRIVE VIETNAM</p>
-                <p><strong>Địa chỉ:</strong> 123 Đường Xe Điện, Quận 1, TP.HCM</p>
-                <p><strong>Điện thoại:</strong> (0123) 456 789</p>
-                <p><strong>Email:</strong> contact@e-drive.vn</p>
-                <p><strong>Mã số thuế:</strong> 0123456789</p>
-              </>
-            )}
-          </section>
-
-          <section className={styles.docSection}>
-            <h5>BÊN MUA (BÊN B) - ĐẠI LÝ</h5>
-            <p><strong>Tên đại lý:</strong> {payload.dealer.name}</p>
-            {payload.order?.deliveryAddress && <p><strong>Địa chỉ:</strong> {payload.order.deliveryAddress}</p>}
-          </section>
-
-          {/* Vehicle */}
-          <section className={styles.docSection}>
-            <h5>THÔNG TIN XE</h5>
-            <div className={styles.table}>
-              <div className={styles.row}>
-                <span className={styles.key}>Model:</span>
-                <span className={styles.val}>{payload.vehicle.model}</span>
-              </div>
-              {payload.vehicle.variant && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Phiên bản:</span>
-                  <span className={styles.val}>{payload.vehicle.variant}</span>
-                </div>
-              )}
-              {payload.vehicle.color && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Màu sắc:</span>
-                  <span className={styles.val}>{payload.vehicle.color}</span>
-                </div>
-              )}
-              {payload.vehicle.vin && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Số khung (VIN):</span>
-                  <span className={styles.val}>{payload.vehicle.vin}</span>
-                </div>
-              )}
-              {payload.order?.orderItems && payload.order.orderItems.length > 0 && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Số lượng:</span>
-                  <span className={styles.val}>{payload.order.orderItems[0].quantity} xe</span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Order Info */}
-          <section className={styles.docSection}>
-            <h5>THÔNG TIN ĐƠN HÀNG</h5>
-            <div className={styles.table}>
-              {payload.order?.orderDate && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Ngày đặt hàng:</span>
-                  <span className={styles.val}>{formatDate(payload.order.orderDate)}</span>
-                </div>
-              )}
-              {payload.order?.desiredDeliveryDate && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Ngày giao dự kiến:</span>
-                  <span className={styles.val}>{formatDate(payload.order.desiredDeliveryDate)}</span>
-                </div>
-              )}
-              {payload.order?.paymentStatus && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Trạng thái thanh toán:</span>
-                  <span className={styles.val}>{payload.order.paymentStatus}</span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Delivery Info */}
-          <section className={styles.docSection}>
-            <h5>THÔNG TIN GIAO HÀNG</h5>
-            <div className={styles.table}>
-              {payload.order?.deliveryAddress && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Địa chỉ giao hàng:</span>
-                  <span className={styles.val}>{payload.order.deliveryAddress}</span>
-                </div>
-              )}
-              {payload.terms.deliveryDate && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Ngày giao xe:</span>
-                  <span className={styles.val}>{formatDate(payload.terms.deliveryDate)}</span>
-                </div>
-              )}
-              {payload.terms.deliveryLocation && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Địa điểm giao:</span>
-                  <span className={styles.val}>{payload.terms.deliveryLocation}</span>
-                </div>
-              )}
-              {payload.order?.deliveryNote && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Ghi chú giao hàng:</span>
-                  <span className={styles.val}>{payload.order.deliveryNote}</span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Pricing */}
-          <section className={styles.docSection}>
-            <h5>GIÁ TRỊ HỢP ĐỒNG</h5>
-            <div className={styles.pricing}>
-              <div className={styles.row}>
-                <span>Giá niêm yết:</span>
-                <span>{formatCurrency(payload.pricing.subtotal)}</span>
-              </div>
-              <div className={styles.row}>
-                <span>Chiết khấu:</span>
-                <span>-{formatCurrency(payload.pricing.discount)}</span>
-              </div>
-              <div className={styles.row}>
-                <span>Thuế VAT ({payload.pricing.taxPercent}%):</span>
-                <span>
-                  {formatCurrency(
-                    (payload.pricing.subtotal - payload.pricing.discount) *
-                      (payload.pricing.taxPercent / 100)
-                  )}
-                </span>
-              </div>
-              <div className={styles.row}>
-                <span>Phí khác:</span>
-                <span>{formatCurrency(payload.pricing.fees || 0)}</span>
-              </div>
-              <div className={`${styles.row} ${styles.total}`}>
-                <strong>Tổng cộng:</strong>
-                <strong>{formatCurrency(payload.pricing.total)}</strong>
-              </div>
-              {payload.pricing.paidTotal !== undefined && payload.pricing.paidTotal > 0 && (
-                <>
-                  <div className={`${styles.row} ${styles.paid}`}>
-                    <span>Đã thanh toán:</span>
-                    <span>{formatCurrency(payload.pricing.paidTotal)}</span>
-                  </div>
-                  <div className={`${styles.row} ${styles.remaining}`}>
-                    <span>Còn lại:</span>
-                    <span>{formatCurrency(payload.pricing.remaining || 0)}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
-
-          {/* Payment Methods & Conditions */}
-          <section className={styles.docSection}>
-            <h5>PHƯƠNG THỨC & ĐIỀU KIỆN THANH TOÁN</h5>
+          {/* ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG */}
+          <div className={styles.article}>
+            <h4>ĐIỀU 1. ĐỐI TƯỢNG HỢP ĐỒNG</h4>
+            <p>Căn cứ theo đơn hàng số {orderCode} do Hợp đồng này có hiệu lực từ ngày {formatDate(payload.order?.orderDate)} ("Hợp đồng") với các đại điểm sau:</p>
             
-            <div className={styles.subsection}>
-              <p><strong>Phương thức thanh toán:</strong></p>
-              <ul>
-                <li>Tiền mặt tại showroom</li>
-                <li>Chuyển khoản ngân hàng (thông tin tài khoản kèm theo)</li>
-                <li>VNPAY (quét mã QR)</li>
-                <li>Thẻ tín dụng/ghi nợ (Visa, Mastercard, JCB)</li>
-              </ul>
-            </div>
+            <table className={styles.vehicleTable}>
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Mô tả hàng hóa</th>
+                  <th>SL</th>
+                  <th>Đơn giá<br/>(đã gồm VAT)</th>
+                  <th>Thành tiền<br/>(đã gồm VAT)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payload.order?.orderItems && payload.order.orderItems.length > 0 ? (
+                  <>
+                    {payload.order.orderItems.map((item, index) => {
+                      // Parse vehicle name to extract model and version
+                      const vehicleParts = item.vehicleName.split(' ');
+                      const vehicleModel = vehicleParts.slice(0, 2).join(' '); // VF 8, VF 5, etc.
+                      const vehicleVersion = vehicleParts.slice(2).join(' ') || 'Standard';
+                      
+                      return (
+                        <tr key={index}>
+                          <td>{(index + 1).toString().padStart(2, '0')}</td>
+                          <td>
+                            <div className={styles.vehicleDesc}>
+                              <p><strong>XE Ô TÔ ĐIỆN {vehicleModel.toUpperCase()}</strong></p>
+                              <p>- Phiên bản: {vehicleVersion}</p>
+                              <p>- Số chỗ ngồi: 05 chỗ</p>
+                              <p>- Nguồn gốc xuất xứ: Xe được nhập khẩu nguyên chiếc.</p>
+                              <p>- Màu sơn: {item.color || 'Chưa xác định'}</p>
+                              <p>- Năm sản xuất: {new Date().getFullYear()}</p>
+                              <p>- Màu nội thất: Đen</p>
+                              <p>- Chế động và quy cách: Một 100%; tay lái thuận tay với các thiết bị kỹ thuật theo quy chuẩn và có nhãn hàng xuất sản xuất.</p>
+                            </div>
+                          </td>
+                          <td className={styles.centerText}>{item.quantity.toString().padStart(2, '0')}</td>
+                          <td className={styles.rightText}>{formatCurrency(item.unitPrice)}</td>
+                          <td className={styles.rightText}>{formatCurrency(item.itemSubtotal)}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className={styles.totalRow}>
+                      <td colSpan={2}><strong>Tổng Giá trị Hợp đồng</strong></td>
+                      <td className={styles.centerText}>
+                        <strong>
+                          {payload.order.orderItems.reduce((sum, item) => sum + item.quantity, 0).toString().padStart(2, '0')}
+                        </strong>
+                      </td>
+                      <td className={styles.rightText}><strong></strong></td>
+                      <td className={styles.rightText}><strong>{formatCurrency(payload.pricing.subtotal)}</strong></td>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    <tr>
+                      <td>01</td>
+                      <td>
+                        <div className={styles.vehicleDesc}>
+                          <p><strong>XE Ô TÔ ĐIỆN {payload.vehicle.model?.toUpperCase()}</strong></p>
+                          <p>- Phiên bản: {payload.vehicle.variant || 'Standard'}</p>
+                          <p>- Số chỗ ngồi: 05 chỗ</p>
+                          <p>- Nguồn gốc xuất xứ: Xe được nhập khẩu nguyên chiếc.</p>
+                          <p>- Màu sơn: {payload.vehicle.color || 'Chưa xác định'}</p>
+                          <p>- Năm sản xuất: {new Date().getFullYear()}</p>
+                          <p>- Màu nội thất: Đen</p>
+                          <p>- Chế động và quy cách: Một 100%; tay lái thuận tay với các thiết bị kỹ thuật theo quy chuẩn và có nhãn hàng xuất sản xuất.</p>
+                        </div>
+                      </td>
+                      <td className={styles.centerText}>{quantity.toString().padStart(2, '0')}</td>
+                      <td className={styles.rightText}>{formatCurrency(unitPrice)}</td>
+                      <td className={styles.rightText}>{formatCurrency(unitPrice * quantity)}</td>
+                    </tr>
+                    <tr className={styles.totalRow}>
+                      <td colSpan={2}><strong>Tổng Giá trị Hợp đồng</strong></td>
+                      <td className={styles.centerText}><strong>{quantity.toString().padStart(2, '0')}</strong></td>
+                      <td className={styles.rightText}><strong>{formatCurrency(unitPrice)}</strong></td>
+                      <td className={styles.rightText}><strong>{formatCurrency(payload.pricing.subtotal)}</strong></td>
+                    </tr>
+                  </>
+                )}
+              </tbody>
+            </table>
             
-            <div className={styles.subsection}>
-              <p><strong>Tiến độ thanh toán:</strong></p>
-              <ul>
-                <li>100% trước khi đăng ký xe (đối với khách hàng mua trực tiếp)</li>
-                <li>Hoặc: 70% trước khi giao xe, 30% còn lại khi bàn giao hoàn tất</li>
-                <li>Đặt cọc: Tối thiểu 20% giá trị xe để giữ chỗ</li>
-              </ul>
-            </div>
-          </section>
+            <p className={styles.note}>
+              <em>Bằng chữ: {numberToVietnameseWords(payload.pricing.subtotal)} (Đã gồm toàn bộ mọi khoản thuế phí theo pháp luật hiện hành /,/.</em>
+            </p>
+          </div>
 
-          {/* Warranty & Maintenance */}
-          <section className={styles.docSection}>
-            <h5>BẢO HÀNH – BẢO DƯỠNG – PIN</h5>
-            
-            <div className={styles.subsection}>
-              <p><strong>Bảo hành tổng thể:</strong></p>
-              <ul>
-                <li>Thời hạn: 3 năm hoặc 100.000 km (tùy điều kiện nào đến trước)</li>
-                <li>Áp dụng cho: Khung xe, động cơ điện, hệ thống điện</li>
-              </ul>
-            </div>
-            
-            <div className={styles.subsection}>
-              <p><strong>Bảo hành pin:</strong></p>
-              <ul>
-                <li>Thời hạn: 8 năm hoặc 160.000 km</li>
-                <li>Tiêu chí: Dung lượng pin còn tối thiểu 70% so với ban đầu</li>
-                <li>Bảo hành miễn phí thay thế nếu suy giảm vượt mức quy định</li>
-              </ul>
-            </div>
+          {/* ĐIỀU 2: ĐẶT CỌC VÀ THANH TOÁN */}
+          <div className={styles.article}>
+            <h4>ĐIỀU 2. ĐẶT CỌC VÀ THANH TOÁN</h4>
+            <ul>
+              <li>Thời hạn giao xe: Trong tháng {formatDate(payload.terms.deliveryDate || payload.order?.desiredDeliveryDate)}.</li>
+              <li>Địa điểm giao xe: Tại cơ sở từ việc kho của Bên Bán theo cơ sở tại Hợp đồng của bên giao nơi từ nay đặt xe giao không nhân được bên khác (Bên) bao, có ghi rõ lý do và phải lấy trả bằng giấy.</li>
+            </ul>
+          </div>
 
-            <div className={styles.subsection}>
-              <p><strong>Bảo dưỡng định kỳ:</strong></p>
-              <ul>
-                <li>Kiểm tra miễn phí: 1.000 km, 5.000 km đầu tiên</li>
-                <li>Bảo dưỡng định kỳ: Mỗi 10.000 km hoặc 6 tháng</li>
-              </ul>
-            </div>
+          {/* ĐIỀU 3: THÔNG TIN GIAO NHẬN VÀ CHẤT LƯỢNG SẢN PHẨM */}
+          <div className={styles.article}>
+            <h4>ĐIỀU 3. THÔNG TIN GIAO NHẬN VÀ CHẤT LƯỢNG SẢN PHẨM</h4>
+            <p>Bên Mua phải giao xe: Xe được bàn giao phải là xe mới 100%, theo đúng chuẩn loại trong Mã Hợp đồng bao. Thống báo sẵn sàng giao xe; Bên trong sau khi xe nhân từ xe phải lịch 05 ngày kể từ ngày nhận Bên Bán gửi. Thống báo sẵn sàng giao xe, do được coi là khoản thanh toán bao lý. Nếu không giao Hợp đồng bao có hiệu lực từ ngày bên kia được /./.</p>
+            <p><em>Hợp đồng này có thể từ ngày ký và được thỏa thuận cho đến khi Bên Mua hoàn tất thủ tục nghiệm thu xong xuôi.</em></p>
+          </div>
 
-            <div className={styles.subsection}>
-              <p><strong>Điều kiện từ chối bảo hành:</strong></p>
-              <ul>
-                <li>Sử dụng không đúng hướng dẫn, cải tạo, thay đổi kết cấu xe</li>
-                <li>Bảo dưỡng không đúng lịch hoặc tại garage không ủy quyền</li>
-                <li>Tai nạn, ngập nước, hỏa hoạn do lỗi người dùng</li>
-              </ul>
-            </div>
-          </section>
-
-          {/* Appendix & Documents */}
-          <section className={styles.docSection}>
-            <h5>PHỤ LỤC/ĐÍNH KÈM</h5>
-            
-            <div className={styles.subsection}>
-              <p><strong>Tài liệu kèm theo:</strong></p>
-              <ul>
-                <li>Phụ lục giá chi tiết (bảng tính tiền)</li>
-                <li>Biên bản bàn giao xe (checklist ngoại thất/nội thất/phụ kiện/2 chìa khóa)</li>
-                <li>Hóa đơn/phiếu thu (đặt cọc, thanh toán)</li>
-                <li>Giấy chứng nhận bảo hiểm</li>
-                <li>Hướng dẫn sạc/bảo quản pin</li>
-                <li>Hồ sơ đăng ký (bản sao CCCD/MST/ủy quyền)</li>
-              </ul>
-            </div>
-
-            <div className={styles.subsection}>
-              <p><strong>Dịch vụ hỗ trợ:</strong></p>
-              <ul>
-                <li>Cứu hộ – hỗ trợ 24/7 (trong phạm vi bảo hành)</li>
-                <li>Hotline: 1900-1111</li>
-                <li>Ứng dụng di động: Hỗ trợ giám sát xe, đặt lịch bảo dưỡng</li>
-              </ul>
-            </div>
-          </section>
+          {/* ĐIỀU 4: BẢN ĐIỀU KHOẢN VÀ ĐIỀU KIỆN CHUNG */}
+          <div className={styles.article}>
+            <h4>ĐIỀU 4. BẢN ĐIỀU KHOẢN VÀ ĐIỀU KIỆN CHUNG</h4>
+            <p>Bản Điều khoản và Điều kiện chung là một phần không tách rời của gói cơ bản này; bao gồm các nội dung quy định bao này.</p>
+            <p><em>Hợp đồng này có hiệu lực từ ngày ký, được lưu giữ tại văn phòng và được giữ đúng bằng (bản) bên, có giá trị pháp lý như nhau.</em></p>
+          </div>
 
           {/* Signatures */}
           <div className={styles.signatures}>
-            <div className={styles.signBox}>
-              <p>
-                <strong>BÊN BÁN</strong>
-              </p>
-              <p className={styles.signName}>E-Drive VietNam</p>
-              
+            <div className={styles.signatureBlock}>
+              <p className={styles.signTitle}>ĐẠI DIỆN BÊN BÁN</p>
+              <p className={styles.signStamp}>(Đã ký và đóng dấu)</p>
+              <div className={styles.stampArea}>
+                <p className={styles.stampText}>DL-1. Văn Nam Đăng</p>
+              </div>
             </div>
-            <div className={styles.signBox}>
-              <p>
-                <strong>BÊN MUA</strong>
-              </p>
-              <p className={styles.signLine}>(Ký và ghi rõ họ tên)</p>
+            
+            <div className={styles.signatureBlock}>
+              <p className={styles.signTitle}>ĐẠI DIỆN BÊN MUA</p>
+              <div className={styles.signArea}></div>
             </div>
           </div>
         </div>

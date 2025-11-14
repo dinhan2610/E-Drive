@@ -33,7 +33,13 @@ export async function getOrderById(id: string): Promise<OrderLite> {
       orderId: order.orderId,
       dealerName: order.dealerName,
       grandTotal: order.grandTotal,
-      status: order.orderStatus
+      status: order.orderStatus,
+      orderItems: order.orderItems?.map(item => ({
+        vehicleName: item.vehicleName,
+        quantity: item.quantity,
+        colorName: item.colorName, // Backend field
+        color: item.color, // Frontend field
+      })),
     });
     
     // Map Order to OrderLite format
@@ -129,11 +135,13 @@ async function mapApiOrderToOrderLite(order: Order): Promise<OrderLite> {
     deliveryNote: order.deliveryNote,
     orderItems: order.orderItems?.map(item => ({
       vehicleName: item.vehicleName,
+      vehicleVersion: item.vehicleVersion || '', // Add version from API
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       itemSubtotal: item.itemSubtotal,
       itemDiscount: item.itemDiscount,
       itemTotal: item.itemTotal,
+      color: item.colorName || item.color || '', // Map colorName from backend to color
     })) || [],
   };
 }

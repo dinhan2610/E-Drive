@@ -3262,6 +3262,7 @@ const AdminPage: React.FC = () => {
                           <thead>
                             <tr>
                               <th>Tên xe</th>
+                              <th>Màu sắc</th>
                               <th>Số lượng</th>
                               <th>Đơn giá</th>
                               <th>Tạm tính</th>
@@ -3270,16 +3271,26 @@ const AdminPage: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedOrder.orderItems.map((item, index) => (
-                              <tr key={index}>
-                                <td>{item.vehicleName}</td>
-                                <td>{item.quantity}</td>
-                                <td>{formatCurrency(item.unitPrice)}</td>
-                                <td>{formatCurrency(item.itemSubtotal)}</td>
-                                <td className={modalStyles.discount}>-{formatCurrency(item.itemDiscount)}</td>
-                                <td><strong>{formatCurrency(item.itemTotal)}</strong></td>
-                              </tr>
-                            ))}
+                            {selectedOrder.orderItems.map((item, index) => {
+                              // Parse vehicle name and version for display
+                              const displayName = item.vehicleName || 'N/A';
+                              const vehicleVersion = item.vehicleVersion || '';
+                              const fullVehicleName = vehicleVersion 
+                                ? `${displayName} - ${vehicleVersion}`
+                                : displayName;
+                              
+                              return (
+                                <tr key={index}>
+                                  <td>{fullVehicleName}</td>
+                                  <td>{item.color || 'Chưa xác định'}</td>
+                                  <td>{item.quantity}</td>
+                                  <td>{formatCurrency(item.unitPrice)}</td>
+                                  <td>{formatCurrency(item.itemSubtotal)}</td>
+                                  <td className={modalStyles.discount}>-{formatCurrency(item.itemDiscount)}</td>
+                                  <td><strong>{formatCurrency(item.itemTotal)}</strong></td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

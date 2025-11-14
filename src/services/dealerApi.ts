@@ -151,6 +151,18 @@ function normalizeDealerData(dealerData: any): Dealer {
   const phone = dealerData.contactPhone || dealerData.phone || '';
   const email = dealerData.dealerEmail || dealerData.email || '';
   
+  // Build full address from parts if not provided
+  let fullAddress = dealerData.fullAddress || '';
+  if (!fullAddress && dealerData.houseNumberAndStreet) {
+    const parts = [
+      dealerData.houseNumberAndStreet,
+      dealerData.wardOrCommune,
+      dealerData.district,
+      dealerData.provinceOrCity
+    ].filter(Boolean);
+    fullAddress = parts.join(', ');
+  }
+  
   return {
     ...dealerData,
     // Ensure both backend and frontend field names exist
@@ -158,7 +170,7 @@ function normalizeDealerData(dealerData: any): Dealer {
     phone: phone,
     dealerEmail: email,
     email: email,
-    fullAddress: dealerData.fullAddress || ''
+    fullAddress: fullAddress
   };
 }
 

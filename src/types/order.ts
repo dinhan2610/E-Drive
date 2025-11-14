@@ -60,6 +60,7 @@ export interface OrderLite {
   deliveryNote?: string;
   orderItems?: Array<{
     vehicleName: string;
+    vehicleVersion?: string;
     quantity: number;
     unitPrice: number;
     itemSubtotal: number;

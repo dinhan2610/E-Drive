@@ -21,12 +21,14 @@ export interface CreateOrderRequest {
 export interface OrderItem {
   vehicleId: number;
   vehicleName: string;
+  vehicleVersion?: string;
+  colorName?: string; // Backend returns colorName
   quantity: number;
   unitPrice: number;
   itemSubtotal: number;
   itemDiscount: number;
   itemTotal: number;
-  color?: string;
+  color?: string; // Frontend uses color (mapped from colorName)
 }
 
 export interface Order {
@@ -122,12 +124,14 @@ export const getOrders = async (): Promise<Order[]> => {
       orderItems: order.orderItems ? order.orderItems.map((item: any) => ({
         vehicleId: item.vehicleId,
         vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
+        vehicleVersion: item.vehicleVersion || item.version || '',
+        colorName: item.colorName || item.color || '',
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || 0,
         itemSubtotal: item.itemSubtotal || 0,
         itemDiscount: item.itemDiscount || 0,
         itemTotal: item.itemTotal || 0,
-        color: item.color
+        color: item.colorName || item.color || '' // Map colorName to color
       })) : []
     }));
 
@@ -262,12 +266,14 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
       orderItems: orderData.orderItems ? orderData.orderItems.map((item: any) => ({
         vehicleId: item.vehicleId,
         vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
+        vehicleVersion: item.vehicleVersion || item.version || '',
+        colorName: item.colorName || item.color || '',
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || 0,
         itemSubtotal: item.itemSubtotal || 0,
         itemDiscount: item.itemDiscount || 0,
         itemTotal: item.itemTotal || 0,
-        color: item.color
+        color: item.colorName || item.color || '' // Map colorName to color
       })) : []
     };
 
