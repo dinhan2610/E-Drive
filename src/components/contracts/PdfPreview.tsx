@@ -262,10 +262,7 @@ const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload,
           <div className={styles.signatures}>
             <div className={styles.signatureBlock}>
               <p className={styles.signTitle}>ĐẠI DIỆN BÊN BÁN</p>
-              <p className={styles.signStamp}>(Đã ký và đóng dấu)</p>
-              <div className={styles.stampArea}>
-                <p className={styles.stampText}>DL-1. Văn Nam Đăng</p>
-              </div>
+              <div className={styles.stampArea}></div>
             </div>
             
             <div className={styles.signatureBlock}>

@@ -12,7 +12,8 @@ import { createColor, updateColor, deleteColor, fetchColors } from '../services/
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
 import { fetchDiscountPolicies, createDiscountPolicy, updateDiscountPolicy, deleteDiscountPolicy } from '../services/discountApi';
 import type { DiscountPolicy, CreateDiscountRequest, UpdateDiscountRequest } from '../types/discount';
-import { downloadContractPdf } from '../services/contractsApi';
+import { downloadContractPdf, getAllContracts } from '../services/contractsApi';
+import type { Contract } from '../types/contract';
 import { useContractCheck } from '../hooks/useContractCheck';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
@@ -649,6 +650,7 @@ const AdminPage: React.FC = () => {
   const [editDiscountErrors, setEditDiscountErrors] = useState<Record<string, string>>({});
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [updateTrigger, setUpdateTrigger] = useState(0); // Force re-render trigger
 
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId, getContractStatus, reload: reloadContractMap } = useContractCheck();
@@ -1048,6 +1050,19 @@ const AdminPage: React.FC = () => {
     };
     
     fetchOrdersData();
+
+    // Fetch contracts from API
+    (async () => {
+      try {
+        console.log('📑 Fetching contracts from API...');
+        const contractList = await getAllContracts();
+        setContracts(contractList);
+        console.log('✅ Loaded contracts:', contractList);
+      } catch (error) {
+        console.error('❌ Failed to load contracts:', error);
+        setContracts([]);
+      }
+    })();
   }, []); // Empty dependency array - only run once on mount
 
   // Handle view order detail

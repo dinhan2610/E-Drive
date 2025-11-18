@@ -5,7 +5,9 @@ import jsPDF from 'jspdf';
 import { getContract, saveManufacturerSignature, saveDealerSignature, uploadContractPdf } from '../services/contractsApi';
 import { getOrderById } from '../services/ordersApi';
 import type { Contract } from '../types/contract';
+import type { ContractPayload } from '../types/contract';
 import type { OrderLite } from '../types/order';
+import PdfPreviewWithSignature from '../components/contracts/PdfPreviewWithSignature';
 import styles from './ContractSignPage.module.scss';
 
 const ContractSignPage: React.FC = () => {
@@ -15,7 +17,7 @@ const ContractSignPage: React.FC = () => {
   const documentRef = useRef<HTMLDivElement>(null);
   
   const [contract, setContract] = useState<Contract | null>(null);
-  const [orderData, setOrderData] = useState<OrderLite | null>(null);
+  const [payload, setPayload] = useState<ContractPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
@@ -109,43 +111,89 @@ const ContractSignPage: React.FC = () => {
       }
       
       // Load order data if orderId exists
+      let loadedOrder: OrderLite | null = null;
       if (contractData.orderId) {
         console.log('📦 Loading order:', contractData.orderId);
         try {
-          const order = await getOrderById(contractData.orderId);
-          console.log('📦 Order data:', order);
-          setOrderData(order);
+          loadedOrder = await getOrderById(contractData.orderId);
+          console.log('📦 Order data:', loadedOrder);
+          console.log('📦 Order items count:', loadedOrder?.orderItems?.length);
           
           // Merge order data into contract for display
-          contractData.order = order;
+          contractData.order = loadedOrder;
           setContract({...contractData});
         } catch (orderError) {
           console.warn('⚠️ Could not load order data:', orderError);
         }
       }
+      
+      // Load dealer details to get representative/contactPerson
+      let dealerRepresentative = contractData.dealer?.representative || '';
+      if (!dealerRepresentative && (contractData.dealer?.id || loadedOrder?.dealer?.id)) {
+        try {
+          const dealerId = contractData.dealer?.id || loadedOrder?.dealer?.id;
+          console.log('📞 Loading dealer details for ID:', dealerId);
+          const { getDealerById } = await import('../services/dealerApi');
+          const dealerDetails = await getDealerById(Number(dealerId));
+          if (dealerDetails) {
+            dealerRepresentative = dealerDetails.contactPerson || '';
+            console.log('✅ Dealer representative loaded:', dealerRepresentative);
+          }
+        } catch (dealerError) {
+          console.warn('⚠️ Could not load dealer details:', dealerError);
+        }
+      }
+      
+      // Convert Contract to ContractPayload for PdfPreview component
+      console.log('🔍 DEBUG - contractData.dealer:', contractData.dealer);
+      console.log('🔍 DEBUG - loadedOrder?.dealer:', loadedOrder?.dealer);
+      console.log('🔍 DEBUG - contractData.dealer?.representative:', contractData.dealer?.representative);
+      console.log('🔍 DEBUG - loadedOrder?.dealer?.representative:', (loadedOrder?.dealer as any)?.representative);
+      console.log('🔍 DEBUG - dealerRepresentative:', dealerRepresentative);
+      
+      const convertedPayload: ContractPayload = {
+        orderId: contractData.orderId || '',
+        buyer: contractData.buyer || { name: '' },
+        dealer: {
+          id: contractData.dealer?.id || '',
+          name: contractData.dealer?.name || loadedOrder?.dealer?.name || '',
+          phone: contractData.dealer?.phone || '',
+          email: contractData.dealer?.email || '',
+          address: contractData.dealer?.address || '',
+          taxCode: contractData.dealer?.taxCode || '',
+          representative: dealerRepresentative,
+        },
+        manufacturer: contractData.manufacturer || {
+          name: 'E-DRIVE VIETNAM',
+          address: '123 Đường Xe Điện, Quận 1, TP.HCM',
+          phone: '(0123) 456 789',
+          email: 'contact@e-drive.vn',
+          taxCode: '0123456789',
+        },
+        vehicle: contractData.vehicle || { model: '' },
+        terms: contractData.terms || {},
+        pricing: contractData.pricing || {
+          subtotal: 0,
+          discount: 0,
+          taxPercent: 10,
+          fees: 0,
+          total: 0,
+          paidTotal: 0,
+          remaining: 0,
+        },
+        order: loadedOrder || undefined,
+      };
+      
+      console.log('📋 Converted payload:', convertedPayload);
+      console.log('📋 Payload order items:', convertedPayload.order?.orderItems?.length);
+      
+      setPayload(convertedPayload);
     } catch (error: any) {
       console.error('❌ Error loading contract:', error);
       alert('Không thể tải hợp đồng. Vui lòng thử lại.');
       navigate('/admin');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN').format(value);
-  };
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '—';
-    try {
-      const date = new Date(dateStr);
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch {
-      return dateStr;
     }
   };
 
@@ -435,7 +483,7 @@ const ContractSignPage: React.FC = () => {
       const isRow = part.tagName === 'TR';
       
       // Render this part
-      const canvas = await html2canvas(row, {
+      const canvas = await html2canvas(part, {
         scale: scale,
         useCORS: true,
         logging: false,
@@ -457,7 +505,7 @@ const ContractSignPage: React.FC = () => {
         
         // Re-render header on new page (if not already header and we have one)
         if (!isHeader && i > 0 && thead) {
-          const headerCanvas = await html2canvas(headerClone, {
+          const headerCanvas = await html2canvas(thead as HTMLElement, {
             scale: scale,
             useCORS: true,
             logging: false,
@@ -648,7 +696,7 @@ const ContractSignPage: React.FC = () => {
     );
   }
 
-  if (!contract) {
+  if (!contract || !payload) {
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.error}>
@@ -660,26 +708,7 @@ const ContractSignPage: React.FC = () => {
     );
   }
 
-  const orderCode = contract.order?.code || orderData?.code || contract.orderId || 'N/A';
-  const dealerName = contract.dealer?.name || orderData?.dealer?.name || 'N/A';
-  const buyerName = contract.buyer?.name || orderData?.customer?.name || 'N/A';
-  const orderItems = contract.order?.orderItems || orderData?.orderItems || [];
-  const orderMoney = contract.order?.money || orderData?.money || contract.pricing;
-  const orderDate = contract.order?.orderDate || orderData?.orderDate || contract.createdAt;
-  const deliveryDate = contract.terms?.deliveryDate || contract.order?.desiredDeliveryDate || orderData?.desiredDeliveryDate;
-
-  console.log('📊 Display data:', {
-    orderCode,
-    dealerName,
-    buyerName,
-    orderItems: orderItems.length,
-    orderMoney,
-    orderDate,
-    deliveryDate
-  });
-
-  console.log('🎨 Rendering with signerType:', signerType);
-  console.log('🎨 Will render:', signerType === 'manufacturer' ? 'Manufacturer canvas + Dealer placeholder' : 'Manufacturer image + Dealer canvas');
+  const manufacturerSignature = contract.manufacturer?.signatureData || contract.manufacturerSignatureData;
 
   return (
     <div className={styles.pageContainer}>
@@ -695,222 +724,22 @@ const ContractSignPage: React.FC = () => {
       </div>
 
       <div className={styles.contractWrapper}>
-        <div ref={documentRef} className={styles.contractDocument}>
-          {/* Header */}
-          <div className={styles.contractHeader}>
-            <div className={styles.leftColumn}>
-              <div className={styles.companyInfo}>
-                <h3>CÔNG TY E-DRIVE VIỆT NAM</h3>
-                <p><strong>MSDN:</strong> {contract.manufacturer?.taxCode || '0123456789'}</p>
-                <p><strong>Địa chỉ:</strong> {contract.manufacturer?.address || '123 Đường Điện Biên Phủ, Quận 1, TP.HCM'}</p>
-                <p><strong>Điện thoại:</strong> {contract.manufacturer?.phone || '(0123) 456 789'}</p>
-                <p>Kết nối giữa các bên:</p>
-              </div>
-              
-              <div className={styles.partyInfo}>
-                <p><strong>BÊN A: MUA (Đại lý)</strong></p>
-                <p><strong>Tên người đại diện:</strong> {contract.dealer?.representative || '__________'}</p>
-                <p><strong>Đại diện:</strong> {dealerName}</p>
-                <p><strong>Địa chỉ:</strong> {contract.dealer?.address || 'Chưa cập nhật'}</p>
-                <p><strong>Số điện thoại:</strong> {contract.dealer?.phone || 'Chưa cập nhật'}</p>
-                <p><strong>Chức vụ:</strong> Quản lý</p>
-              </div>
-              
-              <div className={styles.partyInfo}>
-                <p><strong>BÊN B: BÁN (Hãng sản xuất)</strong></p>
-                <p><strong>Văn phòng:</strong> Tại các Trưởng Phòng Kinh Doanh Trưng Bày, Tư vấn</p>
-                <p><strong>Đại diện:</strong> {contract.manufacturer?.name || 'E-DRIVE VIETNAM'}</p>
-                <p><strong>Tên người đại diện:</strong> Thân Trọng An</p>
-                <p><strong>Số điện thoại:</strong> 0912345678</p>
-                <p><strong>Chức vụ:</strong> Giám đốc</p>
-              </div>
-            </div>
-            
-            <div className={styles.rightColumn}>
-              <h1 className={styles.mainTitle}>HỢP ĐỒNG MUA BÁN XE</h1>
-              <p className={styles.contractNo}>Số: <strong>#{contract.id}</strong> - BMW/VL</p>
-              <p className={styles.contractDate}>Ký vào ngày {formatDate(orderDate)} tại</p>
-              <p className={styles.note}>Ký với giấy các bên:</p>
-            </div>
-          </div>
-
-          {/* ĐIỀU 1 */}
-          <div className={styles.article}>
-            <h4>ĐIỀU 1. ĐỐI TƯỢNG HỢP ĐỒNG</h4>
-            <p>Căn cứ theo đơn hàng số {orderCode} do Hợp đồng này có hiệu lực từ ngày {formatDate(orderDate)} ("Hợp đồng") với các đại điểm sau:</p>
-            
-            <table className={styles.vehicleTable}>
-              <thead>
-                <tr>
-                  <th>STT</th>
-                  <th>Mô tả hàng hóa</th>
-                  <th>SL</th>
-                  <th>Đơn giá<br/>(đã gồm VAT)</th>
-                  <th>Thành tiền<br/>(đã gồm VAT)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderItems && orderItems.length > 0 ? (
-                  <>
-                    {orderItems.map((item, index) => {
-                      const vehicleParts = item.vehicleName.split(' ');
-                      const vehicleModel = vehicleParts.slice(0, 2).join(' ');
-                      const vehicleVersion = vehicleParts.slice(2).join(' ') || 'Standard';
-                      
-                      const taxPercent = orderMoney?.taxPercent || 10;
-                      const priceAfterDiscount = item.itemSubtotal - item.itemDiscount;
-                      const unitPriceWithVAT = (item.unitPrice - (item.itemDiscount / item.quantity)) * (1 + taxPercent / 100);
-                      const totalWithVAT = priceAfterDiscount * (1 + taxPercent / 100);
-                      
-                      return (
-                        <tr key={index}>
-                          <td>{(index + 1).toString().padStart(2, '0')}</td>
-                          <td>
-                            <div className={styles.vehicleDesc}>
-                              <p><strong>XE Ô TÔ ĐIỆN {vehicleModel.toUpperCase()}</strong></p>
-                              <p>- Phiên bản: {vehicleVersion}</p>
-                              <p>- Số chỗ ngồi: 05 chỗ</p>
-                              <p>- Nguồn gốc xuất xứ: Xe được nhập khẩu nguyên chiếc.</p>
-                              <p>- Màu sơn: {item.color || 'Chưa xác định'}</p>
-                              <p>- Năm sản xuất: {new Date().getFullYear()}</p>
-                              <p>- Màu nội thất: Đen</p>
-                              <p>- Chế động và quy cách: Một 100%; tay lái thuận tay với các thiết bị kỹ thuật theo quy chuẩn và có nhãn hàng xuất sản xuất.</p>
-                            </div>
-                          </td>
-                          <td className={styles.centerText}>{item.quantity.toString().padStart(2, '0')}</td>
-                          <td className={styles.rightText}>{formatCurrency(unitPriceWithVAT)}</td>
-                          <td className={styles.rightText}>{formatCurrency(totalWithVAT)}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className={styles.totalRow}>
-                      <td colSpan={2}><strong>Tổng Giá trị Hợp đồng</strong></td>
-                      <td className={styles.centerText}>
-                        <strong>
-                          {orderItems.reduce((sum, item) => sum + item.quantity, 0).toString().padStart(2, '0')}
-                        </strong>
-                      </td>
-                      <td className={styles.rightText}><strong></strong></td>
-                      <td className={styles.rightText}><strong>{formatCurrency(orderMoney?.total || contract.pricing?.total || 0)}</strong></td>
-                    </tr>
-                  </>
-                ) : (
-                  <tr>
-                    <td colSpan={5}>Không có dữ liệu</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ĐIỀU 2 */}
-          <div className={styles.article}>
-            <h4>ĐIỀU 2. ĐẶT CỌC VÀ THANH TOÁN</h4>
-            <ul>
-              <li>Thời hạn giao xe: Trong tháng {formatDate(deliveryDate)}.</li>
-              <li>Địa điểm giao xe: Tại cơ sở từ việc kho của Bên Bán theo cơ sở tại Hợp đồng của bên giao nơi từ nay đặt xe giao không nhân được bên khác (Bên) bao, có ghi rõ lý do và phải lấy trả bằng giấy.</li>
-            </ul>
-          </div>
-
-          {/* ĐIỀU 3 */}
-          <div className={styles.article}>
-            <h4>ĐIỀU 3. THÔNG TIN GIAO NHẬN VÀ CHẤT LƯỢNG SẢN PHẨM</h4>
-            <p>Bên Mua phải giao xe: Xe được bàn giao phải là xe mới 100%, theo đúng chuẩn loại trong Mã Hợp đồng bao. Thống báo sẵn sàng giao xe; Bên trong sau khi xe nhân từ xe phải lịch 05 ngày kể từ ngày nhận Bên Bán gửi. Thống báo sẵn sàng giao xe, do được coi là khoản thanh toán bao lý. Nếu không giao Hợp đồng bao có hiệu lực từ ngày bên kia được /./.</p>
-            <p><em>Hợp đồng này có thể từ ngày ký và được thỏa thuận cho đến khi Bên Mua hoàn tất thủ tục nghiệm thu xong xuôi.</em></p>
-          </div>
-
-          {/* ĐIỀU 4 */}
-          <div className={styles.article}>
-            <h4>ĐIỀU 4. BẢN ĐIỀU KHOẢN VÀ ĐIỀU KIỆN CHUNG</h4>
-            <p>Bản Điều khoản và Điều kiện chung là một phần không tách rời của gói cơ bản này; bao gồm các nội dung quy định bao này.</p>
-            <p><em>Hợp đồng này có hiệu lực từ ngày ký, được lưu giữ tại văn phòng và được giữ đúng bằng (bản) bên, có giá trị pháp lý như nhau.</em></p>
-          </div>
-
-          {/* Signatures */}
-          <div className={styles.signatures}>
-            {signerType === 'manufacturer' ? (
-              <>
-                <div className={styles.signatureBlock}>
-                  <p className={styles.signTitle}>ĐẠI DIỆN BÊN BÁN (Hãng sản xuất)</p>
-                  <div className={styles.signatureCanvas}>
-                    <canvas
-                      ref={canvasRef}
-                      width={250}
-                      height={120}
-                      className={styles.canvas}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                    />
-                    {!hasSignature && (
-                      <div className={styles.placeholder}>
-                        <i className="fas fa-pen"></i>
-                        <p>Ký tên ở đây</p>
-                      </div>
-                    )}
-                  </div>
-                  <p className={styles.signName}>{contract?.manufacturer?.name || 'E-DRIVE VIETNAM'}</p>
-                </div>
-                
-                <div className={styles.signatureBlock}>
-                  <p className={styles.signTitle}>ĐẠI DIỆN BÊN MUA (Đại lý)</p>
-                  <div className={styles.buyerSignArea}>
-                    <p className={styles.emptySignText}>Chờ đại lý ký...</p>
-                  </div>
-                  <p className={styles.signName}>{contract?.dealer?.name || '___________________'}</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className={styles.signatureBlock}>
-                  <p className={styles.signTitle}>ĐẠI DIỆN BÊN BÁN (Hãng sản xuất)</p>
-                  <div className={styles.buyerSignArea}>
-                    {(contract?.manufacturer?.signatureData || contract?.manufacturerSignatureData) ? (
-                      <img 
-                        src={contract?.manufacturer?.signatureData || contract?.manufacturerSignatureData || ''} 
-                        alt="Chữ ký hãng" 
-                        style={{ width: '250px', height: '120px', objectFit: 'contain' }}
-                      />
-                    ) : (
-                      <p className={styles.emptySignText}>Đã ký</p>
-                    )}
-                  </div>
-                  <p className={styles.signName}>{contract?.manufacturer?.name || 'E-DRIVE VIETNAM'}</p>
-                </div>
-                
-                <div className={styles.signatureBlock}>
-                  <p className={styles.signTitle}>ĐẠI DIỆN BÊN MUA (Đại lý)</p>
-                  <div className={styles.signatureCanvas}>
-                    <canvas
-                      ref={canvasRef}
-                      width={250}
-                      height={120}
-                      className={styles.canvas}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                    />
-                    {!hasSignature && (
-                      <div className={styles.placeholder}>
-                        <i className="fas fa-pen"></i>
-                        <p>Ký tên ở đây</p>
-                      </div>
-                    )}
-                  </div>
-                  <p className={styles.signName}>{contract?.dealer?.name || '___________________'}</p>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <PdfPreviewWithSignature
+          ref={documentRef}
+          payload={payload}
+          contractNo={contract.id}
+          signerType={signerType}
+          manufacturerSignature={manufacturerSignature}
+          canvasRef={canvasRef}
+          hasSignature={hasSignature}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
 
         {/* Action buttons */}
         <div className={styles.actionBar}>

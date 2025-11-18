@@ -95,10 +95,8 @@ const ContractManagementPage: React.FC = () => {
       onTabChange={() => {}}
       counters={{
         cars: 0,
-        colors: 0,
         dealers: 0,
         unverifiedDealers: 0,
-        inventory: 0,
         bookings: 0,
         testDrives: 0
       }}

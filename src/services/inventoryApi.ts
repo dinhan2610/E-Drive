@@ -1,3 +1,55 @@
+import apiClient from '../lib/apiClient';
+
+// Dealer Inventory Response Type
+export interface DealerInventoryItem {
+  modelName: string;
+  version: string;
+  colorName: string;
+  quantity: number;
+}
+
+/**
+ * Fetch dealer inventory by dealer ID
+ * GET /dealer-inventory/dealer/{dealerId}
+ */
+export async function getDealerInventory(dealerId: number): Promise<DealerInventoryItem[]> {
+  try {
+    console.log('📦 Fetching dealer inventory for dealer:', dealerId);
+    const response = await apiClient.get<{
+      statusCode: number;
+      message: string;
+      data: DealerInventoryItem[];
+    }>(`/dealer-inventory/dealer/${dealerId}`);
+    
+    console.log('✅ Dealer inventory response:', response.data);
+    return response.data.data || [];
+  } catch (error: any) {
+    console.error('❌ Error fetching dealer inventory:', error?.response?.data || error);
+    throw new Error(error?.response?.data?.message || 'Không thể tải dữ liệu kho hàng');
+  }
+}
+
+/**
+ * Update vehicle quantity in dealer inventory
+ * PUT /dealer-inventory/update/{dealerId}/{vehicleId}
+ */
+export async function updateDealerInventory(
+  dealerId: number,
+  vehicleId: number,
+  quantity: number
+): Promise<void> {
+  try {
+    console.log('📝 Updating dealer inventory:', { dealerId, vehicleId, quantity });
+    await apiClient.put(`/dealer-inventory/update/${dealerId}/${vehicleId}`, null, {
+      params: { quantity }
+    });
+    console.log('✅ Inventory updated successfully');
+  } catch (error: any) {
+    console.error('❌ Error updating dealer inventory:', error?.response?.data || error);
+    throw new Error(error?.response?.data?.message || 'Không thể cập nhật kho hàng');
+  }
+}
+
 // import type { ManufacturerInventorySummary, VehicleInventoryItem } from '../types/inventory';
 
 // const API_BASE_URL = 'http://localhost:8080/api';
