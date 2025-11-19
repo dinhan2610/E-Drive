@@ -169,29 +169,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
             </div>
           </div>
 
-          <div className={styles.navSection}>
-            <div className={styles.sectionTitle}>Khác</div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'analytics' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('analytics');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-chart-bar"></i>
-              <span>Thống kê</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'settings' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('settings');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-cog"></i>
-              <span>Cài đặt</span>
-            </div>
-          </div>
+          {/* 'Cài đặt' tab removed per request */}
         </nav>
 
         <div className={styles.sidebarFooter}>

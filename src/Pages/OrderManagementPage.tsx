@@ -491,19 +491,21 @@ const OrderManagementPage: React.FC = () => {
                             </button>
                           )}
                           
-                          {/* Upload hóa đơn */}
-                          <button
-                            className={`${styles.actionButton} ${styles.upload}`}
-                            title="Upload hóa đơn"
-                            onClick={() => handleViewFiles(order.orderId)}
-                            disabled={uploadingBillOrderId === order.orderId}
-                          >
-                            {uploadingBillOrderId === order.orderId ? (
-                              <i className="fas fa-spinner fa-spin"></i>
-                            ) : (
-                              <i className="fas fa-paperclip"></i>
-                            )}
-                          </button>
+                          {/* Upload hóa đơn - only visible after contract is ACTIVE (signed) */}
+                          {hasContract(String(order.orderId)) && getContractStatus(order.orderId) === 'ACTIVE' && (
+                            <button
+                              className={`${styles.actionButton} ${styles.upload}`}
+                              title="Upload hóa đơn"
+                              onClick={() => handleViewFiles(order.orderId)}
+                              disabled={uploadingBillOrderId === order.orderId}
+                            >
+                              {uploadingBillOrderId === order.orderId ? (
+                                <i className="fas fa-spinner fa-spin"></i>
+                              ) : (
+                                <i className="fas fa-paperclip"></i>
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

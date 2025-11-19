@@ -824,8 +824,9 @@ const AdminPage: React.FC = () => {
 
       // Update stats
       setStats(prev => ({
-        ...prev,
-        totalRevenue: mappedBookings.reduce((sum, b) => sum + b.totalAmount, 0),
+      ...prev,
+      // Only include revenue for orders that have been paid
+      totalRevenue: mappedBookings.reduce((sum, b) => sum + (b.paymentStatus === 'paid' ? b.totalAmount : 0), 0),
         monthlyBookings: mappedBookings.filter(b => {
           const orderDate = new Date(b.startDate);
           const now = new Date();
@@ -1014,10 +1015,11 @@ const AdminPage: React.FC = () => {
         console.log('📊 [Initial Load] Payment statuses after mapping:', mappedBookings.map(b => ({ id: b.id, paymentStatus: b.paymentStatus })));
 
     // Calculate enhanced stats
-    setStats({
+      setStats({
       totalCars: cars.length || 0,
       totalUsers: dealers.length,
-          totalRevenue: mappedBookings.reduce((sum, b) => sum + b.totalAmount, 0),
+          // Only include revenue for orders that have been paid on initial load
+          totalRevenue: mappedBookings.reduce((sum, b) => sum + (b.paymentStatus === 'paid' ? b.totalAmount : 0), 0),
           monthlyBookings: mappedBookings.filter(b => {
             const orderDate = new Date(b.startDate);
             const now = new Date();
@@ -1185,6 +1187,7 @@ const AdminPage: React.FC = () => {
       });
     }
   };
+
 
   // Handle update payment status
   const handleUpdatePaymentStatus = async (
@@ -2178,27 +2181,6 @@ const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>
-                  <i className="fas fa-star"></i>
-                </div>
-                <div className={styles.statInfo}>
-                  <h3>{stats.avgRating.toFixed(1)}</h3>
-                  <p>Đánh giá trung bình</p>
-                  <small className={styles.statChange}>Tuyệt vời</small>
-                </div>
-              </div>
-
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>
-                  <i className="fas fa-tools"></i>
-                </div>
-                <div className={styles.statInfo}>
-                  <h3>{stats.pendingMaintenance}</h3>
-                  <p>Xe cần bảo trì</p>
-                  <small className={styles.statChange}>Cần xem xét</small>
-                </div>
-              </div>
 
               <div className={styles.statCard}>
                 <div className={styles.statIcon}>
@@ -2211,39 +2193,10 @@ const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>
-                  <i className="fas fa-clock"></i>
-                </div>
-                <div className={styles.statInfo}>
-                  <h3>{stats.activeBookings}</h3>
-                  <p>Đang thuê xe</p>
-                  <small className={styles.statChange}>Hiện tại</small>
-                </div>
-              </div>
+              {/* Removed: average rating, pending maintenance, and active rentals as requested */}
             </div>
 
-            {/* Recent Activity */}
-            <div className={styles.recentActivity}>
-              <h3>Hoạt động gần đây</h3>
-              <div className={styles.activityList}>
-                <div className={styles.activityItem}>
-                  <i className="fas fa-user-plus"></i>
-                  <span>Người dùng mới: Nguyễn Văn A đã đăng ký</span>
-                  <time>2 giờ trước</time>
-                </div>
-                <div className={styles.activityItem}>
-                  <i className="fas fa-car"></i>
-                  <span>Xe mới được thêm: BMW 320</span>
-                  <time>5 giờ trước</time>
-                </div>
-                <div className={styles.activityItem}>
-                  <i className="fas fa-booking"></i>
-                  <span>Đặt xe mới: Toyota Camry được đặt</span>
-                  <time>1 ngày trước</time>
-                </div>
-              </div>
-            </div>
+            {/* Recent Activity removed per request */}
           </div>
         )}
 
@@ -3209,6 +3162,16 @@ const AdminPage: React.FC = () => {
                           >
                             <i className="fas fa-file-invoice"></i>
                           </button>
+                          {booking.status === 'confirmed' && (
+                            <button
+                              className={styles.billButton}
+                              title="Giao hàng"
+                              onClick={() => handleConfirmDelivery(booking.id, `#${booking.id} - ${booking.dealerName}`)}
+                              style={{ backgroundColor: '#f97316', color: 'white' }}
+                            >
+                              <i className="fas fa-truck"></i>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -5144,7 +5107,7 @@ const AdminPage: React.FC = () => {
                       )}
                     </div>
                     <div className={styles.settingItem}>
-                      <label>Price (VND)</label>
+                      <label>Giá (VND)</label>
                       <input
                         type="text"
                         className={styles.settingInput}
@@ -5164,38 +5127,14 @@ const AdminPage: React.FC = () => {
                       )}
                     </div>
                     <div className={styles.settingItem}>
-                      <label>Final Price (VND) - Giá sau khuyến mãi</label>
-                      <input
-                        type="text"
-                        className={styles.settingInput}
-                        value={formatPriceInput(editCar.finalPrice)}
-                        onChange={(e) => {
-                          const numericValue = parsePriceInput(e.target.value);
-                          setEditCar({...editCar, finalPrice: numericValue});
-                          const error = validateCarField('finalPrice', numericValue, editCar);
-                          setEditCarErrors(prev => ({ ...prev, finalPrice: error }));
-                        }}
-                        placeholder="Để 0 nếu không có khuyến mãi"
-                        style={editCarErrors.finalPrice ? { borderColor: 'red' } : {}}
-                      />
-                      {editCarErrors.finalPrice && (
-                        <span style={{ color: 'red', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                          ⚠️ {editCarErrors.finalPrice}
-                        </span>
-                      )}
-                      <small style={{ color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                        💡 Nếu để 0, giá hiển thị sẽ là Price. Nếu có giá trị, sẽ hiển thị giá khuyến mãi.
-                      </small>
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>Status</label>
+                      <label>Trạng thái</label>
                       <select
                         className={styles.settingInput}
                         value={editCar.status}
                         onChange={(e) => setEditCar({ ...editCar, status: e.target.value as 'AVAILABLE' | 'DISCONTINUED' })}
                       >
-                        <option value="AVAILABLE">AVAILABLE</option>
-                        <option value="DISCONTINUED">DISCONTINUED</option>
+                        <option value="AVAILABLE">Còn hàng</option>
+                        <option value="DISCONTINUED">Ngừng bán</option>
                       </select>
                     </div>
                   </div>
