@@ -1,0 +1,82 @@
+.pageWrapper {
+  padding: 32px;
+  background: #fff;
+}
+.vehicleList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.vehicleCard {
+  border: 2px solid #eee;
+  border-radius: 12px;
+  padding: 16px;
+  width: 260px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.vehicleCard.selected {
+  border-color: #ff4d30;
+  background: #fff7f4;
+}
+.vehicleImage {
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+.vehicleInfo {
+  text-align: left;
+}
+.colorList {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.colorBtn {
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  outline: none;
+  margin-right: 4px;
+  transition: box-shadow 0.2s;
+}
+.colorBtn.active {
+  box-shadow: 0 0 0 2px #ff4d30;
+}
+.actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+}
+.cancelBtn, .addBtn {
+  padding: 10px 24px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cancelBtn {
+  background: #eee;
+  color: #333;
+}
+.addBtn {
+  background: #ff4d30;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255,77,48,0.08);
+}
+.addBtn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+.loading {
+  text-align: center;
+  font-size: 18px;
+  color: #888;
+  margin: 40px 0;
+}

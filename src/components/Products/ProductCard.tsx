@@ -9,12 +9,16 @@ interface ProductCardProps {
   item: Product;
   onViewDetails?: (product: Product) => void;
   onContactDealer?: (product: Product) => void;
+  primaryActionLabel?: string;
+  primaryActionIcon?: string;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
   item, 
   onViewDetails, 
-  onContactDealer 
+  onContactDealer,
+  primaryActionLabel,
+  primaryActionIcon,
 }) => {
   const [imageSrc, setImageSrc] = useState(item.image);
   const [imageError, setImageError] = useState(false);
@@ -223,8 +227,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           >
             {item.inStock ? (
               <>
-                <i className={shouldShowQuoteButton() ? "fas fa-file-invoice-dollar" : "fas fa-shopping-cart"} style={{ marginRight: '6px' }}></i>
-                {shouldShowQuoteButton() ? 'Báo giá' : 'Đặt hàng'}
+                <i className={
+                  primaryActionIcon ? primaryActionIcon : (shouldShowQuoteButton() ? "fas fa-file-invoice-dollar" : "fas fa-shopping-cart")
+                } style={{ marginRight: '6px' }}></i>
+                {primaryActionLabel ? primaryActionLabel : (shouldShowQuoteButton() ? 'Báo giá' : 'Đặt hàng')}
               </>
             ) : (
               <>

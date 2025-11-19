@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { getProfile, getDealerProfile } from '../services/profileApi';
@@ -47,7 +47,6 @@ interface DealerOrderForm {
 const DealerOrderPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const incomingProduct = location.state?.product as Product | undefined;
   
   // Check authentication on mount
   useEffect(() => {
@@ -92,6 +91,8 @@ const DealerOrderPage: React.FC = () => {
   });
 
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const SESSION_KEY = 'dealerOrder_selectedProducts_v1';
+  const [isSessionRestored, setIsSessionRestored] = useState(false);
 
   // Auto-load profile data
   useEffect(() => {
@@ -177,46 +178,24 @@ const DealerOrderPage: React.FC = () => {
     loadDiscountPolicies();
   }, []);
 
-  // Auto-add product from navigation state
-  useEffect(() => {
-    if (incomingProduct) {
-      console.log('📦 Incoming product from navigation:', incomingProduct);
-      
-      // Lấy hình ảnh đúng theo màu đã chọn
-      let productImage = incomingProduct.image || 'default-image.jpg';
-      
-      if (incomingProduct.selectedColor && incomingProduct.colorVariants && incomingProduct.colorVariants.length > 0) {
-        const selectedColorVariant = incomingProduct.colorVariants.find(
-          (cv: any) => cv.color === incomingProduct.selectedColor
-        );
-        if (selectedColorVariant && selectedColorVariant.imageUrl) {
-          productImage = selectedColorVariant.imageUrl;
-          console.log('🎨 Using color-specific image from navigation:', productImage, 'for color:', incomingProduct.selectedColor);
-        }
-      }
+  // Track processed incoming navigation products to avoid double-processing
+  const processedIncomingRef = useRef<Set<string>>(new Set());
 
-      const newProduct = {
-        productId: incomingProduct.id,
-        productName: incomingProduct.name,
-        variant: incomingProduct.variant || 'Standard',
-        quantity: 1,
-        unitPrice: incomingProduct.price || 0,
-        image: productImage,
-        color: incomingProduct.selectedColor,
-      };
-
-      console.log('✅ Auto-added product with correct color image:', newProduct);
-
-      setFormData(prev => ({
-        ...prev,
-        selectedProducts: [newProduct],
-      }));
-    }
-  }, [incomingProduct]);
+  
 
   useEffect(() => {
+    let mounted = true;
     window.scrollTo(0, 0);
     fetchVehicles();
+    // Restore any in-progress selected products from session (in case user navigated away to /select-car)
+    const restored = restoreSelectedProductsFromSession();
+    if (mounted) {
+      if (restored) {
+        setFormData(prev => ({ ...prev, selectedProducts: restored }));
+      }
+      setIsSessionRestored(true);
+    }
+    return () => { mounted = false; };
   }, []);
 
   const fetchVehicles = async () => {
@@ -243,6 +222,31 @@ const DealerOrderPage: React.FC = () => {
     }
   };
 
+  const saveSelectedProductsToSession = (products: any[]) => {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(products || []));
+      console.log('💾 Saved selectedProducts to sessionStorage', products);
+    } catch (err) {
+      console.error('Failed to save selectedProducts to sessionStorage:', err);
+    }
+  };
+
+  const restoreSelectedProductsFromSession = () => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log('♻️ Restored selectedProducts from sessionStorage', parsed);
+        return parsed;
+      }
+      return null;
+    } catch (err) {
+      console.error('Failed to restore selectedProducts from sessionStorage:', err);
+      return null;
+    }
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -258,48 +262,109 @@ const DealerOrderPage: React.FC = () => {
 
   const handleAddProduct = (vehicle: any) => {
     console.log('🛒 handleAddProduct called with vehicle:', vehicle);
-    
-    const existingProduct = formData.selectedProducts.find(
-      p => p.productId === vehicle.id
-    );
 
-    if (existingProduct) {
-      alert('Sản phẩm đã được thêm vào đơn hàng');
-      return;
-    }
+    // Normalize id comparison to string to avoid duplicates due to type mismatch
+    const incomingId = vehicle?.id ?? vehicle?.productId ?? vehicle?.vehicleId;
 
-    // Lấy hình ảnh đúng theo màu đã chọn
-    let productImage = vehicle.image || 'default-image.jpg';
-    
-    if (vehicle.selectedColor && vehicle.colorVariants && vehicle.colorVariants.length > 0) {
-      const selectedColorVariant = vehicle.colorVariants.find(
-        (cv: any) => cv.color === vehicle.selectedColor
-      );
-      if (selectedColorVariant && selectedColorVariant.imageUrl) {
-        productImage = selectedColorVariant.imageUrl;
-        console.log('🎨 Using color-specific image:', productImage, 'for color:', vehicle.selectedColor);
+    // Determine image
+    let productImage = vehicle?.image || 'default-image.jpg';
+
+    // Determine price: prefer color variant price if available
+    let unitPrice = 0;
+    if (vehicle?.colorVariants && Array.isArray(vehicle.colorVariants) && vehicle.colorVariants.length > 0) {
+      const variant = vehicle.colorVariants.find((cv: any) => {
+        if (vehicle.selectedColor && cv.color === vehicle.selectedColor) return true;
+        if (String(cv.vehicleId) === String(incomingId)) return true;
+        return false;
+      }) || vehicle.colorVariants[0];
+
+      if (variant) {
+        unitPrice = Number(variant.finalPrice > 0 ? variant.finalPrice : variant.priceRetail) || 0;
+        if (variant.imageUrl) productImage = variant.imageUrl;
       }
     }
 
+    // Fallback to direct vehicle price
+    if (!unitPrice) {
+      unitPrice = Number(vehicle?.price ?? vehicle?.finalPrice ?? vehicle?.priceRetail ?? 0) || 0;
+    }
+
     const newProduct = {
-      productId: vehicle.id,
-      productName: vehicle.name,
-      variant: vehicle.variant || 'Standard',
+      productId: String(incomingId),
+      productName: vehicle?.name || vehicle?.modelName || 'Unknown',
+      variant: vehicle?.variant || vehicle?.version || 'Standard',
       quantity: 1,
-      unitPrice: vehicle.price || 0,
+      unitPrice,
       image: productImage,
-      color: vehicle.selectedColor,
+      color: vehicle?.selectedColor || null,
     };
 
-    console.log('✅ Created newProduct:', newProduct);
+    console.log('✅ Created newProduct (normalized):', newProduct);
 
-    setFormData(prev => ({
-      ...prev,
-      selectedProducts: [...prev.selectedProducts, newProduct],
-    }));
-    
+    // Use functional updater to avoid stale reads and persist after update
+    setFormData(prev => {
+      const existingProductIndex = prev.selectedProducts.findIndex(
+        (p: any) => String(p.productId) === String(incomingId)
+      );
+
+      if (existingProductIndex !== -1) {
+        console.log('🔁 Product already in order — incrementing quantity for', incomingId);
+        const updated = [...prev.selectedProducts];
+        const qty = Number(updated[existingProductIndex].quantity) || 0;
+        updated[existingProductIndex] = {
+          ...updated[existingProductIndex],
+          quantity: qty + 1,
+        };
+        saveSelectedProductsToSession(updated);
+        return { ...prev, selectedProducts: updated };
+      }
+
+      const next = [...prev.selectedProducts, newProduct];
+      saveSelectedProductsToSession(next);
+      return { ...prev, selectedProducts: next };
+    });
+
     setShowProductSelector(false);
   };
+
+  const handleNavigateToSelect = () => {
+    // snapshot current selections before leaving the page so they can be restored
+    saveSelectedProductsToSession(formData.selectedProducts);
+    navigate('/select-car');
+  };
+  // Unified handler for navigation-passed vehicle(s).
+  // Accepts either `state.selectedVehicle` or legacy `state.product`.
+  useEffect(() => {
+    // Wait until session restore is done to avoid race between restore and nav processing
+    if (!isSessionRestored) return;
+
+    const navState: any = location.state;
+    if (!navState) return;
+
+    const vehicleFromNav = navState.selectedVehicle ?? navState.product ?? null;
+    if (!vehicleFromNav) return;
+
+    const incomingId = String(vehicleFromNav?.id ?? vehicleFromNav?.productId ?? vehicleFromNav?.vehicleId ?? '');
+    console.log('📥 Navigation state contains vehicle:', { incomingId, vehicleFromNav });
+
+    if (processedIncomingRef.current.has(incomingId)) {
+      console.log('⏭️ Skipping already-processed incoming vehicle:', incomingId);
+      // still clear state to avoid re-processing by navigation
+      navigate(location.pathname, { replace: true, state: {} });
+      return;
+    }
+
+    try {
+      handleAddProduct(vehicleFromNav);
+      processedIncomingRef.current.add(incomingId);
+      console.log('✅ Processed incoming vehicle and updated selectedProducts.');
+    } catch (err) {
+      console.error('Error adding vehicle from navigation state:', err);
+    }
+
+    // Clear navigation state so refresh/back won't re-add the same vehicle
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location, navigate, isSessionRestored]);
 
   const handleUpdateQuantity = (index: number, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -307,20 +372,27 @@ const DealerOrderPage: React.FC = () => {
     setFormData(prev => {
       const updated = [...prev.selectedProducts];
       updated[index].quantity = newQuantity;
+      // persist change
+      saveSelectedProductsToSession(updated);
       return { ...prev, selectedProducts: updated };
     });
   };
 
   const handleRemoveProduct = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedProducts: prev.selectedProducts.filter((_, i) => i !== index),
-    }));
+    setFormData(prev => {
+      const next = prev.selectedProducts.filter((_, i) => i !== index);
+      saveSelectedProductsToSession(next);
+      return { ...prev, selectedProducts: next };
+    });
   };
 
   const calculateTotal = () => {
     const subtotal = formData.selectedProducts.reduce(
-      (sum, product) => sum + (product.unitPrice * product.quantity),
+      (sum, product) => {
+        const price = Number(product.unitPrice) || 0;
+        const qty = Number(product.quantity) || 0;
+        return sum + (price * qty);
+      },
       0
     );
     
@@ -436,6 +508,13 @@ const DealerOrderPage: React.FC = () => {
         notes: '',
         urgentOrder: false
       });
+      // Clear session snapshot after successful create
+      try {
+        sessionStorage.removeItem(SESSION_KEY);
+        console.log('🧹 Cleared session snapshot after submit');
+      } catch (err) {
+        console.error('Failed to clear session snapshot:', err);
+      }
       
       // Show success modal
       setShowSuccess(true);
@@ -526,20 +605,12 @@ const DealerOrderPage: React.FC = () => {
                   <button
                     type="button"
                     className={styles.addProductButton}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      console.log('🔘 Add button clicked!');
-                      console.log('Current showProductSelector:', showProductSelector);
-                      setShowProductSelector(!showProductSelector);
-                      if (!showProductSelector) {
-                        console.log('📡 Fetching vehicles...');
-                        fetchVehicles(); // Refresh vehicle list when opening
-                      }
-                    }}
+                    onClick={handleNavigateToSelect}
                   >
                     <i className="fas fa-plus"></i>
                     Thêm xe
                   </button>
+                  {/* ...existing code... */}
                 </div>
 
               
@@ -547,7 +618,7 @@ const DealerOrderPage: React.FC = () => {
                 {formData.selectedProducts.length > 0 ? (
                   <div className={styles.selectedProducts}>
                     {formData.selectedProducts.map((product, index) => (
-                      <div key={index} className={styles.selectedProduct}>
+                      <div key={String(product.productId) || index} className={styles.selectedProduct}>
                         <img src={product.image} alt={product.productName} />
                         <div className={styles.productInfo}>
                           <div className={styles.productMainInfo}>
@@ -570,7 +641,7 @@ const DealerOrderPage: React.FC = () => {
                           </button>
                           <input
                             type="number"
-                            value={product.quantity}
+                            value={product.quantity ?? 1}
                             onChange={(e) => handleUpdateQuantity(index, parseInt(e.target.value) || 1)}
                             min="1"
                           />
@@ -582,7 +653,7 @@ const DealerOrderPage: React.FC = () => {
                           </button>
                         </div>
                         <div className={styles.productTotal}>
-                          {formatPrice(product.unitPrice * product.quantity)}
+                          {formatPrice((Number(product.unitPrice) || 0) * (Number(product.quantity) || 0))}
                         </div>
                         <button
                           type="button"
@@ -602,8 +673,8 @@ const DealerOrderPage: React.FC = () => {
                           <div>
                             <span>Số lượng xe</span>
                             <strong>
-                              {formData.selectedProducts.reduce((sum, p) => sum + p.quantity, 0)}
-                            </strong>
+                                  {formData.selectedProducts.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)}
+                                </strong>
                           </div>
                         </div>
                       </div>

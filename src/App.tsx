@@ -5,6 +5,7 @@ import ProductsPage from "./Pages/ProductsPage";
 import ProductDetailPage from "./Pages/ProductDetailPage";
 import QuoteListPage from "./Pages/QuoteListPage";
 import DealerOrderPage from "./Pages/DealerOrderPage";
+import SelectCarPage from "./Pages/SelectCarPage";
 import ProfilePage from "./Pages/ProfilePage";
 import AdminPage from "./Pages/AdminPage";
 import CustomersPage from "./Pages/CustomersPage";
@@ -100,6 +101,11 @@ function App() {
         <Route path="/dealer-order" element={
           <ProtectedRoute requiredRole="dealer">
             <DealerOrderPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/select-car" element={
+          <ProtectedRoute requiredRole="dealer">
+            <SelectCarPage />
           </ProtectedRoute>
         } />
         <Route path="/test-drive" element={
