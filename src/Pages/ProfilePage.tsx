@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getCurrentUser } from '../utils/authUtils';
 import { getProfile, updateProfile, getDealerProfile } from '../services/profileApi';
 import { authApi } from '../services/authApi';
 import '../styles/ProfileStyles/_profile.scss';
@@ -140,10 +141,9 @@ const ProfilePage: React.FC = () => {
         setAvatarPreview(uiProfile.avatar);
       } catch (error) {
         console.error('Failed to load profile:', error);
-        // Fallback to localStorage if API fails
-        const userData = localStorage.getItem('e-drive-user');
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
+        // Fallback if API fails
+        const parsedUser = getCurrentUser();
+        if (parsedUser) {
           const mockUserProfile: UserProfile = {
             id: parsedUser.id || '1',
             fullName: parsedUser.fullName || parsedUser.name || 'Người dùng E-Drive',

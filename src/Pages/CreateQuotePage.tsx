@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getCurrentUser } from '../utils/authUtils';
 import { fetchVehiclesFromApi, groupVehiclesByModel } from '../services/vehicleApi';
 import { listPromotions } from '../services/promotionsApi';
 import { fetchDealers } from '../services/dealerApi';
@@ -129,11 +130,11 @@ const CreateQuotePage: React.FC = () => {
   
   // Check authentication on mount
   useEffect(() => {
-    const userStr = localStorage.getItem('e-drive-user');
-    if (!userStr || userStr === '{}' || userStr === 'null') {
+    const user = getCurrentUser();
+    if (!user) {
       console.warn('⚠️ No user found - redirecting to login');
       alert('Vui lòng đăng nhập để tạo báo giá');
-      navigate('/login');
+      navigate('/');
     }
   }, [navigate]);
   
@@ -189,13 +190,12 @@ const CreateQuotePage: React.FC = () => {
   useEffect(() => {
     const fetchDealerId = async () => {
       try {
-        const userStr = localStorage.getItem('e-drive-user');
-        if (!userStr) {
-          console.warn('⚠️ No user in localStorage');
+        const user = getCurrentUser();
+        if (!user) {
+          console.warn('⚠️ No user found');
           return;
         }
         
-        const user = JSON.parse(userStr);
         console.log('👤 Current user:', user.username, '- Role:', user.role);
         
         // Extract dealerId from username pattern (d1_manager, d1_staff, etc.)
@@ -357,9 +357,8 @@ const CreateQuotePage: React.FC = () => {
     console.log('🔑 Current dealerId:', dealerId);
     
     // Log current user info for debugging
-    const userStr = localStorage.getItem('e-drive-user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
+    const user = getCurrentUser();
+    if (user) {
       console.log('👤 Fetching promotions as:', user.username, '- Role:', user.role);
     }
     
@@ -835,8 +834,8 @@ const CreateQuotePage: React.FC = () => {
   // ============================================
 
   // Check if user is logged in
-  const userStr = localStorage.getItem('e-drive-user');
-  const isAuthenticated = userStr && userStr !== '{}' && userStr !== 'null';
+  const user = getCurrentUser();
+  const isAuthenticated = !!user;
 
   if (!isAuthenticated) {
     return (
@@ -846,7 +845,7 @@ const CreateQuotePage: React.FC = () => {
             <i className="fas fa-lock"></i>
             <h2>Yêu Cầu Đăng Nhập</h2>
             <p>Vui lòng đăng nhập để tạo báo giá</p>
-            <button className="btn-primary" onClick={() => navigate('/login')}>
+            <button className="btn-primary" onClick={() => navigate('/')}>
               <i className="fas fa-sign-in-alt"></i>
               Đăng Nhập
             </button>

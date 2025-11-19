@@ -7,6 +7,8 @@
  * - staff: Can only create quotes, no order creation
  */
 
+import { getCurrentUser } from './authUtils';
+
 export type UserRole = 'admin' | 'dealer' | 'staff';
 
 /**
@@ -14,10 +16,9 @@ export type UserRole = 'admin' | 'dealer' | 'staff';
  */
 export const getCurrentUserRole = (): UserRole => {
   try {
-    const userData = localStorage.getItem('e-drive-user');
-    if (!userData) return 'dealer'; // Default fallback
+    const user = getCurrentUser();
+    if (!user) return 'dealer'; // Default fallback
     
-    const user = JSON.parse(userData);
     let role = user.role || 'dealer';
     
     // Normalize role (remove ROLE_ and role_ prefix if exists)

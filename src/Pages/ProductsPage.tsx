@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { getCurrentUser } from '../utils/authUtils';
 import type { Product, ProductFilters } from '../types/product';
 import { fetchVehiclesFromApi, groupVehiclesByModel } from '../services/vehicleApi';
 import ProductCard from '../components/Products/ProductCard';
@@ -160,16 +161,11 @@ const ProductsPage: React.FC = () => {
 
   const handleContactDealer = (product: Product) => {
     // Check user role to determine navigation
-    const userData = localStorage.getItem('e-drive-user');
+    const user = getCurrentUser();
     let userRole = 'dealer'; // Default
     
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        userRole = user.role ? user.role.toLowerCase().replace('role_', '') : 'dealer';
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
+    if (user) {
+      userRole = user.role ? user.role.toLowerCase().replace('role_', '') : 'dealer';
     }
     
     // Staff → Navigate to quote creation (Báo giá)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getCurrentUser } from '../utils/authUtils';
 import type { Product } from '../types/product';
 import { getProfile, getDealerProfile } from '../services/profileApi';
 import { createOrder, type CreateOrderRequest } from '../services/orderApi';
@@ -131,24 +132,19 @@ const DealerOrderPage: React.FC = () => {
         console.error('❌ Error loading profile:', error);
         
         // Don't redirect if just API error, only if 401 (handled by interceptor)
-        // Try localStorage fallback
-        const userData = localStorage.getItem('e-drive-user');
-        if (userData) {
-          try {
-            const user = JSON.parse(userData);
-            setFormData(prev => ({
-              ...prev,
-              dealerName: user.fullName || user.dealerName || '',
+        // Try fallback
+        const user = getCurrentUser();
+        if (user) {
+          setFormData(prev => ({
+            ...prev,
+            dealerName: user.fullName || user.dealerName || '',
 
-              contactPerson: user.fullName || user.name || '',
-              email: user.email || '',
-              phone: user.phone || '',
-              address: user.address || '',
-            }));
-            console.log('✅ Dealer info loaded from localStorage');
-          } catch (parseError) {
-            console.error('Failed to parse user data:', parseError);
-          }
+            contactPerson: user.fullName || user.name || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            address: user.address || '',
+          }));
+          console.log('✅ Dealer info loaded from auth session');
         }
       }
     };
