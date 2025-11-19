@@ -78,6 +78,14 @@ export const canManagePromotions = (): boolean => {
 };
 
 /**
+ * Check if user can edit quote status
+ * Only Dealer/Manager can edit status (Staff can only view)
+ */
+export const canEditQuoteStatus = (): boolean => {
+  return getCurrentUserRole() === 'dealer';
+};
+
+/**
  * Check if user should see quote button instead of order button
  * Staff → Quote button (Báo giá) - navigate to /quotes/create
  * Dealer → Order button (Đặt hàng) - navigate to /dealer-order
@@ -96,6 +104,7 @@ export const getUserCapabilities = () => {
   return {
     canCreateOrder: canCreateOrder(),
     canManagePromotions: canManagePromotions(),
+    canEditQuoteStatus: canEditQuoteStatus(),
     shouldShowQuoteButton: shouldShowQuoteButton(),
     canViewCustomers: true, // All roles can view customers
     canManageTestDrive: true, // All roles can manage test drives
