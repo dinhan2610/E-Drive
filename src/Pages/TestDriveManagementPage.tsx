@@ -26,10 +26,10 @@ const formatTime = (datetime: string) => {
 
 const getStatusLabel = (status: string) => {
   switch(status) {
-    case 'PENDING': return 'Chờ xác nhận';
+    case 'PENDING': return 'Chờ xử lý';
     case 'APPROVED': return 'Đã xác nhận';
     case 'COMPLETED': return 'Hoàn thành';
-    case 'CANCELLED': return 'Đã hủy';
+    case 'CANCELLED': return 'Huỷ';
     default: return status;
   }
 };
@@ -44,6 +44,10 @@ const TestDriveManagementPage: React.FC = () => {
   const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
   const [dealerConfirmations, setDealerConfirmations] = useState<Record<number, 'PENDING' | 'APPROVED'>>({});
   const [updatingConfirmation, setUpdatingConfirmation] = useState<number | null>(null);
+  const [updatingStaffStatus, setUpdatingStaffStatus] = useState<number | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancellingTestDrive, setCancellingTestDrive] = useState<TestDrive | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
   const [userRole] = useState<'dealer' | 'staff'>(getCurrentUserRole() as 'dealer' | 'staff');
 
   // Get dealer info from profile API
@@ -166,12 +170,12 @@ const TestDriveManagementPage: React.FC = () => {
     try {
       setUpdatingConfirmation(testDrive.testdriveId);
       
-      // Use PATCH API with dealer confirmation status
+      // Use PATCH API with dealer confirmation status only
       const updated = await updateTestDriveStatus(
         testDrive.dealerId,
         testDrive.testdriveId,
         {
-          status: newStatus as 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'
+          status: newStatus as 'PENDING' | 'APPROVED' // Dealer confirmation field
         }
       );
       
@@ -186,27 +190,7 @@ const TestDriveManagementPage: React.FC = () => {
       ));
       
       // Show success notification
-      const notification = document.createElement('div');
-      notification.textContent = `✓ Đã cập nhật: ${getStatusLabel(newStatus)}`;
-      notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #28a745;
-        color: white;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-      `;
-      document.body.appendChild(notification);
-      setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => notification.remove(), 300);
-      }, 2000);
+      showNotification(`✓ Đã cập nhật xác nhận: ${getStatusLabel(newStatus)}`);
       
     } catch (error: any) {
       console.error('❌ Error updating confirmation:', error);
@@ -214,6 +198,104 @@ const TestDriveManagementPage: React.FC = () => {
     } finally {
       setUpdatingConfirmation(null);
     }
+  };
+
+  const handleStaffStatusChange = async (testDrive: TestDrive, newStatus: string) => {
+    if (updatingStaffStatus === testDrive.testdriveId) return; // Prevent double-click
+    
+    // If selecting CANCELLED, show dialog to get reason
+    if (newStatus === 'CANCELLED') {
+      setCancellingTestDrive(testDrive);
+      setShowCancelDialog(true);
+      return;
+    }
+    
+    try {
+      setUpdatingStaffStatus(testDrive.testdriveId);
+      
+      // Use PATCH API with staff status field only
+      const updated = await updateTestDriveStatus(
+        testDrive.dealerId,
+        testDrive.testdriveId,
+        {
+          statusForStaff: newStatus as 'PENDING' | 'COMPLETED' | 'CANCELLED' // Staff processing field
+        }
+      );
+      
+      setTestDrives(prev => prev.map(td => 
+        td.testdriveId === testDrive.testdriveId ? updated : td
+      ));
+      
+      // Show success notification
+      showNotification(`✓ Đã cập nhật trạng thái: ${getStatusLabel(newStatus)}`);
+      
+    } catch (error: any) {
+      console.error('❌ Error updating staff status:', error);
+      alert(`❌ ${error.message || 'Không thể cập nhật trạng thái'}`);
+    } finally {
+      setUpdatingStaffStatus(null);
+    }
+  };
+
+  const handleCancelWithReason = async () => {
+    if (!cancellingTestDrive || !cancelReason.trim()) {
+      alert('⚠️ Vui lòng nhập lý do hủy');
+      return;
+    }
+    
+    try {
+      setUpdatingStaffStatus(cancellingTestDrive.testdriveId);
+      
+      const updated = await updateTestDriveStatus(
+        cancellingTestDrive.dealerId,
+        cancellingTestDrive.testdriveId,
+        {
+          statusForStaff: 'CANCELLED',
+          cancelReason: cancelReason.trim()
+        }
+      );
+      
+      setTestDrives(prev => prev.map(td => 
+        td.testdriveId === cancellingTestDrive.testdriveId ? updated : td
+      ));
+      
+      showNotification(`✓ Đã hủy lịch lái thử`);
+      
+      // Close dialog and reset
+      setShowCancelDialog(false);
+      setCancellingTestDrive(null);
+      setCancelReason('');
+      
+    } catch (error: any) {
+      console.error('❌ Error cancelling:', error);
+      alert(`❌ ${error.message || 'Không thể hủy lịch lái thử'}`);
+    } finally {
+      setUpdatingStaffStatus(null);
+    }
+  };
+
+  const showNotification = (message: string) => {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => notification.remove(), 300);
+    }, 2000);
   };
 
   const filteredTestDrives = filterStatus === 'ALL' 
@@ -252,17 +334,29 @@ const TestDriveManagementPage: React.FC = () => {
             >
               Tất cả ({testDrives.length})
             </button>
-                        <button 
+            <button 
               className={`${styles.filterButton} ${filterStatus === 'PENDING' ? styles.active : ''}`}
               onClick={() => setFilterStatus('PENDING')}
             >
-              Chờ xác nhận ({testDrives.filter(td => td.status === 'PENDING').length})
+              Chờ xử lý ({testDrives.filter(td => td.status === 'PENDING').length})
             </button>
             <button 
               className={`${styles.filterButton} ${filterStatus === 'APPROVED' ? styles.active : ''}`}
               onClick={() => setFilterStatus('APPROVED')}
             >
               Đã xác nhận ({testDrives.filter(td => td.status === 'APPROVED').length})
+            </button>
+            <button 
+              className={`${styles.filterButton} ${filterStatus === 'COMPLETED' ? styles.active : ''}`}
+              onClick={() => setFilterStatus('COMPLETED')}
+            >
+              Hoàn thành ({testDrives.filter(td => td.status === 'COMPLETED').length})
+            </button>
+            <button 
+              className={`${styles.filterButton} ${filterStatus === 'CANCELLED' ? styles.active : ''}`}
+              onClick={() => setFilterStatus('CANCELLED')}
+            >
+              Huỷ ({testDrives.filter(td => td.status === 'CANCELLED').length})
             </button>
           </div>
         </div>
@@ -281,6 +375,7 @@ const TestDriveManagementPage: React.FC = () => {
                   <th>Khách hàng</th>
                   <th>Xe lái thử</th>
                   <th>Thời gian</th>
+                  <th>Trạng thái</th>
                   <th>Xác nhận đại lý</th>
                   <th>Thao tác</th>
                 </tr>
@@ -288,7 +383,7 @@ const TestDriveManagementPage: React.FC = () => {
               <tbody>
                 {filteredTestDrives.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className={styles.emptyState}>
+                    <td colSpan={7} className={styles.emptyState}>
                       <i className="fas fa-inbox"></i>
                       <p>Không có dữ liệu</p>
                     </td>
@@ -312,8 +407,27 @@ const TestDriveManagementPage: React.FC = () => {
                       </td>
                       <td>
                         {userRole === 'staff' ? (
+                          <select 
+                            className={`${styles.statusSelect} ${styles[testDrive.statusForStaff?.toLowerCase() || testDrive.status?.toLowerCase() || 'pending']} ${updatingStaffStatus === testDrive.testdriveId ? styles.updating : ''}`}
+                            value={testDrive.statusForStaff || testDrive.status || 'PENDING'}
+                            onChange={(e) => handleStaffStatusChange(testDrive, e.target.value)}
+                            disabled={updatingStaffStatus === testDrive.testdriveId}
+                            title="Staff cập nhật trạng thái xử lý"
+                          >
+                            <option value="PENDING">Chờ xử lý</option>
+                            <option value="COMPLETED">Hoàn thành</option>
+                            <option value="CANCELLED">Huỷ</option>
+                          </select>
+                        ) : (
+                          <span className={`${styles.statusBadge} ${styles[testDrive.statusForStaff?.toLowerCase() || testDrive.status?.toLowerCase() || 'pending']}`}>
+                            {getStatusLabel(testDrive.statusForStaff || testDrive.status || 'PENDING')}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {userRole === 'staff' ? (
                           <span className={`${styles.statusBadge} ${styles[testDrive.status?.toLowerCase() || 'pending']}`}>
-                            {getStatusLabel(testDrive.status)}
+                            {testDrive.status === 'APPROVED' ? 'Đã xác nhận' : 'Chờ xác nhận'}
                           </span>
                         ) : (
                           <select 
@@ -321,6 +435,7 @@ const TestDriveManagementPage: React.FC = () => {
                             value={dealerConfirmations[testDrive.testdriveId] || testDrive.status || 'PENDING'}
                             onChange={(e) => handleDealerConfirmationChange(testDrive, e.target.value)}
                             disabled={updatingConfirmation === testDrive.testdriveId}
+                            title="Manager cập nhật xác nhận đại lý"
                           >
                             <option value="PENDING">Chờ xác nhận</option>
                             <option value="APPROVED">Đã xác nhận</option>
@@ -375,6 +490,88 @@ const TestDriveManagementPage: React.FC = () => {
             onClose={() => setShowEditModal(false)}
             onSuccess={handleEditSuccess}
           />
+        )}
+
+        {/* Cancel Reason Dialog */}
+        {showCancelDialog && cancellingTestDrive && (
+          <div className={styles.modalOverlay} onClick={() => {
+            setShowCancelDialog(false);
+            setCancellingTestDrive(null);
+            setCancelReason('');
+          }}>
+            <div className={styles.cancelDialog} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.dialogHeader}>
+                <h3>
+                  <i className="fas fa-ban"></i>
+                  Hủy lịch lái thử
+                </h3>
+                <button 
+                  className={styles.closeButton}
+                  onClick={() => {
+                    setShowCancelDialog(false);
+                    setCancellingTestDrive(null);
+                    setCancelReason('');
+                  }}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
+              <div className={styles.dialogBody}>
+                <p className={styles.cancelInfo}>
+                  <strong>Khách hàng:</strong> {cancellingTestDrive.customerName}
+                  <br />
+                  <strong>Xe:</strong> {cancellingTestDrive.vehicleModel}
+                  <br />
+                  <strong>Thời gian:</strong> {formatDate(cancellingTestDrive.scheduleDatetime)} - {formatTime(cancellingTestDrive.scheduleDatetime)}
+                </p>
+                
+                <label className={styles.inputLabel}>
+                  <i className="fas fa-comment"></i>
+                  Lý do hủy <span className={styles.required}>*</span>
+                </label>
+                <textarea
+                  className={styles.cancelReasonInput}
+                  placeholder="Nhập lý do hủy lịch lái thử..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={4}
+                  autoFocus
+                />
+              </div>
+              
+              <div className={styles.dialogFooter}>
+                <button 
+                  className={styles.cancelButton}
+                  onClick={() => {
+                    setShowCancelDialog(false);
+                    setCancellingTestDrive(null);
+                    setCancelReason('');
+                  }}
+                >
+                  <i className="fas fa-arrow-left"></i>
+                  Quay lại
+                </button>
+                <button 
+                  className={styles.confirmButton}
+                  onClick={handleCancelWithReason}
+                  disabled={!cancelReason.trim() || updatingStaffStatus === cancellingTestDrive.testdriveId}
+                >
+                  {updatingStaffStatus === cancellingTestDrive.testdriveId ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-check"></i>
+                      Xác nhận hủy
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

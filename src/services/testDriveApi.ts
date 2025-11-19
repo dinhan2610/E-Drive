@@ -14,7 +14,8 @@ export interface TestDrive {
   vehicleModel: string;
   scheduleDatetime: string;
   completedAt: string | null;
-  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'; // Dealer confirmation
+  statusForStaff?: 'PENDING' | 'COMPLETED' | 'CANCELLED'; // Staff processing status
   cancelReason: string | null;
 }
 
@@ -227,16 +228,29 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
 
 /**
  * PATCH /api/testdrives/dealer/{dealerId}/{testdriveId}/status - Update test drive status
+ * Supports both dealer confirmation status and staff processing status
  */
 export const updateTestDriveStatus = async (
   dealerId: number,
   testdriveId: number,
-  statusData: { status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'; cancelReason?: string }
+  statusData: { 
+    status?: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'; // Dealer confirmation
+    statusForStaff?: 'PENDING' | 'COMPLETED' | 'CANCELLED'; // Staff processing
+    cancelReason?: string;
+  }
 ): Promise<TestDrive> => {
   try {
-    const payload: any = {
-      status: statusData.status
-    };
+    const payload: any = {};
+    
+    // Include dealer status if provided
+    if (statusData.status) {
+      payload.status = statusData.status;
+    }
+    
+    // Include staff status if provided
+    if (statusData.statusForStaff) {
+      payload.statusForStaff = statusData.statusForStaff;
+    }
     
     // Only include cancelReason if it has a value
     if (statusData.cancelReason && statusData.cancelReason.trim() !== '') {

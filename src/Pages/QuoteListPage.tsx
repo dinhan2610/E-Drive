@@ -81,6 +81,7 @@ interface Quote {
   quoteNumber: string;
   date: string;
   customerName: string;
+  customerPhone: string;
   productName: string;
   productVariant: string;
   totalPrice: number;
@@ -167,6 +168,7 @@ const QuoteListPage: React.FC = () => {
         quoteNumber: `BG-${q.quotationId}`,
         date: q.createdAt ? new Date(q.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         customerName: q.customerFullName || `Khách hàng #${q.customerId}`,
+        customerPhone: q.customerPhone || 'Chưa cập nhật',
         productName: q.modelName ? `${q.modelName}${q.version ? ' ' + q.version : ''}` : `Xe #${q.vehicleId}`,
         productVariant: q.version || '',
         totalPrice: q.grandTotal || 0,
@@ -887,7 +889,7 @@ const QuoteListPage: React.FC = () => {
                             <div className={styles.customerName}>{quote.customerName}</div>
                             <div className={styles.customerPhone}>
                               <i className="fas fa-phone"></i>
-                              ID: {quote.id}
+                              {quote.customerPhone}
                             </div>
                           </div>
                         </td>
