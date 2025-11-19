@@ -70,9 +70,6 @@ const ContractSignPage: React.FC = () => {
       
       // Check if user is dealer (includes dealer, dealer_manager, etc.)
       let isDealer = userRole?.includes('dealer') || false;
-          console.warn('Could not parse user data');
-        }
-      }
       
       console.log('👤 Current user role:', userRole);
       console.log('👤 Is dealer:', isDealer);
