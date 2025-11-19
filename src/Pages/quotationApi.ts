@@ -11,12 +11,6 @@ export interface QuotationCreateRequest {
   selectedPromotionIds: number[];
 }
 
-export interface UpdateQuotationStatusRequest {
-  quotationId: number;
-  status: 'ACCEPTED' | 'REJECTED';
-  rejectionReason?: string;
-}
-
 export interface QuotationResponse {
   quotationId: number;
   dealerId: number;
@@ -163,23 +157,6 @@ export async function exportQuotationPDF(id: number): Promise<Blob> {
     return data;
   } catch (error: any) {
     console.error('❌ Export PDF error:', error.response?.data || error.message);
-    throw error;
-  }
-}
-
-/**
- * Update quotation status
- */
-export async function updateQuotationStatus(request: UpdateQuotationStatusRequest): Promise<QuotationResponse> {
-  console.log('🔄 Updating quotation status:', request);
-  
-  try {
-    const { data } = await api.put<ApiResponse<QuotationResponse>>('/api/quotations/update-status', request);
-    
-    console.log('✅ Quotation status updated:', data);
-    return data.data;
-  } catch (error: any) {
-    console.error('❌ Update status error:', error.response?.data || error.message);
     throw error;
   }
 }

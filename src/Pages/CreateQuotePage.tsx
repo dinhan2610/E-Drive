@@ -4,17 +4,13 @@ import { getCurrentUser } from '../utils/authUtils';
 import { fetchVehiclesFromApi, groupVehiclesByModel } from '../services/vehicleApi';
 import { listPromotions } from '../services/promotionsApi';
 import { fetchDealers } from '../services/dealerApi';
-import { createQuotation, mapServicesToBoolean } from '../services/quotationApi';
+import { createQuotation, exportQuotationPDF } from '../services/quotationApi';
 import { listCustomers } from '../services/customersApi';
 import { getProfile, type UserProfile } from '../services/profileApi';
+import { listActiveServiceAccessories } from '../services/serviceAccessoryApi';
 import type { Customer } from '../types/customer';
 import type { Product, ColorVariant } from '../types/product';
 import type { Promotion } from '../types/promotion';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import ReactDOM from 'react-dom/client';
-import QuotePDFTemplate from '../components/QuotePDFTemplate';
-import type { QuotationDetailData } from './QuoteListPage';
 import './_CreateQuote.scss';
 
 // ============================================
@@ -46,7 +42,7 @@ interface ServiceItem {
 interface QuoteState {
   customerId: number | null; // Changed: Use customerId instead of Customer object
   vehicle: VehicleConfig;
-  promotions: number[]; // Array of promoId
+  promotions: number | null; // Single promotion ID
   paymentMethod: 'TRẢ_THẲNG'; // Hardcoded - no installment
   notes: string;
   validityDays: 7; // Hardcoded 7 days
@@ -56,69 +52,6 @@ interface QuoteState {
 // ============================================
 // CONSTANTS
 // ============================================
-
-const MOCK_ADDON_SERVICES: ServiceItem[] = [
-  {
-    id: 'tint-film',
-    name: 'Phim cách nhiệt cao cấp',
-    price: 8500000,
-    icon: 'fa-sun',
-    description: 'Phim 3M chống nóng, chống tia UV 99%',
-    category: 'protection'
-  },
-  {
-    id: 'wallbox-7kw',
-    name: 'Bộ sạc Wallbox 7kW',
-    price: 15000000,
-    icon: 'fa-charging-station',
-    description: 'Sạc nhanh tại nhà, tiết kiệm thời gian',
-    category: 'charging'
-  },
-  {
-    id: 'extended-warranty',
-    name: 'Gói bảo hành mở rộng 2 năm',
-    price: 25000000,
-    icon: 'fa-shield-alt',
-    description: 'Gia hạn bảo hành thêm 2 năm hoặc 50.000km',
-    category: 'warranty'
-  },
-  {
-    id: 'ppf-full',
-    name: 'PPF toàn xe',
-    price: 45000000,
-    icon: 'fa-car-side',
-    description: 'Phim bảo vệ sơn chống xước, chống ố vàng',
-    category: 'protection'
-  },
-  {
-    id: 'ceramic-coating',
-    name: 'Phủ Ceramic 9H',
-    price: 12000000,
-    icon: 'fa-sparkles',
-    description: 'Bảo vệ sơn xe, tăng độ bóng lâu dài',
-    category: 'protection'
-  },
-  {
-    id: 'dashcam-360',
-    name: 'Camera hành trình 360°',
-    price: 18000000,
-    icon: 'fa-video',
-    description: 'Camera 4K, góc quay toàn cảnh, ghi hình 24/7',
-    category: 'accessory'
-  }
-];
-
-// Terms & Conditions
-const QUOTATION_TERMS: string[] = [
-  "Báo giá này có hiệu lực trong vòng 07 ngày kể từ ngày phát hành.",
-  "Giá trên đã bao gồm thuế VAT, nhưng chưa bao gồm lệ phí trước bạ, phí đăng ký, đăng kiểm và các chi phí lăn bánh khác.",
-  "Các chương trình khuyến mãi (nếu có) được áp dụng theo điều kiện và thời hạn của E-Drive tại thời điểm xuất hóa đơn.",
-  "Màu sắc xe và phụ kiện có thể có sự chênh lệch nhỏ so với hình ảnh minh họa do điều kiện ánh sáng.",
-  "Khoản tiền đặt cọc sẽ không được hoàn lại nếu khách hàng đơn phương hủy bỏ giao dịch.",
-  "Thời gian giao xe dự kiến có thể thay đổi tùy thuộc vào lịch sản xuất của nhà máy và tình hình vận chuyển.",
-  "Các gói dịch vụ cộng thêm có thể có điều khoản riêng. Vui lòng tham khảo hợp đồng chi tiết.",
-  "Đây là báo giá tham khảo và không có giá trị pháp lý như một hợp đồng mua bán chính thức."
-];
 
 // ============================================
 // MAIN COMPONENT
@@ -152,7 +85,7 @@ const CreateQuotePage: React.FC = () => {
       imageUrl: '',
       basePrice: 0,
     },
-    promotions: [],
+    promotions: null,
     paymentMethod: 'TRẢ_THẲNG', // Hardcoded
     notes: '',
     validityDays: 7, // Hardcoded 7 days
@@ -187,6 +120,8 @@ const CreateQuotePage: React.FC = () => {
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [dealerId, setDealerId] = useState<number | null>(null);
   const [dealerInfo, setDealerInfo] = useState<UserProfile | null>(null);
+  const [addonServices, setAddonServices] = useState<ServiceItem[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
 
   // Fetch dealerId and dealer profile from API
   useEffect(() => {
@@ -280,6 +215,38 @@ const CreateQuotePage: React.FC = () => {
     };
 
     fetchData();
+  }, []);
+  
+  // ============================================
+  // LOAD ACTIVE ADDON SERVICES
+  // ============================================
+  useEffect(() => {
+    const loadAddonServices = async () => {
+      try {
+        setLoadingServices(true);
+        const services = await listActiveServiceAccessories();
+        
+        // Convert ServiceAccessory to ServiceItem format
+        const formattedServices: ServiceItem[] = services.map(service => ({
+          id: (service.serviceId || service.id || 0).toString(),
+          name: service.serviceName || service.name || '',
+          price: service.price,
+          icon: service.icon || 'fa-box',
+          description: service.description || '',
+          category: (service.category?.toLowerCase() || 'accessory') as 'protection' | 'charging' | 'warranty' | 'accessory'
+        }));
+        
+        setAddonServices(formattedServices);
+        console.log('✅ Loaded active addon services:', formattedServices.length);
+      } catch (error: any) {
+        console.error('❌ Failed to load addon services:', error);
+        setAddonServices([]);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+    
+    loadAddonServices();
   }, []);
   
   // Fetch customers for dropdown (must have dealerId first)
@@ -434,28 +401,29 @@ const CreateQuotePage: React.FC = () => {
     
     // Calculate promotion discounts (only from promotions API)
     let promoDiscount = 0;
-    quote.promotions.forEach(promoId => {
-      const promo = promotions.find(p => p.promoId === promoId);
+    if (quote.promotions) {
+      const promo = promotions.find(p => p.promoId === quote.promotions);
       if (promo) {
         // Check if promotion applies to this vehicle
         if (promo.vehicleIds.length === 0 || promo.vehicleIds.includes(quote.vehicle.vehicleId)) {
           if (promo.discountType === 'AMOUNT') {
-            promoDiscount += promo.discountValue;
+            promoDiscount = promo.discountValue;
           } else if (promo.discountType === 'PERCENTAGE') {
-            promoDiscount += (listPrice * promo.discountValue) / 100;
+            promoDiscount = (listPrice * promo.discountValue) / 100;
           }
         }
       }
-    });
+    }
 
     // Calculate total service cost
     const totalServiceCost = quote.addedServices.reduce((sum, item) => sum + item.price, 0);
     
     // Tính toán không bao gồm thuế:
     // 1. Tạm tính = basePrice + services - discount
-    // 2. Grand Total = Tạm tính (không cộng thuế)
+    // 2. Grand Total = Tạm tính + VAT 10%
     const taxableAmount = listPrice + totalServiceCost - promoDiscount;
-    const grandTotal = taxableAmount; // Không cộng thuế
+    const vatAmount = taxableAmount * 0.1; // VAT 10%
+    const grandTotal = taxableAmount + vatAmount;
     const depositRequired = grandTotal * 0.1; // Đặt cọc 10%
 
     return {
@@ -463,7 +431,7 @@ const CreateQuotePage: React.FC = () => {
       promoDiscount,
       totalServiceCost,
       taxableAmount,
-      vatAmount: 0, // Không tính thuế
+      vatAmount,
       grandTotal,
       depositRequired,
     };
@@ -475,8 +443,8 @@ const CreateQuotePage: React.FC = () => {
     let promotionName = 'Khuyến mãi';
     let discountPercent: number | undefined = undefined;
     
-    if (costSummary.promoDiscount > 0 && quote.promotions.length > 0) {
-      const promo = promotions.find(p => quote.promotions.includes(p.promoId));
+    if (costSummary.promoDiscount > 0 && quote.promotions) {
+      const promo = promotions.find(p => p.promoId === quote.promotions);
       if (promo) {
         promotionName = promo.title;
         if (promo.discountType === 'PERCENTAGE') {
@@ -524,6 +492,12 @@ const CreateQuotePage: React.FC = () => {
 
   const handleColorSelect = useCallback((colorVariant: ColorVariant) => {
     if (selectedProduct) {
+      console.log('🎨 Color selected:', {
+        color: colorVariant.color,
+        vehicleId: colorVariant.vehicleId,
+        price: colorVariant.finalPrice || colorVariant.priceRetail
+      });
+      
       setQuote(prev => ({
         ...prev,
         vehicle: {
@@ -531,7 +505,7 @@ const CreateQuotePage: React.FC = () => {
           model: selectedProduct.name,
           variant: selectedProduct.variant,
           color: colorVariant.color,
-          colorId: 0, // Will be set from colors array if needed
+          colorId: colorVariant.vehicleId, // Use vehicleId as colorId for consistency
           colorHex: colorVariant.colorHex,
           imageUrl: colorVariant.imageUrl,
           basePrice: colorVariant.finalPrice > 0 ? colorVariant.finalPrice : colorVariant.priceRetail,
@@ -555,9 +529,7 @@ const CreateQuotePage: React.FC = () => {
   const handlePromotionToggle = useCallback((promoId: number) => {
     setQuote(prev => ({
       ...prev,
-      promotions: prev.promotions.includes(promoId)
-        ? prev.promotions.filter(p => p !== promoId)
-        : [...prev.promotions, promoId],
+      promotions: prev.promotions === promoId ? null : promoId,
     }));
   }, []);
 
@@ -629,12 +601,24 @@ const CreateQuotePage: React.FC = () => {
     
     try {
       // Prepare the request data
+      const selectedServiceIds = quote.addedServices.map(s => parseInt(s.id));
+      const selectedPromotionIds = quote.promotions ? [quote.promotions] : [];
+      
       const request = {
         vehicleId: quote.vehicle.vehicleId,
         customerId: quote.customerId!,
-        paymentMethod: 'TRẢ_THẲNG' as const,
-        additionalServices: mapServicesToBoolean(quote.addedServices.map(s => s.id)),
+        selectedServiceIds,
+        selectedPromotionIds,
       };
+      
+      console.log('📝 Creating quotation with:', request);
+      console.log('✅ Vehicle details:', {
+        vehicleId: quote.vehicle.vehicleId,
+        model: quote.vehicle.model,
+        variant: quote.vehicle.variant,
+        color: quote.vehicle.color,
+        basePrice: quote.vehicle.basePrice
+      });
       
       // Call the API
       const response = await createQuotation(request);
@@ -665,170 +649,29 @@ const CreateQuotePage: React.FC = () => {
     }
 
     try {
-      console.log('📝 Generating PDF from current form data...');
+      console.log('📥 Downloading PDF from backend for quotation:', createdQuotationId);
       
-      // Tìm thông tin customer
-      const selectedCustomer = customers.find(c => c.customerId === quote.customerId);
+      // Call backend API to export PDF
+      const pdfBlob = await exportQuotationPDF(createdQuotationId);
       
-      // Tạo dữ liệu PDF trực tiếp từ form và displayData
-      const pdfData: QuotationDetailData = {
-        quotationId: createdQuotationId,
-        dealerId: dealerId || 0,
-        quotationNumber: `QUOTE-${createdQuotationId}`,
-        quotationDate: new Date().toISOString(),
-        status: 'pending',
-        validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        
-        // Customer info từ form
-        customerId: quote.customerId!,
-        customerName: selectedCustomer?.fullName || 'N/A',
-        customerPhone: selectedCustomer?.phone || 'N/A',
-        customerEmail: selectedCustomer?.email || 'N/A',
-        customerAddress: selectedCustomer?.address || 'N/A',
-        
-        // Vehicle info từ form
-        vehicleId: quote.vehicle.vehicleId,
-        vehicleName: quote.vehicle.model, // Chỉ dùng model, không ghép variant để tránh trùng lặp
-        vehicleModel: quote.vehicle.model,
-        vehicleVersion: quote.vehicle.variant,
-        vehicleColor: quote.vehicle.color,
-        vehicleYear: new Date().getFullYear(),
-        paymentMethod: 'TRẢ_THẲNG',
-        
-        // Pricing từ displayData (đã tính toán chính xác)
-        basePrice: displayData.listPrice,
-        quantity: 1,
-        subtotal: displayData.listPrice,
-        
-        // Services từ form
-        additionalServices: {
-          hasTintFilm: quote.addedServices.some(s => s.id === 'tint-film'),
-          hasWallboxCharger: quote.addedServices.some(s => s.id === 'wallbox-7kw'),
-          hasWarrantyExtension: quote.addedServices.some(s => s.id === 'extended-warranty'),
-          hasPPF: quote.addedServices.some(s => s.id === 'ppf-full'),
-          hasCeramicCoating: quote.addedServices.some(s => s.id === 'ceramic-coating'),
-          has360Camera: quote.addedServices.some(s => s.id === 'dashcam-360'),
-        },
-        tintFilmPrice: quote.addedServices.find(s => s.id === 'tint-film')?.price || 0,
-        wallboxChargerPrice: quote.addedServices.find(s => s.id === 'wallbox-7kw')?.price || 0,
-        warrantyExtensionPrice: quote.addedServices.find(s => s.id === 'extended-warranty')?.price || 0,
-        ppfPrice: quote.addedServices.find(s => s.id === 'ppf-full')?.price || 0,
-        ceramicCoatingPrice: quote.addedServices.find(s => s.id === 'ceramic-coating')?.price || 0,
-        camera360Price: quote.addedServices.find(s => s.id === 'dashcam-360')?.price || 0,
-        servicesTotal: displayData.totalServiceCost,
-        
-        // Discount & Total từ displayData
-        promotionDiscount: displayData.promoDiscount,
-        promotionName: displayData.promotionName,
-        discountPercent: displayData.discountPercent,
-        
-        // VAT calculation từ displayData
-        taxableAmount: displayData.taxableAmount,
-        vatRate: 10,
-        vatAmount: displayData.vatAmount,
-        grandTotal: displayData.grandTotal,
-        depositRequired: displayData.depositRequired,
-        
-        // Notes
-        notes: quote.notes,
-        
-        // Terms & Conditions
-        termsAndConditions: QUOTATION_TERMS.join('\n'),
-        
-        // Dealer info - Use getProfile() data
-        dealerName: dealerInfo?.agencyName || 'VinFast E-Drive',
-        dealerPhone: dealerInfo?.agencyPhone || '1900 23 23 89',
-        dealerEmail: dealerInfo?.email || 'contact@vinfastedrive.vn',
-        dealerAddress: dealerInfo?.fullAddress || '458 Minh Khai, Hai Bà Trưng, Hà Nội',
-      };
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Bao-Gia-${createdQuotationId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
       
-      console.log('📊 PDF Data:', pdfData);
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
-      console.log('📝 Starting PDF generation...');
-      
-      // Tạo container ẩn cho PDF template
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '0';
-      document.body.appendChild(tempDiv);
-      
-      // Render React component vào container
-      const root = ReactDOM.createRoot(tempDiv);
-      root.render(<QuotePDFTemplate data={pdfData} />);
-      
-      // Đợi 500ms để component render xong
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const pdfElement = document.getElementById('pdf-content');
-      if (!pdfElement) {
-        throw new Error('Không tìm thấy PDF template element');
-      }
-      
-      console.log('📸 Capturing PDF content as image...');
-      
-      // Capture HTML thành canvas
-      const canvas = await html2canvas(pdfElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 794,
-      });
-      
-      console.log('📝 Creating multi-page PDF...');
-      
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
-      const totalPages = Math.ceil(imgHeight / pageHeight);
-      
-      for (let i = 0; i < totalPages; i++) {
-        if (i > 0) pdf.addPage();
-        
-        const pageCanvas = document.createElement('canvas');
-        const pageCtx = pageCanvas.getContext('2d');
-        if (!pageCtx) continue;
-        
-        const scale = canvas.width / imgWidth;
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = Math.min(pageHeight * scale, canvas.height - i * pageHeight * scale);
-        
-        pageCtx.drawImage(
-          canvas,
-          0,
-          i * pageHeight * scale,
-          canvas.width,
-          pageCanvas.height,
-          0,
-          0,
-          canvas.width,
-          pageCanvas.height
-        );
-        
-        const pageImgData = pageCanvas.toDataURL('image/png');
-        const actualHeight = Math.min(pageHeight, imgHeight - i * pageHeight);
-        pdf.addImage(pageImgData, 'PNG', 0, 0, imgWidth, actualHeight);
-      }
-      
-      document.body.removeChild(tempDiv);
-      
-      const fileName = `BaoGia_${pdfData.quotationNumber}_${pdfData.customerName?.replace(/\s+/g, '_') || 'KhachHang'}.pdf`;
-      pdf.save(fileName);
-      
-      console.log(`✅ PDF generated: ${fileName}`);
+      console.log('✅ PDF downloaded successfully');
     } catch (error) {
-      console.error('❌ Error generating PDF:', error);
-      alert('Có lỗi xảy ra khi tạo PDF!');
+      console.error('❌ Error downloading PDF:', error);
+      alert('Không thể tải PDF. Vui lòng thử lại!');
     }
-  }, [createdQuotationId, dealerId, quote, displayData, customers]);
+  }, [createdQuotationId]);
 
   const handleBack = useCallback(() => {
     if (window.confirm('Bạn có chắc muốn quay lại? Các thay đổi chưa lưu sẽ bị mất.')) {
@@ -1106,7 +949,7 @@ const CreateQuotePage: React.FC = () => {
                       const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
                       const isExpiringSoon = daysUntilExpiry <= 7 && daysUntilExpiry > 0;
                       
-                      const isSelected = quote.promotions.includes(promo.promoId);
+                      const isSelected = quote.promotions === promo.promoId;
 
                       return (
                         <div
@@ -1116,7 +959,8 @@ const CreateQuotePage: React.FC = () => {
                         >
                           <div className="promo-checkbox">
                             <input
-                              type="checkbox"
+                              type="radio"
+                              name="promotion"
                               checked={isSelected}
                               onChange={() => {}}
                             />
@@ -1182,8 +1026,19 @@ const CreateQuotePage: React.FC = () => {
               <i className={`fas fa-chevron-${expandedSections.services ? 'up' : 'down'} toggle-icon`}></i>
             </div>
             <div className={`card-body accordion-body ${expandedSections.services ? 'expanded' : 'collapsed'}`}>
-              <div className="service-grid">
-                {MOCK_ADDON_SERVICES.map(service => {
+              {loadingServices ? (
+                <div className="loading-state">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <p>Đang tải dịch vụ và phụ kiện...</p>
+                </div>
+              ) : addonServices.length === 0 ? (
+                <div className="empty-state">
+                  <i className="fas fa-box-open"></i>
+                  <p>Chưa có dịch vụ và phụ kiện nào</p>
+                </div>
+              ) : (
+                <div className="service-grid">
+                  {addonServices.map(service => {
                   const isSelected = quote.addedServices.some(s => s.id === service.id);
                   return (
                     <div
@@ -1212,9 +1067,10 @@ const CreateQuotePage: React.FC = () => {
                       </div>
                     </div>
                   );
-                })}
-              </div>
-              {quote.addedServices.length === 0 && (
+                  })}
+                </div>
+              )}
+              {!loadingServices && quote.addedServices.length === 0 && (
                 <div className="service-hint">
                   <i className="fas fa-info-circle"></i>
                   <p>Chọn các dịch vụ và phụ kiện để nâng cao trải nghiệm sử dụng xe</p>
@@ -1405,6 +1261,10 @@ const CreateQuotePage: React.FC = () => {
                         <td>Tạm tính</td>
                         <td className="price">{formatCurrency(displayData.taxableAmount)}</td>
                       </tr>
+                      <tr>
+                        <td>Thuế VAT (10%)</td>
+                        <td className="price">{formatCurrency(displayData.vatAmount)}</td>
+                      </tr>
                       <tr className="divider">
                         <td colSpan={2}></td>
                       </tr>
@@ -1412,10 +1272,7 @@ const CreateQuotePage: React.FC = () => {
                         <td><strong>TỔNG CỘNG</strong></td>
                         <td className="price"><strong>{formatCurrency(displayData.grandTotal)}</strong></td>
                       </tr>
-                      <tr className="deposit">
-                        <td><i className="fas fa-hand-holding-usd"></i> Tiền đặt cọc (10%)</td>
-                        <td className="price">{formatCurrency(displayData.depositRequired)}</td>
-                      </tr>
+                     
                     </tbody>
                   </table>
                 </div>
@@ -1431,25 +1288,7 @@ const CreateQuotePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Terms & Conditions */}
-                <div className="preview-terms-section">
-                  <div className="terms-header">
-                    <i className="fas fa-file-contract"></i>
-                    <h6 className="terms-title">Điều Khoản & Điều Kiện</h6>
-                  </div>
-                  <ol className="terms-list">
-                    {QUOTATION_TERMS.map((term, index) => (
-                      <li key={index}>
-                        <span className="term-number"></span>
-                        <span className="term-text">{term}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  <div className="terms-note">
-                    <i className="fas fa-info-circle"></i>
-                    <span>Vui lòng đọc kỹ các điều khoản trước khi quyết định mua xe.</span>
-                  </div>
-                </div>
+               
 
                 {/* Footer */}
                 <div className="preview-footer">

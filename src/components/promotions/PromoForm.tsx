@@ -21,7 +21,7 @@ const PromoForm: React.FC<PromoFormProps> = ({ promotion, dealerId, onClose, onS
     discountValue: 0,
     startDate: '',
     endDate: '',
-    applicableTo: 'CUSTOMER' as ApplicableTo,
+    applicableTo: 'VEHICLE' as ApplicableTo,
     vehicleIds: [] as number[]
   });
   const [loading, setLoading] = useState(false);
@@ -255,15 +255,7 @@ const PromoForm: React.FC<PromoFormProps> = ({ promotion, dealerId, onClose, onS
             <div className={styles.column}>
               <h3>Điều kiện áp dụng</h3>
 
-              <div className={styles.formGroup}>
-                <label>Áp dụng cho</label>
-                <select
-                  value={formData.applicableTo}
-                  onChange={(e) => handleChange('applicableTo', e.target.value as ApplicableTo)}
-                >
-                  <option value="CUSTOMER">Khách hàng</option>
-                </select>
-              </div>
+              
 
               <div className={styles.formGroup}>
                 <label>

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  listServiceAccessories, 
+  listAllServiceAccessories, 
   createServiceAccessory, 
   updateServiceAccessory,
   deleteServiceAccessory,
   toggleServiceAccessoryStatus,
-  getServiceAccessoryStats,
   getCategoryLabel,
   getCategoryColor,
-  getDefaultIcon,
   type ServiceAccessory,
   type ServiceCategory,
   type CreateServiceAccessoryDto
@@ -46,7 +44,6 @@ const ServiceAccessoryManagementPage: React.FC = () => {
   
   // Filter and search state
   const [filterCategory, setFilterCategory] = useState<ServiceCategory | 'ALL'>('ALL');
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal state
@@ -57,26 +54,11 @@ const ServiceAccessoryManagementPage: React.FC = () => {
   
   // Form state
   const [formData, setFormData] = useState<CreateServiceAccessoryDto>({
-    name: '',
+    serviceName: '',
     description: '',
     price: 0,
     category: 'accessory',
-    icon: 'fa-cube',
     isActive: true,
-    dealerId: 0,
-  });
-  
-  // Stats state
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    inactive: 0,
-    byCategory: {
-      protection: 0,
-      charging: 0,
-      warranty: 0,
-      accessory: 0,
-    },
   });
 
   // ===== LOAD DEALER PROFILE =====
@@ -101,25 +83,18 @@ const ServiceAccessoryManagementPage: React.FC = () => {
 
   // ===== LOAD DATA =====
   useEffect(() => {
-    if (dealerInfo?.id) {
-      loadServices();
-      loadStats();
-    }
-  }, [dealerInfo?.id, filterCategory, filterStatus, searchQuery]);
+    loadServices();
+  }, [filterCategory, searchQuery]);
 
   const loadServices = async () => {
-    if (!dealerInfo?.id) return;
-    
     try {
       setLoading(true);
-      const result = await listServiceAccessories({
-        dealerId: dealerInfo.id,
-        category: filterCategory === 'ALL' ? undefined : filterCategory,
-        isActive: filterStatus === 'ALL' ? undefined : filterStatus === 'ACTIVE',
-        search: searchQuery || undefined,
+      const result = await listAllServiceAccessories({
+        page: 0,
+        size: 100,
       });
       
-      setServices(result.items || []);
+      setServices(result.content || []);
     } catch (error) {
       console.error('Error loading services:', error);
       setServices([]);
@@ -128,28 +103,15 @@ const ServiceAccessoryManagementPage: React.FC = () => {
     }
   };
 
-  const loadStats = async () => {
-    if (!dealerInfo?.id) return;
-    
-    try {
-      const statsData = await getServiceAccessoryStats(dealerInfo.id);
-      setStats(statsData as typeof stats);
-    } catch (error) {
-      console.error('Error loading stats:', error);
-    }
-  };
-
   // ===== HANDLERS =====
   const handleCreate = () => {
     setIsEditing(false);
     setFormData({
-      name: '',
+      serviceName: '',
       description: '',
       price: 0,
       category: 'accessory',
-      icon: getDefaultIcon('accessory'),
       isActive: true,
-      dealerId: dealerInfo?.id || 0,
     });
     setShowFormModal(true);
   };
@@ -158,13 +120,11 @@ const ServiceAccessoryManagementPage: React.FC = () => {
     setIsEditing(true);
     setSelectedService(service);
     setFormData({
-      name: service.name,
-      description: service.description,
+      serviceName: service.serviceName || service.name || '',
+      description: service.description || '',
       price: service.price,
       category: service.category,
-      icon: service.icon,
       isActive: service.isActive,
-      dealerId: service.dealerId,
     });
     setShowFormModal(true);
   };
@@ -177,54 +137,53 @@ const ServiceAccessoryManagementPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!dealerInfo?.id) return;
-    
     try {
       if (isEditing && selectedService) {
-        await updateServiceAccessory(dealerInfo.id, selectedService.id, formData);
+        const serviceId = selectedService.id || selectedService.serviceId;
+        await updateServiceAccessory(serviceId, formData);
         alert('✅ Cập nhật dịch vụ/phụ kiện thành công!');
       } else {
-        await createServiceAccessory({ ...formData, dealerId: dealerInfo.id });
+        await createServiceAccessory(formData);
         alert('✅ Tạo dịch vụ/phụ kiện thành công!');
       }
       
       setShowFormModal(false);
       loadServices();
-      loadStats();
     } catch (error: any) {
       alert(`❌ ${error.message}`);
     }
   };
 
   const handleDelete = async (service: ServiceAccessory) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa "${service.name}" không?`)) return;
-    
-    if (!dealerInfo?.id) return;
+    const serviceName = service.name || service.serviceName;
+    if (!confirm(`Bạn có chắc chắn muốn xóa "${serviceName}" không?`)) return;
     
     try {
-      await deleteServiceAccessory(dealerInfo.id, service.id);
+      const serviceId = service.id || service.serviceId;
+      await deleteServiceAccessory(serviceId);
       alert('✅ Đã xóa dịch vụ/phụ kiện!');
       loadServices();
-      loadStats();
     } catch (error: any) {
       alert(`❌ ${error.message}`);
     }
   };
 
   const handleToggleStatus = async (service: ServiceAccessory) => {
-    if (!dealerInfo?.id) return;
-    
     try {
-      await toggleServiceAccessoryStatus(dealerInfo.id, service.id, !service.isActive);
+      const serviceId = service.id || service.serviceId;
+      await toggleServiceAccessoryStatus(serviceId, !service.isActive);
       loadServices();
-      loadStats();
     } catch (error: any) {
       alert(`❌ ${error.message}`);
     }
   };
 
   // ===== FILTERED DATA =====
-  const filteredServices = services;
+  const filteredServices = services.sort((a, b) => {
+    const idA = a.serviceId || a.id || 0;
+    const idB = b.serviceId || b.id || 0;
+    return idB - idA; // Sort from high to low (newest first)
+  });
 
   // ===== RENDER =====
   return (
@@ -266,31 +225,6 @@ const ServiceAccessoryManagementPage: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
-         
-
-          <div className={styles.statusFilters}>
-            <button
-              className={`${styles.statusButton} ${filterStatus === 'ALL' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('ALL')}
-            >
-              Tất cả
-            </button>
-            <button
-              className={`${styles.statusButton} ${filterStatus === 'ACTIVE' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('ACTIVE')}
-            >
-              <i className="fa-solid fa-circle-check"></i>
-              Hoạt động
-            </button>
-            <button
-              className={`${styles.statusButton} ${filterStatus === 'INACTIVE' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('INACTIVE')}
-            >
-              <i className="fa-solid fa-circle-pause"></i>
-              Tạm ngưng
-            </button>
-          </div>
         </div>
 
         {/* Loading */}
@@ -311,7 +245,6 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                   <th>Tên dịch vụ/Phụ kiện</th>
                   <th>Danh mục</th>
                   <th>Giá</th>
-                  <th>Trạng thái</th>
                   <th>Ngày tạo</th>
                   <th>Thao tác</th>
                 </tr>
@@ -326,18 +259,12 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                   </tr>
                 ) : (
                   filteredServices.map((service) => (
-                    <tr key={service.id}>
-                      <td>#{service.id}</td>
+                    <tr key={service.serviceId || service.id}>
+                      <td>#{service.serviceId || service.id}</td>
                       <td>
                         <div className={styles.serviceInfo}>
-                          <div 
-                            className={styles.serviceIcon}
-                            style={{ background: getCategoryColor(service.category) }}
-                          >
-                            <i className={`fa-solid ${service.icon}`}></i>
-                          </div>
                           <div>
-                            <div className={styles.serviceName}>{service.name}</div>
+                            <div className={styles.serviceName}>{service.serviceName || service.name}</div>
                             <div className={styles.serviceDesc}>{service.description}</div>
                           </div>
                         </div>
@@ -353,18 +280,17 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                       <td>
                         <span className={styles.price}>{formatPrice(service.price)}</span>
                       </td>
-                      <td>
-                        <button
-                          className={`${styles.statusBadge} ${service.isActive ? styles.active : styles.inactive}`}
-                          onClick={() => handleToggleStatus(service)}
-                          title="Click để thay đổi trạng thái"
-                        >
-                          {service.isActive ? 'Hoạt động' : 'Tạm ngưng'}
-                        </button>
-                      </td>
                       <td>{formatDate(service.createdAt)}</td>
                       <td>
                         <div className={styles.actionButtons}>
+                          <label className={styles.toggleSwitch} title={service.isActive ? 'Hoạt động' : 'Tạm ngưng'}>
+                            <input
+                              type="checkbox"
+                              checked={service.isActive}
+                              onChange={() => handleToggleStatus(service)}
+                            />
+                            <span className={styles.slider}></span>
+                          </label>
                           <button
                             className={styles.actionButton}
                             onClick={() => handleViewDetail(service)}
@@ -418,8 +344,8 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={formData.serviceName}
+                    onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
                     required
                     placeholder="Nhập tên dịch vụ hoặc phụ kiện (VD: Dán phim cách nhiệt 3M)"
                     className={styles.input}
@@ -427,6 +353,30 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                   <small className={styles.helpText}>
                     <i className="fa-solid fa-circle-info"></i>
                     Tên sẽ hiển thị trong danh sách lựa chọn khi tạo báo giá
+                  </small>
+                </div>
+
+                {/* Category */}
+                <div className={styles.formGroup}>
+                  <label>
+                    <i className="fa-solid fa-layer-group"></i>
+                    Danh mục <span className={styles.required}>*</span>
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    required
+                    className={styles.select}
+                  >
+                    <option value="">-- Chọn danh mục --</option>
+                    <option value="protection">🛡️ Bảo vệ xe</option>
+                    <option value="charging">⚡ Sạc điện</option>
+                    <option value="warranty">📋 Bảo hành</option>
+                    <option value="accessory">🔧 Phụ kiện</option>
+                  </select>
+                  <small className={styles.helpText}>
+                    <i className="fa-solid fa-circle-info"></i>
+                    Danh mục giúp phân loại và tìm kiếm dễ dàng hơn
                   </small>
                 </div>
 
