@@ -6,6 +6,7 @@ import { listPromotions } from '../services/promotionsApi';
 import { fetchDealers } from '../services/dealerApi';
 import { createQuotation, mapServicesToBoolean } from '../services/quotationApi';
 import { listCustomers } from '../services/customersApi';
+import { getProfile, type UserProfile } from '../services/profileApi';
 import type { Customer } from '../types/customer';
 import type { Product, ColorVariant } from '../types/product';
 import type { Promotion } from '../types/promotion';
@@ -185,8 +186,9 @@ const CreateQuotePage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [dealerId, setDealerId] = useState<number | null>(null);
+  const [dealerInfo, setDealerInfo] = useState<UserProfile | null>(null);
 
-  // Fetch dealerId from username (JWT token)
+  // Fetch dealerId and dealer profile from API
   useEffect(() => {
     const fetchDealerId = async () => {
       try {
@@ -198,7 +200,18 @@ const CreateQuotePage: React.FC = () => {
         
         console.log('👤 Current user:', user.username, '- Role:', user.role);
         
-        // Extract dealerId from username pattern (d1_manager, d1_staff, etc.)
+        // Fetch dealer profile from API
+        try {
+          const profile = await getProfile();
+          console.log('✅ Dealer profile loaded:', profile);
+          setDealerInfo(profile);
+          setDealerId(profile.dealerId);
+          return;
+        } catch (profileError: any) {
+          console.warn('⚠️ Failed to fetch profile, using fallback method:', profileError.message);
+        }
+        
+        // Fallback: Extract dealerId from username pattern (d1_manager, d1_staff, etc.)
         // Pattern: d{dealerId}_{role}
         const usernameMatch = user.username?.match(/^d(\d+)_/);
         if (usernameMatch) {
@@ -438,13 +451,11 @@ const CreateQuotePage: React.FC = () => {
     // Calculate total service cost
     const totalServiceCost = quote.addedServices.reduce((sum, item) => sum + item.price, 0);
     
-    // Tính toán theo đúng logic thuế:
-    // 1. Tạm tính (chưa VAT) = basePrice + services - discount
-    // 2. VAT = Tạm tính × 10%
-    // 3. Grand Total = Tạm tính + VAT
+    // Tính toán không bao gồm thuế:
+    // 1. Tạm tính = basePrice + services - discount
+    // 2. Grand Total = Tạm tính (không cộng thuế)
     const taxableAmount = listPrice + totalServiceCost - promoDiscount;
-    const vatAmount = taxableAmount * 0.1;
-    const grandTotal = taxableAmount + vatAmount;
+    const grandTotal = taxableAmount; // Không cộng thuế
     const depositRequired = grandTotal * 0.1; // Đặt cọc 10%
 
     return {
@@ -452,7 +463,7 @@ const CreateQuotePage: React.FC = () => {
       promoDiscount,
       totalServiceCost,
       taxableAmount,
-      vatAmount,
+      vatAmount: 0, // Không tính thuế
       grandTotal,
       depositRequired,
     };
@@ -677,7 +688,7 @@ const CreateQuotePage: React.FC = () => {
         
         // Vehicle info từ form
         vehicleId: quote.vehicle.vehicleId,
-        vehicleName: `${quote.vehicle.model} ${quote.vehicle.variant}`,
+        vehicleName: quote.vehicle.model, // Chỉ dùng model, không ghép variant để tránh trùng lặp
         vehicleModel: quote.vehicle.model,
         vehicleVersion: quote.vehicle.variant,
         vehicleColor: quote.vehicle.color,
@@ -724,11 +735,11 @@ const CreateQuotePage: React.FC = () => {
         // Terms & Conditions
         termsAndConditions: QUOTATION_TERMS.join('\n'),
         
-        // Dealer info
-        dealerName: 'VinFast E-Drive',
-        dealerPhone: '1900 23 23 89',
-        dealerEmail: 'contact@vinfastedrive.vn',
-        dealerAddress: '458 Minh Khai, Hai Bà Trưng, Hà Nội',
+        // Dealer info - Use getProfile() data
+        dealerName: dealerInfo?.agencyName || 'VinFast E-Drive',
+        dealerPhone: dealerInfo?.agencyPhone || '1900 23 23 89',
+        dealerEmail: dealerInfo?.email || 'contact@vinfastedrive.vn',
+        dealerAddress: dealerInfo?.fullAddress || '458 Minh Khai, Hai Bà Trưng, Hà Nội',
       };
       
       console.log('📊 PDF Data:', pdfData);
@@ -870,14 +881,7 @@ const CreateQuotePage: React.FC = () => {
           <p>Tạo báo giá chi tiết cho khách hàng</p>
         </div>
         <div className="page-actions">
-          <button
-            className="btn-secondary"
-            onClick={() => handleSave('draft')}
-            disabled={isSaving}
-          >
-            <i className="fas fa-save"></i>
-            Lưu Nháp
-          </button>
+          
           <button
             className="btn-primary"
             onClick={() => handleSave('send')}
@@ -1258,25 +1262,24 @@ const CreateQuotePage: React.FC = () => {
               <div className="preview-document">
                 {/* Header */}
                 <div className="preview-header">
-                  <div className="preview-logo">
-                    <i className="fas fa-car-side"></i>
-                    <div className="logo-text">
-                      <h1>VinFast E-Drive</h1>
-                      <p>Đại lý ủy quyền chính thức</p>
+                  <div className="dealer-header">
+                    <div className="dealer-title-section">
+                      <h1 className="dealer-name">{dealerInfo?.agencyName || 'VinFast E-Drive'}</h1>
+                      <p className="dealer-subtitle">Đại lý ủy quyền chính thức</p>
                     </div>
-                  </div>
-                  <div className="preview-company-info">
-                    <p><strong>VinFast E-Drive</strong></p>
-                    <p>458 Minh Khai, Hai Bà Trưng, Hà Nội</p>
-                    <p>Điện thoại: 1900 23 23 89</p>
-                    <p>Email: contact@vinfastedrive.vn</p>
+                    <div className="contact-info">
+                      <p className="contact-title">Thông tin liên hệ:</p>
+                      <p className="contact-item">{dealerInfo?.agencyPhone || '1900 23 23 89'}</p>
+                      <p className="contact-item">{dealerInfo?.email || 'contact@vinfastedrive.vn'}</p>
+                      <p className="contact-item">{dealerInfo?.fullAddress || '458 Minh Khai, Hai Bà Trưng, Hà Nội'}</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Title */}
                 <div className="preview-title-section">
                   <h2>BÁO GIÁ XE ĐIỆN</h2>
-                  <p className="quote-number">Số: {`QUOTE-${new Date().getTime()}`}</p>
+                  <p className="quote-number">Số: BG-{Math.floor(100000 + Math.random() * 900000)}</p>
                 </div>
 
                 {/* Quote Info */}
@@ -1300,19 +1303,19 @@ const CreateQuotePage: React.FC = () => {
                   <div className="info-grid">
                     <div className="grid-item">
                       <span className="label">Họ và tên:</span>
-                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.fullName || 'N/A'}</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.fullName || ''}</span>
                     </div>
                     <div className="grid-item">
                       <span className="label">Số điện thoại:</span>
-                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.phone || 'N/A'}</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.phone || ''}</span>
                     </div>
                     <div className="grid-item">
                       <span className="label">Email:</span>
-                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.email || 'N/A'}</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.email || ''}</span>
                     </div>
                     <div className="grid-item">
                       <span className="label">Địa chỉ:</span>
-                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.address || 'N/A'}</span>
+                      <span className="value">{customers?.find(c => c.customerId === quote.customerId)?.address || ''}</span>
                     </div>
                   </div>
                 </div>
@@ -1399,12 +1402,8 @@ const CreateQuotePage: React.FC = () => {
                         <td colSpan={2}></td>
                       </tr>
                       <tr>
-                        <td>Tạm tính (chưa VAT)</td>
+                        <td>Tạm tính</td>
                         <td className="price">{formatCurrency(displayData.taxableAmount)}</td>
-                      </tr>
-                      <tr>
-                        <td>Thuế VAT (10%)</td>
-                        <td className="price">{formatCurrency(displayData.vatAmount)}</td>
                       </tr>
                       <tr className="divider">
                         <td colSpan={2}></td>

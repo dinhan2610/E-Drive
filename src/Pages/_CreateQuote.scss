@@ -1698,50 +1698,47 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       animation: float 8s ease-in-out infinite;
     }
 
-    .preview-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      position: relative;
-      z-index: 1;
+    .dealer-header {
+      padding: 20px;
+      border-bottom: 3px solid #ffffff;
+      margin-bottom: 24px;
 
-      i {
-        font-size: 32px;
-        color: $card-bg;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-      }
+      .dealer-title-section {
+        text-align: left;
+        margin-bottom: 16px;
 
-      .logo-text {
-        h1 {
+        .dealer-name {
           font-size: 24px;
           font-weight: 800;
-          color: $card-bg;
-          letter-spacing: 2px;
-          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-          margin: 0 0 4px 0;
+          color: #ffffff;
+          margin: 0 0 6px 0;
+          letter-spacing: 0.5px;
         }
 
-        p {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.9);
+        .dealer-subtitle {
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.85);
           margin: 0;
+          font-weight: 500;
         }
       }
-    }
 
-    .preview-company-info {
-      text-align: right;
-      position: relative;
-      z-index: 1;
+      .contact-info {
+        text-align: left;
 
-      p {
-        margin: 3px 0;
-        color: $card-bg;
-        font-size: 12px;
-
-        &:first-child {
+        .contact-title {
+          font-size: 15px;
           font-weight: 700;
+          color: #ffffff;
+          margin: 0 0 8px 0;
+        }
+
+        .contact-item {
           font-size: 13px;
+          color: rgba(255, 255, 255, 0.9);
+          margin: 4px 0;
+          line-height: 1.6;
+          font-weight: 500;
         }
       }
     }
@@ -1760,6 +1757,7 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       color: $primary-color;
       margin: 0 0 8px 0;
       letter-spacing: 2px;
+      font-family: $font-family;
     }
 
     .quote-number {
@@ -1767,6 +1765,7 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       color: $text-body;
       margin: 0;
       font-weight: 600;
+      font-family: $font-family;
     }
   }
 
@@ -2066,20 +2065,33 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .info-grid {
-    display: grid;
-    grid-template-columns: 140px 1fr;
-    gap: 10px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     font-size: 14px;
-    line-height: 1.6;
 
-    span:nth-child(odd) {
-      color: $text-body;
-      font-weight: 500;
-    }
+    .grid-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
-    span:nth-child(even) {
-      font-weight: 600;
-      color: $text-title;
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        color: $text-body;
+        font-weight: 500;
+        min-width: 120px;
+      }
+
+      .value {
+        font-weight: 600;
+        color: $text-title;
+        text-align: right;
+      }
     }
   }
 

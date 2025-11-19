@@ -120,12 +120,11 @@ const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({ data }) => {
             {data.vehicleModel && <span><i className="fas fa-car-side"></i> Model: {data.vehicleModel}</span>}
             {data.vehicleVersion && <span><i className="fas fa-tag"></i> Phiên bản: {data.vehicleVersion}</span>}
           </div>
-          <div className={styles.vehicleDetails}>
-            <span><i className="fas fa-credit-card"></i> Phương thức thanh toán: {data.paymentMethod === 'TRẢ_THẲNG' ? 'Trả thẳng' : 'Trả góp'}</span>
-            {data.quantity && data.quantity > 1 && (
+          {data.quantity && data.quantity > 1 && (
+            <div className={styles.vehicleDetails}>
               <span><i className="fas fa-boxes"></i> Số lượng: {data.quantity} xe</span>
-            )}
-          </div>
+            </div>
+          )}
           <div className={styles.basePrice}>
             <span>Giá niêm yết:</span>
             <span>{formatPrice(data.basePrice)}</span>
@@ -222,14 +221,6 @@ const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({ data }) => {
             )}
             <tr className={styles.divider}>
               <td colSpan={2}></td>
-            </tr>
-            <tr>
-              <td>Tạm tính (chưa VAT)</td>
-              <td className={styles.price}>{formatPrice(data.taxableAmount)}</td>
-            </tr>
-            <tr>
-              <td>Thuế VAT ({data.vatRate || 10}%)</td>
-              <td className={styles.price}>{formatPrice(data.vatAmount)}</td>
             </tr>
             <tr className={styles.divider}>
               <td colSpan={2}></td>
