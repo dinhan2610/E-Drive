@@ -8,13 +8,24 @@ import { getProfile } from "../services/profileApi";
 import type { VehicleApiResponse } from "../types/product";
 import styles from "../styles/TestDriveStyles/TestDrivePage.module.scss";
 
+interface GroupedModel {
+  modelName: string;
+  version: string;
+  colors: Array<{
+    vehicleId: number;
+    color: string;
+    imageUrl?: string;
+    inStock: boolean;
+  }>;
+}
+
 interface BookingFormData {
   name: string;
   phone: string;
   email: string;
   citizenId: string;
-  model: string;
-  variant: string;
+  model: string; // modelName + version
+  variant: string; // vehicleId của màu được chọn
   date: string;
   time: string;
   note: string;
@@ -41,7 +52,7 @@ const TestDrivePage: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   
   // Vehicle data from API
-  const [vehicles, setVehicles] = useState<VehicleApiResponse[]>([]);
+  const [groupedModels, setGroupedModels] = useState<GroupedModel[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
   
@@ -73,7 +84,35 @@ const TestDrivePage: React.FC = () => {
       setVehicleError(null);
       try {
         const result = await fetchVehiclesFromApi({ status: 'AVAILABLE' });
-        setVehicles(result.vehicles);
+        
+        // Group vehicles theo modelName + version
+        const grouped = new Map<string, VehicleApiResponse[]>();
+        result.vehicles.forEach(vehicle => {
+          const key = `${vehicle.modelName}|||${vehicle.version}`;
+          if (!grouped.has(key)) {
+            grouped.set(key, []);
+          }
+          grouped.get(key)!.push(vehicle);
+        });
+        
+        // Convert sang GroupedModel array
+        const models: GroupedModel[] = [];
+        grouped.forEach((vehicleGroup, key) => {
+          const [modelName, version] = key.split('|||');
+          models.push({
+            modelName,
+            version,
+            colors: vehicleGroup.map(v => ({
+              vehicleId: v.vehicleId,
+              color: v.color,
+              imageUrl: v.imageUrl,
+              inStock: v.status === 'AVAILABLE'
+            }))
+          });
+        });
+        
+        setGroupedModels(models);
+        console.log('✅ Grouped models:', models.length, 'models');
       } catch (error) {
         console.error('Error loading vehicles:', error);
         setVehicleError('Không thể tải danh sách xe. Vui lòng thử lại.');
@@ -229,7 +268,9 @@ const TestDrivePage: React.FC = () => {
 
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
+      // Reset màu khi chọn model mới
+      ...(name === 'model' ? { variant: '' } : {})
     }));
 
     setErrors(prev => ({ ...prev, [name]: undefined }));
@@ -241,10 +282,10 @@ const TestDrivePage: React.FC = () => {
 
   const modelVariants = useMemo(() => {
     if (!formData.model) return [];
-    const selectedVehicle = vehicles.find(v => v.vehicleId.toString() === formData.model);
-    if (!selectedVehicle) return [];
-    return [{ color: selectedVehicle.color, version: selectedVehicle.version }];
-  }, [formData.model, vehicles]);
+    const selectedModel = groupedModels.find(m => `${m.modelName}|||${m.version}` === formData.model);
+    if (!selectedModel) return [];
+    return selectedModel.colors;
+  }, [formData.model, groupedModels]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,6 +329,7 @@ const TestDrivePage: React.FC = () => {
       // Bước 2: Tạo test drive với thông tin đầy đủ trong note
       console.log('📝 Step 2: Creating test drive...');
       const scheduleDatetime = `${formData.date}T${formData.time}:00`;
+      const vehicleId = parseInt(formData.variant); // variant giờ chứa vehicleId
       
       // Lưu ĐẦY ĐỦ thông tin khách hàng vào note (đây là nguồn thông tin chính)
       const customerNote = `
@@ -303,7 +345,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
       const testDrivePayload = {
         customerId: createdCustomer.customerId, // Customer ID thật từ DB
         dealerId: currentDealerId,
-        vehicleId: parseInt(formData.model),
+        vehicleId: vehicleId, // Lấy từ màu đã chọn
         scheduleDatetime,
         status: 'PENDING' as const,
         note: customerNote
@@ -560,9 +602,9 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
                       <option value="">
                         {loadingVehicles ? 'Đang tải...' : 'Chọn mẫu xe'}
                       </option>
-                      {vehicles.map((vehicle) => (
-                        <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
-                          {vehicle.modelName} {vehicle.version}
+                      {groupedModels.map((model, index) => (
+                        <option key={index} value={`${model.modelName}|||${model.version}`}>
+                          {model.modelName} {model.version}
                         </option>
                       ))}
                     </select>
@@ -582,10 +624,12 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
                       className={errors.variant ? styles.error : ''}
                       disabled={!formData.model || modelVariants.length === 0}
                     >
-                      <option value="">Chọn màu sắc</option>
-                      {modelVariants.map((variant, index) => (
-                        <option key={index} value={variant.color}>
-                          {variant.color}
+                      <option value="">
+                        {!formData.model ? 'Chọn mẫu xe trước' : 'Chọn màu sắc'}
+                      </option>
+                      {modelVariants.map((variant) => (
+                        <option key={variant.vehicleId} value={variant.vehicleId.toString()}>
+                          {variant.color} {variant.inStock ? '' : '(Hết hàng)'}
                         </option>
                       ))}
                     </select>
