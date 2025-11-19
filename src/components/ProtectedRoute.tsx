@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { getValidAuthData } from '../utils/authUtils';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -9,38 +10,31 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const location = useLocation();
   
-  // Check if user is logged in
-  const userData = localStorage.getItem('e-drive-user');
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  // Check if user is logged in with valid session
+  const authData = getValidAuthData();
   
-  if (!isLoggedIn || !userData) {
-    // Redirect to home page if not logged in
+  if (!authData) {
+    // Redirect to home page if not logged in or session expired
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  // Parse user data to get role
-  try {
-    const user = JSON.parse(userData);
-    const userRole = user.role || 'dealer'; // Default to dealer if no role
+  // Parse user role
+  const userRole = authData.userRole || 'dealer';
 
-    // Check role-based access
-    if (requiredRole) {
-      if (requiredRole === 'admin' && userRole !== 'admin') {
-        // Non-admin trying to access admin routes
-        return <Navigate to="/" replace />;
-      }
-      
-      if (requiredRole === 'dealer' && userRole === 'admin') {
-        // Admin trying to access dealer routes - redirect to admin
-        return <Navigate to="/admin" replace />;
-      }
+  // Check role-based access
+  if (requiredRole) {
+    if (requiredRole === 'admin' && userRole !== 'admin') {
+      // Non-admin trying to access admin routes
+      return <Navigate to="/" replace />;
     }
-
-    return <>{children}</>;
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    return <Navigate to="/" replace />;
+    
+    if (requiredRole === 'dealer' && userRole === 'admin') {
+      // Admin trying to access dealer routes - redirect to admin
+      return <Navigate to="/admin" replace />;
+    }
   }
+
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

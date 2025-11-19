@@ -7,6 +7,8 @@
  * - staff: Can only create quotes, no order creation
  */
 
+import { getCurrentUser } from './authUtils';
+
 export type UserRole = 'admin' | 'dealer' | 'staff';
 
 /**
@@ -14,10 +16,9 @@ export type UserRole = 'admin' | 'dealer' | 'staff';
  */
 export const getCurrentUserRole = (): UserRole => {
   try {
-    const userData = localStorage.getItem('e-drive-user');
-    if (!userData) return 'dealer'; // Default fallback
+    const user = getCurrentUser();
+    if (!user) return 'dealer'; // Default fallback
     
-    const user = JSON.parse(userData);
     let role = user.role || 'dealer';
     
     // Normalize role (remove ROLE_ and role_ prefix if exists)
@@ -77,6 +78,14 @@ export const canManagePromotions = (): boolean => {
 };
 
 /**
+ * Check if user can edit quote status
+ * Only Dealer/Manager can edit status (Staff can only view)
+ */
+export const canEditQuoteStatus = (): boolean => {
+  return getCurrentUserRole() === 'dealer';
+};
+
+/**
  * Check if user should see quote button instead of order button
  * Staff → Quote button (Báo giá) - navigate to /quotes/create
  * Dealer → Order button (Đặt hàng) - navigate to /dealer-order
@@ -95,6 +104,7 @@ export const getUserCapabilities = () => {
   return {
     canCreateOrder: canCreateOrder(),
     canManagePromotions: canManagePromotions(),
+    canEditQuoteStatus: canEditQuoteStatus(),
     shouldShowQuoteButton: shouldShowQuoteButton(),
     canViewCustomers: true, // All roles can view customers
     canManageTestDrive: true, // All roles can manage test drives

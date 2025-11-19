@@ -1,3 +1,6 @@
+import { setAccessToken } from '../lib/apiClient';
+import { clearAuthData } from '../utils/authUtils';
+
 interface RegisterRequest {
   fullName: string;
   dealerEmail: string; // Backend field name (changed from email)
@@ -264,11 +267,10 @@ export const authApi = {
     }
   },
 
-  // Logout
-  async logout(): Promise<void> {
-    tokenManager.clearTokens();
-    localStorage.removeItem('e-drive-user');
-    localStorage.removeItem('isLoggedIn');
+    // Logout
+  logout(): void {
+    clearAuthData();
+    setAccessToken(null);
   },
 
   // Check if user is authenticated

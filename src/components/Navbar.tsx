@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Logo from "../images/logo/logo.png";
 import AuthManager from "./AuthManager";
 import { canManagePromotions, canCreateOrder } from "../utils/roleUtils";
+import { getValidAuthData, clearAuthData } from "../utils/authUtils";
 import "../styles/NavbarStyles/_navbar.scss";
 
 interface NavLink {
@@ -49,25 +50,19 @@ const Navbar: React.FC = () => {
   }, []);
 
   const checkLoginStatus = () => {
-    const userData = localStorage.getItem('e-drive-user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        setIsLoggedIn(true);
-        setUserProfile(user);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('e-drive-user');
-      }
+    const authData = getValidAuthData();
+    
+    if (authData) {
+      setIsLoggedIn(true);
+      setUserProfile(authData.user);
+    } else {
+      setIsLoggedIn(false);
+      setUserProfile(null);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('e-drive-user');
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearAuthData();
     setIsLoggedIn(false);
     setUserProfile(null);
     window.dispatchEvent(new Event('userLogout'));
@@ -118,6 +113,7 @@ const Navbar: React.FC = () => {
     // Only add Promotions if user has permission (admin/manager only, not staff)
     if (canManagePromotions()) {
       dropdownItems.push({ to: "/promotions", label: "Khuyến mãi", icon: "fa-tags" });
+      dropdownItems.push({ to: "/services-accessories", label: "Dịch vụ & Phụ kiện", icon: "fa-toolbox" });
     }
 
     // Only add Orders if user has permission (admin/manager only, not staff)

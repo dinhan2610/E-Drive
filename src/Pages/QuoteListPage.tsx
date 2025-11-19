@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listQuotations, getQuotation, type QuotationResponse } from '../services/quotationApi';
 import { getProfile } from '../services/profileApi';
+import { canEditQuoteStatus } from '../utils/roleUtils';
 import styles from '../styles/OrderStyles/QuoteManagement.module.scss';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -80,6 +81,7 @@ interface Quote {
   quoteNumber: string;
   date: string;
   customerName: string;
+  customerPhone: string;
   productName: string;
   productVariant: string;
   totalPrice: number;
@@ -161,17 +163,17 @@ const QuoteListPage: React.FC = () => {
       }
       
       // Map API response to local Quote interface
-      // Note: New API has minimal fields, so we use fallback values
       const mappedQuotes: Quote[] = quotations.map((q: QuotationResponse) => ({
         id: String(q.quotationId),
         quoteNumber: `BG-${q.quotationId}`,
         date: q.createdAt ? new Date(q.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        customerName: `Khách hàng #${q.customerId}`, // API doesn't return customer name
-        productName: `Xe #${q.vehicleId}`, // API doesn't return vehicle name
-        productVariant: '',
-        totalPrice: 0, // API doesn't return price
+        customerName: q.customerFullName || `Khách hàng #${q.customerId}`,
+        customerPhone: q.customerPhone || 'Chưa cập nhật',
+        productName: q.modelName ? `${q.modelName}${q.version ? ' ' + q.version : ''}` : `Xe #${q.vehicleId}`,
+        productVariant: q.version || '',
+        totalPrice: q.grandTotal || 0,
         quantity: 1,
-        status: 'pending' // Default status since it's not in API response
+        status: (q.quotationStatus?.toLowerCase() as 'pending' | 'sent' | 'accepted' | 'rejected') || 'pending'
       }));
       
       setQuotes(mappedQuotes);
@@ -201,15 +203,57 @@ const QuoteListPage: React.FC = () => {
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
+  const handleStatusChange = async (quoteId: string, newStatus: string) => {
+    try {
+      // TODO: Call API to update status when backend is ready
+      // await updateQuotationStatus(quoteId, newStatus);
+      
+      // Update local state
+      setQuotes(prevQuotes => 
+        prevQuotes.map(q => 
+          q.id === quoteId ? { ...q, status: newStatus as 'pending' | 'sent' | 'accepted' | 'rejected' } : q
+        )
+      );
+      
+      console.log(`✅ Updated quote ${quoteId} status to ${newStatus}`);
+    } catch (error) {
+      console.error('❌ Error updating status:', error);
+      alert('Không thể cập nhật trạng thái. Vui lòng thử lại.');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: 'Chờ gửi', class: styles.statusPending },
+      pending: { label: 'Chờ xử lý', class: styles.statusPending },
       sent: { label: 'Đã gửi', class: styles.statusSent },
-      accepted: { label: 'Đã chấp nhận', class: styles.statusAccepted },
+      accepted: { label: 'Đã duyệt', class: styles.statusAccepted },
       rejected: { label: 'Đã từ chối', class: styles.statusRejected },
     };
     const config = statusConfig[status as keyof typeof statusConfig];
     return <span className={`${styles.statusBadge} ${config.class}`}>{config.label}</span>;
+  };
+
+  const renderStatusDropdown = (quote: Quote) => {
+    const canEdit = canEditQuoteStatus();
+    
+    // Staff: Show read-only badge
+    if (!canEdit) {
+      return getStatusBadge(quote.status);
+    }
+    
+    // Manager/Dealer: Show editable dropdown
+    return (
+      <select
+        className={`${styles.statusSelect} ${styles[`status${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}`]}`}
+        value={quote.status}
+        onChange={(e) => handleStatusChange(quote.id, e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        title="Manager có thể thay đổi trạng thái"
+      >
+        <option value="pending">Chờ xử lý</option>
+        <option value="accepted">Đã duyệt</option>
+      </select>
+    );
   };
 
   const filteredQuotes = quotes.filter(quote => {
@@ -845,7 +889,7 @@ const QuoteListPage: React.FC = () => {
                             <div className={styles.customerName}>{quote.customerName}</div>
                             <div className={styles.customerPhone}>
                               <i className="fas fa-phone"></i>
-                              ID: {quote.id}
+                              {quote.customerPhone}
                             </div>
                           </div>
                         </td>
@@ -863,7 +907,7 @@ const QuoteListPage: React.FC = () => {
                           </div>
                         </td>
                         <td>
-                          {getStatusBadge(quote.status)}
+                          {renderStatusDropdown(quote)}
                         </td>
                         <td>
                           <div className={styles.actions}>

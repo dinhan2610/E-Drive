@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getCurrentUser } from '../utils/authUtils';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { getContract, saveManufacturerSignature, saveDealerSignature, uploadContractPdf } from '../services/contractsApi';
@@ -64,22 +65,11 @@ const ContractSignPage: React.FC = () => {
       setContract(contractData);
       
       // Determine signer type based on contract status and user role
-      const userRole = localStorage.getItem('userRole')?.toLowerCase(); // Normalize to lowercase
-      const userData = localStorage.getItem('e-drive-user');
+      const user = getCurrentUser();
+      const userRole = user?.role?.toLowerCase(); // Normalize to lowercase
       
       // Check if user is dealer (includes dealer, dealer_manager, etc.)
       let isDealer = userRole?.includes('dealer') || false;
-      
-      // Fallback: check from userData if userRole is not set
-      if (!userRole && userData) {
-        try {
-          const parsed = JSON.parse(userData);
-          const role = parsed.role?.toLowerCase();
-          isDealer = role?.includes('dealer') || false;
-        } catch (e) {
-          console.warn('Could not parse user data');
-        }
-      }
       
       console.log('👤 Current user role:', userRole);
       console.log('👤 Is dealer:', isDealer);

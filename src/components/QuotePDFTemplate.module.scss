@@ -158,9 +158,14 @@
   margin-bottom: 20px;
   page-break-inside: avoid; // Tránh cắt ngang section
   
-  // Nếu section quá dài, cho phép break nhưng ưu tiên giữ nguyên
+  // Nếu section quá dài (như bảng dịch vụ), cho phép break trong tbody
   &.allowBreak {
     page-break-inside: auto;
+    
+    // Nhưng vẫn giữ title cùng với nội dung
+    .sectionTitle {
+      page-break-after: avoid;
+    }
   }
 }
 
@@ -221,7 +226,8 @@
   padding: 18px;
   border-radius: 12px;
   color: white;
-  page-break-inside: avoid;
+  page-break-inside: avoid; // Không cắt ngang thông tin xe
+  page-break-after: avoid; // Luôn giữ cùng trang với phần tiếp theo
 }
 
 .vehicleName {
@@ -271,6 +277,15 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 11pt;
+  page-break-inside: avoid; // Không cắt ngang bảng
+
+  thead {
+    page-break-after: avoid; // Header luôn đi với ít nhất 1 row
+  }
+
+  tbody {
+    page-break-inside: auto; // Cho phép cắt trong tbody nếu cần
+  }
 
   tr {
     border-bottom: 1px solid #e9ecef;

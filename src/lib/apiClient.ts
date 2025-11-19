@@ -1,6 +1,7 @@
 // Axios API client with JWT authentication interceptor
 
 import axios from "axios";
+import { clearAuthData } from "../utils/authUtils";
 
 let accessToken: string | null = null;
 
@@ -47,10 +48,7 @@ api.interceptors.response.use(
       if (status === 401) {
         // Clear token and redirect to home (login modal will appear)
         setAccessToken(null);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('token');
-        localStorage.removeItem('e-drive-user');
-        localStorage.removeItem('isLoggedIn');
+        clearAuthData();
         window.location.href = '/';
       }
       

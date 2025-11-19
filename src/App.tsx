@@ -13,6 +13,7 @@ import TestDrivePage from "./Pages/TestDrivePage";
 import TestDriveManagementPage from "./Pages/TestDriveManagementPage";
 import OrderManagementPage from "./Pages/OrderManagementPage";
 import PromotionsPage from "./Pages/PromotionsPage";
+import ServiceAccessoryManagementPage from "./Pages/ServiceAccessoryManagementPage";
 import FinancingPage from "./Pages/FinancingPage";
 import TicketsPage from "./Pages/TicketsPage";
 import ContractCreatePageNew from "./Pages/ContractCreatePage_new";
@@ -81,6 +82,11 @@ function App() {
         <Route path="/promotions" element={
           <ProtectedRoute requiredRole="dealer">
             <PromotionsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/services-accessories" element={
+          <ProtectedRoute requiredRole="dealer">
+            <ServiceAccessoryManagementPage />
           </ProtectedRoute>
         } />
         <Route path="/installment" element={
