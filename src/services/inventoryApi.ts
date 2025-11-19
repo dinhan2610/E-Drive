@@ -2,6 +2,7 @@ import apiClient from '../lib/apiClient';
 
 // Dealer Inventory Response Type
 export interface DealerInventoryItem {
+  vehicleId: number;
   modelName: string;
   version: string;
   colorName: string;
