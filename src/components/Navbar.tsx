@@ -113,6 +113,7 @@ const Navbar: React.FC = () => {
     // Only add Promotions if user has permission (admin/manager only, not staff)
     if (canManagePromotions()) {
       dropdownItems.push({ to: "/promotions", label: "Khuyến mãi", icon: "fa-tags" });
+      dropdownItems.push({ to: "/services-accessories", label: "Dịch vụ & Phụ kiện", icon: "fa-toolbox" });
     }
 
     // Only add Orders if user has permission (admin/manager only, not staff)
