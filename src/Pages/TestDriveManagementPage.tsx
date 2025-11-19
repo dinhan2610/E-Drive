@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getTestDrivesByDealer, deleteTestDrive, updateTestDriveStatus, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
 import { getProfile } from '../services/profileApi';
 import { getCurrentUserRole } from '../utils/roleUtils';
@@ -48,6 +49,7 @@ const TestDriveManagementPage: React.FC = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancellingTestDrive, setCancellingTestDrive] = useState<TestDrive | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [userRole] = useState<'dealer' | 'staff'>(getCurrentUserRole() as 'dealer' | 'staff');
 
   // Get dealer info from profile API
@@ -170,13 +172,21 @@ const TestDriveManagementPage: React.FC = () => {
     try {
       setUpdatingConfirmation(testDrive.testdriveId);
       
-      // Use PATCH API with dealer confirmation status only
+      // If cancelling, sync both status and statusForStaff
+      const payload: any = {
+        status: newStatus as 'PENDING' | 'APPROVED' | 'CANCELLED'
+      };
+      
+      // When manager cancels, also cancel staff status
+      if (newStatus === 'CANCELLED') {
+        payload.statusForStaff = 'CANCELLED';
+      }
+      
+      // Use PATCH API with dealer confirmation status
       const updated = await updateTestDriveStatus(
         testDrive.dealerId,
         testDrive.testdriveId,
-        {
-          status: newStatus as 'PENDING' | 'APPROVED' // Dealer confirmation field
-        }
+        payload
       );
       
       // Update local state
@@ -246,11 +256,13 @@ const TestDriveManagementPage: React.FC = () => {
     try {
       setUpdatingStaffStatus(cancellingTestDrive.testdriveId);
       
+      // When staff cancels, sync both statusForStaff and status
       const updated = await updateTestDriveStatus(
         cancellingTestDrive.dealerId,
         cancellingTestDrive.testdriveId,
         {
           statusForStaff: 'CANCELLED',
+          status: 'CANCELLED', // Also cancel dealer confirmation
           cancelReason: cancelReason.trim()
         }
       );
@@ -298,9 +310,19 @@ const TestDriveManagementPage: React.FC = () => {
     }, 2000);
   };
 
-  const filteredTestDrives = filterStatus === 'ALL' 
-    ? testDrives 
-    : testDrives.filter(td => td.status === filterStatus);
+  const filteredTestDrives = testDrives.filter(td => {
+    // Filter by status
+    const matchesStatus = filterStatus === 'ALL' || td.status === filterStatus;
+    
+    // Filter by search query
+    const matchesSearch = !searchQuery || 
+      td.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      td.vehicleModel?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      td.testdriveId?.toString().includes(searchQuery) ||
+      td.customerId?.toString().includes(searchQuery);
+    
+    return matchesStatus && matchesSearch;
+  });
 
   return (
     <div className={styles.pageWrapper}>
@@ -323,43 +345,39 @@ const TestDriveManagementPage: React.FC = () => {
                 )}
               </p>
             </div>
+            <Link to="/test-drive" className={styles.createButton} title="Tạo lịch mới">
+              <i className="fas fa-plus"></i>
+            </Link>
           </div>
         </div>
 
-        <div className={styles.filterSection}>
-          <div className={styles.filterButtons}>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'ALL' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('ALL')}
-            >
-              Tất cả ({testDrives.length})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'PENDING' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('PENDING')}
-            >
-              Chờ xử lý ({testDrives.filter(td => td.status === 'PENDING').length})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'APPROVED' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('APPROVED')}
-            >
-              Đã xác nhận ({testDrives.filter(td => td.status === 'APPROVED').length})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'COMPLETED' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('COMPLETED')}
-            >
-              Hoàn thành ({testDrives.filter(td => td.status === 'COMPLETED').length})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'CANCELLED' ? styles.active : ''}`}
-              onClick={() => setFilterStatus('CANCELLED')}
-            >
-              Huỷ ({testDrives.filter(td => td.status === 'CANCELLED').length})
-            </button>
+        {/* Filters Section */}
+        <div className={styles.filtersSection}>
+          <div className={styles.filtersContainer}>
+            {/* Search Box */}
+            <div className={styles.searchBox}>
+              <i className="fas fa-search"></i>
+              <input
+                type="text"
+                placeholder="Tìm kiếm khách hàng..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={styles.searchInput}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className={styles.clearSearch}
+                  onClick={() => setSearchQuery('')}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+      
 
         {isLoading ? (
           <div className={styles.loading}>
@@ -411,8 +429,21 @@ const TestDriveManagementPage: React.FC = () => {
                             className={`${styles.statusSelect} ${styles[testDrive.statusForStaff?.toLowerCase() || testDrive.status?.toLowerCase() || 'pending']} ${updatingStaffStatus === testDrive.testdriveId ? styles.updating : ''}`}
                             value={testDrive.statusForStaff || testDrive.status || 'PENDING'}
                             onChange={(e) => handleStaffStatusChange(testDrive, e.target.value)}
-                            disabled={updatingStaffStatus === testDrive.testdriveId}
-                            title="Staff cập nhật trạng thái xử lý"
+                            disabled={
+                              updatingStaffStatus === testDrive.testdriveId ||
+                              testDrive.status !== 'APPROVED' || // Staff can only update when manager approved
+                              testDrive.statusForStaff === 'COMPLETED' || // Lock when completed
+                              testDrive.statusForStaff === 'CANCELLED' // Lock when cancelled
+                            }
+                            title={
+                              testDrive.status !== 'APPROVED' 
+                                ? 'Chỉ cập nhật được khi Manager đã xác nhận'
+                                : testDrive.statusForStaff === 'COMPLETED'
+                                ? 'Đã hoàn thành, không thể sửa'
+                                : testDrive.statusForStaff === 'CANCELLED'
+                                ? 'Đã hủy, không thể sửa'
+                                : 'Staff cập nhật trạng thái xử lý'
+                            }
                           >
                             <option value="PENDING">Chờ xử lý</option>
                             <option value="COMPLETED">Hoàn thành</option>
@@ -427,18 +458,29 @@ const TestDriveManagementPage: React.FC = () => {
                       <td>
                         {userRole === 'staff' ? (
                           <span className={`${styles.statusBadge} ${styles[testDrive.status?.toLowerCase() || 'pending']}`}>
-                            {testDrive.status === 'APPROVED' ? 'Đã xác nhận' : 'Chờ xác nhận'}
+                            {getStatusLabel(testDrive.status || 'PENDING')}
                           </span>
                         ) : (
                           <select 
                             className={`${styles.statusSelect} ${styles[dealerConfirmations[testDrive.testdriveId] || testDrive.status?.toLowerCase() || 'pending']} ${updatingConfirmation === testDrive.testdriveId ? styles.updating : ''}`}
                             value={dealerConfirmations[testDrive.testdriveId] || testDrive.status || 'PENDING'}
                             onChange={(e) => handleDealerConfirmationChange(testDrive, e.target.value)}
-                            disabled={updatingConfirmation === testDrive.testdriveId}
-                            title="Manager cập nhật xác nhận đại lý"
+                            disabled={
+                              updatingConfirmation === testDrive.testdriveId ||
+                              testDrive.statusForStaff === 'COMPLETED' || // Lock when staff completed
+                              testDrive.status === 'CANCELLED' // Lock when cancelled
+                            }
+                            title={
+                              testDrive.statusForStaff === 'COMPLETED'
+                                ? 'Đã hoàn thành, không thể sửa'
+                                : testDrive.status === 'CANCELLED'
+                                ? 'Đã hủy, không thể sửa'
+                                : 'Manager cập nhật xác nhận đại lý'
+                            }
                           >
-                            <option value="PENDING">Chờ xác nhận</option>
+                            <option value="PENDING">Chờ xử lý</option>
                             <option value="APPROVED">Đã xác nhận</option>
+                            <option value="CANCELLED">Huỷ</option>
                           </select>
                         )}
                       </td>
