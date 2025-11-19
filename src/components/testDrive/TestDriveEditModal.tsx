@@ -15,9 +15,7 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     date: '',
-    time: '',
-    status: testDrive.status,
-    cancelReason: testDrive.cancelReason || ''
+    time: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -63,10 +61,6 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
       if (timeInMinutes < startTime || timeInMinutes > endTime) {
         throw new Error('Giờ lái thử phải trong khoảng 8:00 - 17:00');
       }
-
-      if (formData.status === 'CANCELLED' && !formData.cancelReason) {
-        throw new Error('Vui lòng nhập lý do hủy');
-      }
       
       // Call API with proper payload
       console.log('📝 Updating test drive #' + testDrive.testdriveId);
@@ -76,8 +70,8 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
         dealerId: testDrive.dealerId,
         vehicleId: testDrive.vehicleId,
         scheduleDatetime: datetime.toISOString(),
-        status: formData.status,
-        cancelReason: formData.cancelReason || undefined
+        status: testDrive.status, // Keep existing status
+        cancelReason: testDrive.cancelReason || undefined
       });
 
       console.log('✅ Update successful:', updated);
@@ -253,43 +247,6 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
                       </small>
                     </td>
                   </tr>
-                  <tr>
-                    <td className={styles.labelCol}>
-                      <i className="fas fa-flag"></i>
-                      Trạng thái
-                    </td>
-                    <td className={styles.valueCol}>
-                      <select
-                        className={`${styles.statusSelect} ${styles[formData.status.toLowerCase()]}`}
-                        value={formData.status}
-                        onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                      >
-                        <option value="PENDING">Chờ xác nhận</option>
-                        <option value="CONFIRMED">Đã xác nhận</option>
-                        <option value="COMPLETED">Hoàn thành</option>
-                        <option value="CANCELLED">Đã hủy</option>
-                        
-                      </select>
-                    </td>
-                  </tr>
-                  {formData.status === 'CANCELLED' && (
-                    <tr>
-                      <td className={styles.labelCol}>
-                        <i className="fas fa-comment-slash"></i>
-                        Lý do hủy
-                      </td>
-                      <td className={styles.valueCol}>
-                        <textarea
-                          className={styles.reasonTextarea}
-                          placeholder="Nhập lý do hủy..."
-                          value={formData.cancelReason}
-                          onChange={(e) => setFormData({...formData, cancelReason: e.target.value})}
-                          rows={3}
-                          required
-                        />
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>

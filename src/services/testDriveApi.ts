@@ -14,7 +14,7 @@ export interface TestDrive {
   vehicleModel: string;
   scheduleDatetime: string;
   completedAt: string | null;
-  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED';
   cancelReason: string | null;
 }
 
@@ -23,7 +23,7 @@ export interface TestDriveRequest {
   dealerId: number;
   vehicleId: number;
   scheduleDatetime: string; // ISO 8601 format: "2025-10-24T18:29:34.064Z"
-  status?: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  status?: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED';
   cancelReason?: string;
   note?: string; // Additional notes, can include customer info for walk-in bookings
 }
@@ -226,6 +226,47 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
 };
 
 /**
+ * PATCH /api/testdrives/dealer/{dealerId}/{testdriveId}/status - Update test drive status
+ */
+export const updateTestDriveStatus = async (
+  dealerId: number,
+  testdriveId: number,
+  statusData: { status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'; cancelReason?: string }
+): Promise<TestDrive> => {
+  try {
+    const payload: any = {
+      status: statusData.status
+    };
+    
+    // Only include cancelReason if it has a value
+    if (statusData.cancelReason && statusData.cancelReason.trim() !== '') {
+      payload.cancelReason = statusData.cancelReason;
+    }
+    
+    console.log(`🔄 PATCH /api/testdrives/dealer/${dealerId}/${testdriveId}/status`);
+    console.log('📤 Payload:', payload);
+    
+    const response = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${dealerId}/${testdriveId}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const result = await handleResponse<any>(response);
+    console.log('✅ Status updated:', result);
+    
+    if (result.data && typeof result.data === 'object') {
+      return result.data;
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Update status error:', error);
+    if (error instanceof TestDriveApiError) throw error;
+    throw new TestDriveApiError('Không thể cập nhật trạng thái', 'NETWORK_ERROR', error);
+  }
+};
+
+/**
  * PUT /api/testdrives/{id} - Update test drive booking
  */
 export const updateTestDrive = async (
@@ -325,7 +366,7 @@ export const confirmTestDrive = async (id: number): Promise<TestDrive> => {
     dealerId: testDrive.dealerId,
     vehicleId: testDrive.vehicleId,
     scheduleDatetime: testDrive.scheduleDatetime,
-    status: 'CONFIRMED',
+    status: 'APPROVED',
     cancelReason: testDrive.cancelReason || undefined
   });
 };

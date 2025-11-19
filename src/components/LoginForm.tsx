@@ -41,6 +41,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loggedInUserName, setLoggedInUserName] = useState('');
   const [userRole, setUserRole] = useState<'admin' | 'dealer'>('dealer');
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -154,10 +155,24 @@ const LoginForm: React.FC<LoginFormProps> = ({
         
         console.log('💾 User data to be stored:', userData);
         console.log('👤 Final normalized role:', userData.role);
+        console.log('🔐 Remember Me:', rememberMe);
         
-        localStorage.setItem('e-drive-user', JSON.stringify(userData));
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', userData.role); // Lưu role riêng để dễ check
+        // Use sessionStorage by default, localStorage only if Remember Me is checked
+        const storage = rememberMe ? localStorage : sessionStorage;
+        
+        storage.setItem('e-drive-user', JSON.stringify(userData));
+        storage.setItem('isLoggedIn', 'true');
+        storage.setItem('userRole', userData.role);
+        
+        // Set login timestamp for session management
+        const loginTime = new Date().getTime();
+        storage.setItem('loginTimestamp', loginTime.toString());
+        
+        // If Remember Me, set expiry (7 days)
+        if (rememberMe) {
+          const expiryTime = loginTime + (7 * 24 * 60 * 60 * 1000); // 7 days
+          localStorage.setItem('loginExpiry', expiryTime.toString());
+        }
         
         // Set role for redirect
         setUserRole(userData.role);
@@ -284,10 +299,14 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
           <div className="form-options">
             <label className="remember-me">
-              <input type="checkbox" />
-              <span>Ghi nhớ đăng nhập</span>
+              <input 
+                type="checkbox" 
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span>Ghi nhớ đăng nhập (7 ngày)</span>
             </label>
-            <a href="#" className="forgot-password">Quên mật khẩu?</a>
+            <a href="#" className="forgot-password" onClick={(e) => e.preventDefault()}>Quên mật khẩu?</a>
           </div>
 
           <button 
