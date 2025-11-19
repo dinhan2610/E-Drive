@@ -40,7 +40,8 @@ body {
   }
   
   // Admin page không có navbar - bỏ padding
-  &.admin-page {
+  &.admin-page,
+  &.no-navbar-page {
     padding-top: 0 !important;
   }
 }

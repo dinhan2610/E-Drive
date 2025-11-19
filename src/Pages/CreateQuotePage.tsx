@@ -738,7 +738,7 @@ const CreateQuotePage: React.FC = () => {
             ) : (
               <>
                 <i className="fas fa-paper-plane"></i>
-                Tạo & Gửi Báo Giá
+                Tạo Báo Giá
               </>
             )}
           </button>

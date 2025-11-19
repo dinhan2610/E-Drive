@@ -31,6 +31,7 @@ import { useEffect } from "react";
 function App() {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
+  const isCreateQuotePage = location.pathname === '/quotes/create';
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -45,15 +46,23 @@ function App() {
       document.body.classList.remove('admin-page');
     }
     
+    // Add/remove class for create quote page
+    if (isCreateQuotePage) {
+      document.body.classList.add('no-navbar-page');
+    } else {
+      document.body.classList.remove('no-navbar-page');
+    }
+    
     // Cleanup
     return () => {
       document.body.classList.remove('admin-page');
+      document.body.classList.remove('no-navbar-page');
     };
-  }, [isAdminPage]);
+  }, [isAdminPage, isCreateQuotePage]);
 
   return (
     <>
-      {!isAdminPage && <Navbar />}
+      {!isAdminPage && !isCreateQuotePage && <Navbar />}
       <Routes>
         {/* Public Routes */}
         <Route index path="/" element={<Home />} />
@@ -171,8 +180,8 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
-      {!isAdminPage && <Footer />}
-      {!isAdminPage && <ChatBox />}
+      {!isAdminPage && !isCreateQuotePage && <Footer />}
+      {!isAdminPage && !isCreateQuotePage && <ChatBox />}
     </>
   );
 }

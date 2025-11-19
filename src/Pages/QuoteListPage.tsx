@@ -241,8 +241,8 @@ const QuoteListPage: React.FC = () => {
     const statusConfig = {
       pending: { label: 'Chờ xử lý', class: styles.statusPending },
       sent: { label: 'Đã gửi', class: styles.statusSent },
-      accepted: { label: 'Đã duyệt', class: styles.statusAccepted },
-      rejected: { label: 'Đã từ chối', class: styles.statusRejected },
+      accepted: { label: 'Đã xác nhận', class: styles.statusAccepted },
+      rejected: { label: 'Huỷ', class: styles.statusRejected },
     };
     const config = statusConfig[status as keyof typeof statusConfig];
     return <span className={`${styles.statusBadge} ${config.class}`}>{config.label}</span>;
