@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authApi } from '../services/authApi';
 import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
 
 interface AdminLayoutProps {
@@ -36,9 +37,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      navigate('/');
+    } catch (error) {
+      localStorage.clear();
+      navigate('/');
+    }
   };
 
   const getPageTitle = () => {

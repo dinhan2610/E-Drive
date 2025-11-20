@@ -267,10 +267,32 @@ export const authApi = {
     }
   },
 
-    // Logout
-  logout(): void {
-    clearAuthData();
-    setAccessToken(null);
+  // Logout - Call server API and clear local data
+  async logout(): Promise<void> {
+    try {
+      const token = tokenManager.getAccessToken();
+      
+      if (token) {
+        // Call logout API to invalidate token on server
+        console.log('🚪 Calling logout API...');
+        await fetch(`${API_BASE_URL}/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('✅ Logout API called successfully');
+      }
+    } catch (error) {
+      console.warn('⚠️ Logout API failed (continuing anyway):', error);
+      // Continue with local cleanup even if API fails
+    } finally {
+      // Always clear local data
+      clearAuthData();
+      setAccessToken(null);
+      console.log('✅ Local auth data cleared');
+    }
   },
 
   // Check if user is authenticated

@@ -4,6 +4,7 @@ import Logo from "../images/logo/logo.png";
 import AuthManager from "./AuthManager";
 import { canManagePromotions, canCreateOrder, getCurrentUserRole, isStaff } from "../utils/roleUtils";
 import { getValidAuthData, clearAuthData } from "../utils/authUtils";
+import { authApi } from "../services/authApi";
 import "../styles/NavbarStyles/_navbar.scss";
 
 interface NavLink {
@@ -30,7 +31,7 @@ const Navbar: React.FC = () => {
     
     // Listen for login/logout events
     const handleLoginSuccess = () => checkLoginStatus();
-    const handleLogout = () => {
+    const handleLogoutEvent = () => {
       setIsLoggedIn(false);
       setUserProfile(null);
     };
@@ -38,13 +39,13 @@ const Navbar: React.FC = () => {
     
     window.addEventListener('loginSuccess', handleLoginSuccess);
     window.addEventListener('registerSuccess', handleLoginSuccess);
-    window.addEventListener('userLogout', handleLogout);
+    window.addEventListener('userLogout', handleLogoutEvent);
     window.addEventListener('userProfileUpdated', handleProfileUpdate);
     
     return () => {
       window.removeEventListener('loginSuccess', handleLoginSuccess);
       window.removeEventListener('registerSuccess', handleLoginSuccess);
-      window.removeEventListener('userLogout', handleLogout);
+      window.removeEventListener('userLogout', handleLogoutEvent);
       window.removeEventListener('userProfileUpdated', handleProfileUpdate);
     };
   }, []);
@@ -61,11 +62,22 @@ const Navbar: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    clearAuthData();
-    setIsLoggedIn(false);
-    setUserProfile(null);
-    window.dispatchEvent(new Event('userLogout'));
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      
+      setIsLoggedIn(false);
+      setUserProfile(null);
+      window.dispatchEvent(new Event('userLogout'));
+      
+      window.location.href = '/';
+    } catch (error) {
+      clearAuthData();
+      setIsLoggedIn(false);
+      setUserProfile(null);
+      window.dispatchEvent(new Event('userLogout'));
+      window.location.href = '/';
+    }
   };
 
   const handleSectionScroll = (sectionId: string) => {
