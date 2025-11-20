@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import Logo from "../images/logo/logo.png";
 import AuthManager from "./AuthManager";
-import { canManagePromotions, canCreateOrder } from "../utils/roleUtils";
+import { canManagePromotions, canCreateOrder, getCurrentUserRole, isStaff } from "../utils/roleUtils";
 import { getValidAuthData, clearAuthData } from "../utils/authUtils";
 import "../styles/NavbarStyles/_navbar.scss";
 
@@ -209,6 +209,26 @@ const Navbar: React.FC = () => {
                 <div className="dropdown-header">
                   <h4>{userProfile.fullName || userProfile.name}</h4>
                   <p>{userProfile.email}</p>
+                  {userProfile.role && (
+                    <span className={`role-badge ${userProfile.role.toLowerCase().replace('role_', '').replace('dealer_', '')}`}>
+                      {userProfile.role.toLowerCase().includes('staff') ? (
+                        <>
+                          <i className="fas fa-user-tag"></i>
+                          Nhân viên
+                        </>
+                      ) : userProfile.role.toLowerCase().includes('dealer') || userProfile.role.toLowerCase().includes('manager') ? (
+                        <>
+                          <i className="fas fa-user-tie"></i>
+                          Quản lý
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-crown"></i>
+                          Admin
+                        </>
+                      )}
+                    </span>
+                  )}
                 </div>
                 
                 <div className="dropdown-menu">
@@ -216,18 +236,19 @@ const Navbar: React.FC = () => {
                     <i className="fas fa-user"></i>
                     Hồ sơ cá nhân
                   </Link>
-                  <Link to="/products" className="dropdown-item">
-                    <i className="fas fa-car"></i>
-                    Mẫu xe
-                  </Link>
                   <Link to="/compare-slots" className="dropdown-item">
                     <i className="fas fa-balance-scale"></i>
                     So sánh xe
                   </Link>
-                  <Link to="/dealer-order" className="dropdown-item">
-                    <i className="fas fa-shopping-cart"></i>
-                    Giỏ hàng
-                  </Link>
+                  
+                  {/* Giỏ hàng - Only show for Dealer/Manager, not Staff */}
+                  {!userProfile.role?.toLowerCase().includes('staff') && (
+                    <Link to="/dealer-order" className="dropdown-item">
+                      <i className="fas fa-shopping-cart"></i>
+                      Giỏ hàng
+                    </Link>
+                  )}
+                  
                   <div className="dropdown-divider"></div>
                   <button className="dropdown-item logout" onClick={handleLogout}>
                     <i className="fas fa-sign-out-alt"></i>
