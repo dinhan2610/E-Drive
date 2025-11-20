@@ -14,6 +14,8 @@ import TestDrivePage from "./Pages/TestDrivePage";
 import TestDriveManagementPage from "./Pages/TestDriveManagementPage";
 import OrderManagementPage from "./Pages/OrderManagementPage";
 import PromotionsPage from "./Pages/PromotionsPage";
+import PromotionDetailPage from "./Pages/PromotionDetailPage";
+import PromotionFormPage from "./Pages/PromotionFormPage";
 import ServiceAccessoryManagementPage from "./Pages/ServiceAccessoryManagementPage";
 import FinancingPage from "./Pages/FinancingPage";
 import FeedbackPage from "./Pages/FeedbackPage";
@@ -33,6 +35,8 @@ function App() {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
   const isCreateQuotePage = location.pathname === '/quotes/create';
+  const isPromotionDetailPage = location.pathname.match(/^\/promotions\/\d+$/);
+  const isPromotionFormPage = location.pathname.match(/^\/promotions\/(new|\d+\/edit)$/);
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -47,8 +51,8 @@ function App() {
       document.body.classList.remove('admin-page');
     }
     
-    // Add/remove class for create quote page
-    if (isCreateQuotePage) {
+    // Add/remove class for create quote page, promotion detail page, and promotion form page
+    if (isCreateQuotePage || isPromotionDetailPage || isPromotionFormPage) {
       document.body.classList.add('no-navbar-page');
     } else {
       document.body.classList.remove('no-navbar-page');
@@ -59,11 +63,11 @@ function App() {
       document.body.classList.remove('admin-page');
       document.body.classList.remove('no-navbar-page');
     };
-  }, [isAdminPage, isCreateQuotePage]);
+  }, [isAdminPage, isCreateQuotePage, isPromotionDetailPage, isPromotionFormPage]);
 
   return (
     <>
-      {!isAdminPage && !isCreateQuotePage && <Navbar />}
+      {!isAdminPage && !isCreateQuotePage && !isPromotionDetailPage && !isPromotionFormPage && <Navbar />}
       <Routes>
         {/* Public Routes */}
         <Route index path="/" element={<Home />} />
@@ -92,6 +96,21 @@ function App() {
         <Route path="/promotions" element={
           <ProtectedRoute requiredRole="dealer">
             <PromotionsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/promotions/new" element={
+          <ProtectedRoute requiredRole="dealer">
+            <PromotionFormPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/promotions/:id" element={
+          <ProtectedRoute requiredRole="dealer">
+            <PromotionDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/promotions/:id/edit" element={
+          <ProtectedRoute requiredRole="dealer">
+            <PromotionFormPage />
           </ProtectedRoute>
         } />
         <Route path="/services-accessories" element={
@@ -186,8 +205,8 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
-      {!isAdminPage && !isCreateQuotePage && <Footer />}
-      {!isAdminPage && !isCreateQuotePage && <ChatBox />}
+      {!isAdminPage && !isCreateQuotePage && !isPromotionDetailPage && !isPromotionFormPage && <Footer />}
+      {!isAdminPage && !isCreateQuotePage && !isPromotionDetailPage && !isPromotionFormPage && <ChatBox />}
     </>
   );
 }

@@ -1,6 +1,6 @@
 // src/Pages/PromotionsPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { listPromotions } from '../services/promotionsApi';
 import { getProfile } from '../services/profileApi';
 import type { Promotion } from '../types/promotion';
@@ -12,7 +12,9 @@ import styles from '../styles/PromotionsStyles/PromotionsPage.module.scss';
 
 const PromotionsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const navigate = useNavigate();
+  const [allPromotions, setAllPromotions] = useState<Promotion[]>([]); // All from API
+  const [promotions, setPromotions] = useState<Promotion[]>([]); // Filtered
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -20,6 +22,11 @@ const PromotionsPage: React.FC = () => {
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null);
   const [viewingPromo, setViewingPromo] = useState<Promotion | null>(null);
   const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
+  
+  // Search debounce state
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Filters from URL
   const page = parseInt(searchParams.get('page') || '1');
@@ -55,6 +62,48 @@ const PromotionsPage: React.FC = () => {
     fetchDealerInfo();
   }, []);
 
+  // Sync searchInput with URL search param
+  useEffect(() => {
+    setSearchInput(search);
+    setSearchQuery(search);
+  }, [search]);
+
+  // Debounce search input (500ms)
+  useEffect(() => {
+    setSearchLoading(true);
+    const timeoutId = setTimeout(() => {
+      if (searchInput !== searchQuery) {
+        setSearchQuery(searchInput);
+        updateParams({ search: searchInput, page: '1' });
+      }
+      setSearchLoading(false);
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      setSearchLoading(false);
+    };
+  }, [searchInput]);
+
+  // Client-side filtering based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setPromotions(allPromotions);
+      setTotal(allPromotions.length);
+      return;
+    }
+
+    const searchLower = searchQuery.toLowerCase().trim();
+    const filtered = allPromotions.filter(promo => {
+      const title = (promo.title || '').toLowerCase();
+      const description = (promo.description || '').toLowerCase();
+      return title.includes(searchLower) || description.includes(searchLower);
+    });
+
+    setPromotions(filtered);
+    setTotal(filtered.length);
+  }, [searchQuery, allPromotions]);
+
   useEffect(() => {
     if (dealerInfo?.id) {
       loadPromotions();
@@ -66,15 +115,30 @@ const PromotionsPage: React.FC = () => {
     
     setLoading(true);
     try {
+      // Load all promotions without search filter (backend doesn't support it)
       const result = await listPromotions(dealerInfo.id, {
-        search,
-        page,
-        limit: 10
+        page: 1,
+        limit: 1000 // Load all
       });
-      setPromotions(result.items || []);
-      setTotal(result.total || 0);
+      setAllPromotions(result.items || []);
+      
+      // Filter client-side if search query exists
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase().trim();
+        const filtered = (result.items || []).filter((promo: Promotion) => {
+          const title = (promo.title || '').toLowerCase();
+          const description = (promo.description || '').toLowerCase();
+          return title.includes(searchLower) || description.includes(searchLower);
+        });
+        setPromotions(filtered);
+        setTotal(filtered.length);
+      } else {
+        setPromotions(result.items || []);
+        setTotal(result.total || 0);
+      }
     } catch (error) {
       console.error('Failed to load promotions:', error);
+      setAllPromotions([]);
       setPromotions([]);
       setTotal(0);
     } finally {
@@ -91,8 +155,10 @@ const PromotionsPage: React.FC = () => {
     setSearchParams(newParams);
   };
 
-  const handleSearch = (value: string) => {
-    updateParams({ search: value, page: '1' });
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    updateParams({ search: '', page: '1' });
   };
 
   const handlePageChange = (newPage: number) => {
@@ -100,18 +166,16 @@ const PromotionsPage: React.FC = () => {
   };
 
   const handleCreate = () => {
-    setEditingPromo(null);
-    setShowForm(true);
+    navigate('/promotions/new');
   };
 
   const handleEdit = (promo: Promotion) => {
-    setEditingPromo(promo);
-    setShowForm(true);
+    navigate(`/promotions/${promo.promoId}/edit`);
   };
 
   const handleView = (promo: Promotion) => {
-    setViewingPromo(promo);
-    setShowDetail(true);
+    // Navigate to detail page instead of modal
+    navigate(`/promotions/${promo.promoId}`);
   };
 
   const handleFormClose = () => {
@@ -163,10 +227,24 @@ const PromotionsPage: React.FC = () => {
             <i className="fas fa-search"></i>
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên..."
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Tìm kiếm theo tên, mô tả..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
+            {searchLoading && (
+              <div className={styles.searchLoading}>
+                <i className="fas fa-spinner fa-spin"></i>
+              </div>
+            )}
+            {searchInput && (
+              <button 
+                className={styles.clearBtn}
+                onClick={handleClearSearch}
+                title="Xóa tìm kiếm"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            )}
           </div>
         </div>
 
