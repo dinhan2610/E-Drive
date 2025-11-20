@@ -79,6 +79,24 @@ const FinancingPage: React.FC = () => {
                 <span>Duyệt nhanh 24h</span>
               </div>
             </div>
+            
+            {/* Disclaimer */}
+            <div className={styles.disclaimer}>
+              <div className={styles.disclaimerIcon}>
+                <i className="fas fa-info-circle"></i>
+              </div>
+              <div className={styles.disclaimerContent}>
+                <p className={styles.disclaimerTitle}>
+                  <strong>Lưu ý quan trọng:</strong>
+                </p>
+                <p className={styles.disclaimerText}>
+                  Đây là công cụ tính toán dự kiến nhằm mục đích tham khảo. 
+                  Giá xe hiển thị là <strong>giá niêm yết chưa bao gồm thuế, phí trước bạ, phí đăng ký, bảo hiểm và các chi phí phát sinh khác</strong>.
+                  Số tiền thực tế có thể thay đổi tùy thuộc vào chương trình khuyến mãi, chính sách của ngân hàng và điều kiện cá nhân. 
+                  Vui lòng liên hệ showroom để được tư vấn chi tiết và chính xác nhất.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -101,6 +119,27 @@ const FinancingPage: React.FC = () => {
 
               {selectedCar && (
                 <>
+                  {/* Price Info Notice */}
+                  <div className={styles.priceNotice}>
+                    <div className={styles.noticeHeader}>
+                      <i className="fas fa-tag"></i>
+                      <span>Thông tin giá xe</span>
+                    </div>
+                    <div className={styles.noticeBody}>
+                      <div className={styles.priceRow}>
+                        <span>Giá niêm yết:</span>
+                        <strong>{selectedCar.priceRetail.toLocaleString('vi-VN')} VND</strong>
+                      </div>
+                      <div className={styles.noticeFooter}>
+                        <i className="fas fa-exclamation-triangle"></i>
+                        <small>
+                          Giá chưa bao gồm: Thuế GTGT (10%),  
+                          Bảo hiểm TNDS, Phí dịch vụ đăng kiểm và các chi phí phát sinh khác
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+
                   <DownPaymentInput
                     carPrice={selectedCar.priceRetail}
                     value={downPayment}
@@ -123,6 +162,17 @@ const FinancingPage: React.FC = () => {
                 <i className="fas fa-calculator"></i>
                 Tính toán ngay
               </button>
+
+              {/* Calculation Disclaimer */}
+              {!calculationResult && isFormValid && (
+                <div className={styles.calculationNote}>
+                  <i className="fas fa-lightbulb"></i>
+                  <p>
+                    Kết quả tính toán mang tính chất tham khảo. 
+                    Để được tư vấn chi tiết về gói trả góp phù hợp, vui lòng nhấn "Tư vấn ngay" sau khi tính toán.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -161,6 +211,38 @@ const FinancingPage: React.FC = () => {
                   }}
                   onConsult={handleConsult}
                 />
+
+                {/* Important Notice After Calculation */}
+                <div className={styles.importantNotice}>
+                  <div className={styles.noticeIcon}>
+                    <i className="fas fa-shield-alt"></i>
+                  </div>
+                  <div className={styles.noticeContent}>
+                    <h4>Lưu ý quan trọng</h4>
+                    <ul>
+                      <li>
+                        <i className="fas fa-check"></i>
+                        Kết quả tính toán trên dựa trên <strong>giá niêm yết chưa bao gồm thuế, phí</strong>
+                      </li>
+                      <li>
+                        <i className="fas fa-check"></i>
+                        Chi phí thực tế sẽ cao hơn do: Thuế GTGT 10%, Phí trước bạ ~10%, Phí đăng ký, Bảo hiểm
+                      </li>
+                      <li>
+                        <i className="fas fa-check"></i>
+                        Lãi suất 0% áp dụng theo chương trình và điều kiện của ngân hàng đối tác
+                      </li>
+                      <li>
+                        <i className="fas fa-check"></i>
+                        Số tiền trả góp hàng tháng có thể thay đổi tùy hồ sơ tín dụng và chính sách ngân hàng
+                      </li>
+                      <li>
+                        <i className="fas fa-check"></i>
+                        Vui lòng liên hệ showroom để được tư vấn chi tiết và báo giá chính xác nhất
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className={styles.emptyState}>
