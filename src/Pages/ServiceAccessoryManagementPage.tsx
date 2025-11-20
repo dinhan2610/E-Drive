@@ -16,10 +16,7 @@ import styles from '../styles/ServiceAccessoryStyles/ServiceAccessoryManagement.
 
 // ===== UTILITY FUNCTIONS =====
 const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(price);
+  return price.toLocaleString('vi-VN') + ' ₫';
 };
 
 const formatDate = (dateString: string | null | undefined): string => {
@@ -350,10 +347,7 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                     placeholder="Nhập tên dịch vụ hoặc phụ kiện (VD: Dán phim cách nhiệt 3M)"
                     className={styles.input}
                   />
-                  <small className={styles.helpText}>
-                    <i className="fa-solid fa-circle-info"></i>
-                    Tên sẽ hiển thị trong danh sách lựa chọn khi tạo báo giá
-                  </small>
+                 
                 </div>
 
                 {/* Category */}
@@ -374,10 +368,7 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                     <option value="warranty">📋 Bảo hành</option>
                     <option value="accessory">🔧 Phụ kiện</option>
                   </select>
-                  <small className={styles.helpText}>
-                    <i className="fa-solid fa-circle-info"></i>
-                    Danh mục giúp phân loại và tìm kiếm dễ dàng hơn
-                  </small>
+                  
                 </div>
 
                 {/* Price */}
@@ -388,22 +379,18 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                   </label>
                   <div className={styles.priceInputWrapper}>
                     <input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                      type="text"
+                      value={formData.price > 0 ? formData.price.toLocaleString('vi-VN') : ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\./g, '');
+                        setFormData({ ...formData, price: Number(value) || 0 });
+                      }}
                       required
-                      min="0"
-                      step="1000"
                       placeholder="0"
                       className={styles.input}
                     />
-                    <span className={styles.currency}>VNĐ</span>
+                    <span className={styles.currency}>₫</span>
                   </div>
-                  {formData.price > 0 && (
-                    <small className={styles.priceDisplay}>
-                      {formData.price.toLocaleString('vi-VN')} đồng
-                    </small>
-                  )}
                 </div>
 
                 {/* Description */}
@@ -419,36 +406,10 @@ const ServiceAccessoryManagementPage: React.FC = () => {
                     placeholder="Nhập mô tả chi tiết về dịch vụ/phụ kiện này...&#10;&#10;VD: Phim cách nhiệt cao cấp 3M, chống nóng hiệu quả, chống tia UV 99%, bảo vệ nội thất xe"
                     className={styles.textarea}
                   />
-                  <small className={styles.charCount}>
-                    {formData.description.length} ký tự
-                  </small>
+                 
                 </div>
 
-                {/* Active Status */}
-                <div className={styles.statusToggle}>
-                  <div className={styles.toggleGroup}>
-                    <label className={styles.toggleLabel}>
-                      <input
-                        type="checkbox"
-                        checked={formData.isActive}
-                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                        className={styles.toggleInput}
-                      />
-                      <span className={styles.toggleSwitch}>
-                        <span className={styles.toggleSlider}></span>
-                      </span>
-                      <span className={styles.toggleText}>
-                        <i className={`fa-solid ${formData.isActive ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-                        {formData.isActive ? 'Hoạt động ngay khi tạo' : 'Tạm ngừng hoạt động'}
-                      </span>
-                    </label>
-                  </div>
-                  <small className={styles.helpText}>
-                    {formData.isActive 
-                      ? 'Dịch vụ sẽ xuất hiện trong danh sách lựa chọn ngay lập tức'
-                      : 'Dịch vụ sẽ được lưu nhưng chưa hiển thị cho khách hàng'}
-                  </small>
-                </div>
+                
 
                 {/* Form Actions */}
                 <div className={styles.modalActions}>
