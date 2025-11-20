@@ -495,8 +495,23 @@ const TestDriveManagementPage: React.FC = () => {
                           </button>
                           <button 
                             className={`${styles.actionButton} ${styles.edit}`}
-                            title="Chỉnh sửa"
+                            title={
+                              testDrive.statusForStaff === 'COMPLETED'
+                                ? 'Không thể chỉnh sửa lịch đã hoàn thành'
+                                : testDrive.statusForStaff === 'CANCELLED' || testDrive.status === 'CANCELLED'
+                                ? 'Không thể chỉnh sửa lịch đã hủy'
+                                : 'Chỉnh sửa (Status sẽ reset về PENDING)'
+                            }
                             onClick={() => handleEdit(testDrive)}
+                            disabled={
+                              testDrive.statusForStaff === 'COMPLETED' ||
+                              testDrive.statusForStaff === 'CANCELLED' ||
+                              testDrive.status === 'CANCELLED'
+                            }
+                            style={{
+                              opacity: testDrive.statusForStaff === 'COMPLETED' || testDrive.statusForStaff === 'CANCELLED' || testDrive.status === 'CANCELLED' ? 0.4 : 1,
+                              cursor: testDrive.statusForStaff === 'COMPLETED' || testDrive.statusForStaff === 'CANCELLED' || testDrive.status === 'CANCELLED' ? 'not-allowed' : 'pointer'
+                            }}
                           >
                             <i className="fas fa-edit"></i>
                           </button>

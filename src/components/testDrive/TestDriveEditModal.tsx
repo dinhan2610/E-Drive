@@ -64,14 +64,15 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
       
       // Call API with proper payload
       console.log('📝 Updating test drive #' + testDrive.testdriveId);
+      console.log('⚠️ Status will reset to PENDING (requires manager approval)');
       
       const updated = await updateTestDrive(testDrive.testdriveId, {
         customerId: testDrive.customerId,
         dealerId: testDrive.dealerId,
         vehicleId: testDrive.vehicleId,
         scheduleDatetime: datetime.toISOString(),
-        status: testDrive.status, // Keep existing status
-        cancelReason: testDrive.cancelReason || undefined
+        status: 'PENDING', // Reset to PENDING - requires manager approval again
+        cancelReason: undefined // Clear cancel reason on edit
       });
 
       console.log('✅ Update successful:', updated);
@@ -98,7 +99,7 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
         <div className={styles.modalHeader}>
           <div className={styles.headerLeft}>
             <i className="fas fa-edit"></i>
-            <h2>Chỉnh sửa lịch lái thử #{testDrive.testdriveId}</h2>
+            <h2>Chỉnh sửa lịch lái thử </h2>
           </div>
           <button className={styles.closeButton} onClick={onClose}>
             <i className="fas fa-times"></i>
@@ -114,141 +115,114 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
             </div>
           )}
 
-          {/* Information Table */}
-          <div className={styles.tableSection}>
+          {/* Information Section - Grid Layout */}
+          <div className={styles.infoSection}>
             <h3 className={styles.sectionTitle}>
               <i className="fas fa-info-circle"></i>
               Thông tin lịch hẹn
             </h3>
-            <table className={styles.infoTable}>
-              <tbody>
-                <tr>
-                  <td className={styles.labelCol}>
-                    <i className="fas fa-hashtag"></i>
-                    Mã lịch hẹn
-                  </td>
-                  <td className={styles.valueCol}>#{testDrive.testdriveId}</td>
-                </tr>
-                <tr>
-                  <td className={styles.labelCol}>
-                    <i className="fas fa-user"></i>
-                    Khách hàng
-                  </td>
-                  <td className={styles.valueCol}>
-                    <div className={styles.customerInfo}>
-                      <strong>{testDrive.customerName}</strong>
-                      <span className={styles.subInfo}>ID: {testDrive.customerId}</span>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className={styles.labelCol}>
-                    <i className="fas fa-car"></i>
-                    Xe điện
-                  </td>
-                  <td className={styles.valueCol}>
-                    <div className={styles.vehicleInfo}>
-                      <strong>{testDrive.vehicleModel}</strong>
-                      <span className={styles.subInfo}>ID: {testDrive.vehicleId}</span>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className={styles.labelCol}>
-                    <i className="fas fa-store"></i>
-                    Đại lý
-                  </td>
-                  <td className={styles.valueCol}>
-                    <strong>{testDrive.dealerName}</strong>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div className={styles.summaryGrid}>
+              <div className={styles.infoItem}>
+                <label><i className="fas fa-hashtag"></i> Mã lịch hẹn</label>
+                <p>#{testDrive.testdriveId}</p>
+              </div>
+              <div className={styles.infoItem}>
+                <label><i className="fas fa-user"></i> Khách hàng</label>
+                <p>{testDrive.customerName}</p>
+                <span className={styles.subtext}>ID: {testDrive.customerId}</span>
+              </div>
+              <div className={styles.infoItem}>
+                <label><i className="fas fa-car"></i> Xe điện</label>
+                <p>{testDrive.vehicleModel}</p>
+                <span className={styles.subtext}>ID: {testDrive.vehicleId}</span>
+              </div>
+              <div className={styles.infoItem}>
+                <label><i className="fas fa-store"></i> Đại lý</label>
+                <p>{testDrive.dealerName}</p>
+                <span className={styles.subtext}>ID: {testDrive.dealerId}</span>
+              </div>
+            </div>
           </div>
 
           {/* Edit Form */}
           <form onSubmit={handleSubmit} className={styles.editForm}>
-            <div className={styles.tableSection}>
+            <div className={styles.editSection}>
               <h3 className={styles.sectionTitle}>
                 <i className="fas fa-edit"></i>
-                Thông tin cần cập nhật
+                Cập nhật lịch hẹn
               </h3>
-              <table className={styles.infoTable}>
-                <tbody>
-                  <tr>
-                    <td className={styles.labelCol}>
-                      <i className="fas fa-calendar-day"></i>
-                      Ngày lái thử
-                    </td>
-                    <td className={styles.valueCol}>
-                      <div className={styles.datePickerWrapper}>
-                        <input
-                          type="date"
-                          className={styles.dateInput}
-                          value={formData.date}
-                          onChange={(e) => {
-                            const selectedDate = new Date(e.target.value);
-                            // Check if Sunday
-                            if (selectedDate.getDay() === 0) {
-                              setError('Không thể chọn Chủ nhật. Vui lòng chọn từ Thứ 2 đến Thứ 7.');
-                              return;
-                            }
-                            setError('');
-                            setFormData({...formData, date: e.target.value});
-                          }}
-                          onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
-                          required
-                          min={new Date().toISOString().slice(0, 10)}
-                        />
-                        <i className="fas fa-calendar-alt" onClick={(e) => {
-                          const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                          input?.showPicker?.();
-                        }}></i>
-                      </div>
-                      <small className={styles.helperText}>
-                        <i className="fas fa-info-circle"></i>
-                        Chỉ nhận lịch từ Thứ 2 đến Thứ 7
-                      </small>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className={styles.labelCol}>
-                      <i className="fas fa-clock"></i>
-                      Giờ lái thử
-                    </td>
-                    <td className={styles.valueCol}>
-                      <div className={styles.timePickerWrapper}>
-                        <input
-                          type="time"
-                          className={styles.timeInput}
-                          value={formData.time}
-                          onChange={(e) => {
-                            const [hours] = e.target.value.split(':').map(Number);
-                            if (hours < 8 || hours > 17) {
-                              setError('Giờ lái thử phải trong khoảng 8:00 - 17:00');
-                              return;
-                            }
-                            setError('');
-                            setFormData({...formData, time: e.target.value});
-                          }}
-                          onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
-                          min="08:00"
-                          max="17:00"
-                          required
-                        />
-                        <i className="fas fa-clock" onClick={(e) => {
-                          const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                          input?.showPicker?.();
-                        }}></i>
-                      </div>
-                      <small className={styles.helperText}>
-                        <i className="fas fa-info-circle"></i>
-                        Giờ hoạt động: 8:00 sáng - 5:00 chiều
-                      </small>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className={styles.editGrid}>
+                {/* Date Input */}
+                <div className={styles.formGroup}>
+                  <label>
+                    <i className="fas fa-calendar-day"></i>
+                    Ngày lái thử
+                  </label>
+                  <div className={styles.datePickerWrapper}>
+                    <input
+                      type="date"
+                      className={styles.dateInput}
+                      value={formData.date}
+                      onChange={(e) => {
+                        const selectedDate = new Date(e.target.value);
+                        if (selectedDate.getDay() === 0) {
+                          setError('Không thể chọn Chủ nhật. Vui lòng chọn từ Thứ 2 đến Thứ 7.');
+                          return;
+                        }
+                        setError('');
+                        setFormData({...formData, date: e.target.value});
+                      }}
+                      onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                      required
+                      min={new Date().toISOString().slice(0, 10)}
+                    />
+                    <i className="fas fa-calendar-alt" onClick={(e) => {
+                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                      input?.showPicker?.();
+                    }}></i>
+                  </div>
+                  <small className={styles.helperText}>
+                    <i className="fas fa-info-circle"></i>
+                    Thứ 2 - Thứ 7
+                  </small>
+                </div>
+
+                {/* Time Input */}
+                <div className={styles.formGroup}>
+                  <label>
+                    <i className="fas fa-clock"></i>
+                    Giờ lái thử
+                  </label>
+                  <div className={styles.timePickerWrapper}>
+                    <input
+                      type="time"
+                      className={styles.timeInput}
+                      value={formData.time}
+                      onChange={(e) => {
+                        const [hours] = e.target.value.split(':').map(Number);
+                        if (hours < 8 || hours > 17) {
+                          setError('Giờ lái thử phải trong khoảng 8:00 - 17:00');
+                          return;
+                        }
+                        setError('');
+                        setFormData({...formData, time: e.target.value});
+                      }}
+                      onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                      min="08:00"
+                      max="17:00"
+                      required
+                    />
+                    <i className="fas fa-clock" onClick={(e) => {
+                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                      input?.showPicker?.();
+                    }}></i>
+                  </div>
+                  <small className={styles.helperText}>
+                    <i className="fas fa-info-circle"></i>
+                    8:00 - 17:00
+                  </small>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}

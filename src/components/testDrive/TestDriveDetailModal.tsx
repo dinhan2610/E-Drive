@@ -55,7 +55,7 @@ const TestDriveDetailModal: React.FC<TestDriveDetailModalProps> = ({
             <i className="fas fa-car-side"></i>
             <div>
               <h2>Chi tiết lịch lái thử</h2>
-              <p className={styles.testDriveId}>ID: #{testDrive.testdriveId}</p>
+             
             </div>
           </div>
           <button className={styles.closeButton} onClick={onClose}>
@@ -76,56 +76,31 @@ const TestDriveDetailModal: React.FC<TestDriveDetailModalProps> = ({
 
         {/* Content */}
         <div className={styles.modalBody}>
-          {/* Vehicle Info */}
+          {/* Summary Info - 2 rows layout */}
           <div className={styles.infoSection}>
             <div className={styles.sectionHeader}>
-              <i className="fas fa-car"></i>
-              <h3>Thông tin xe</h3>
+              <i className="fas fa-info-circle"></i>
+              <h3>Thông tin lịch hẹn</h3>
             </div>
-            <div className={styles.infoGrid}>
+            <div className={styles.summaryGrid}>
               <div className={styles.infoItem}>
-                <label>Mã xe</label>
-                <p>#{testDrive.vehicleId}</p>
+                <label><i className="fas fa-hashtag"></i> Mã lịch hẹn</label>
+                <p>#{testDrive.testdriveId}</p>
               </div>
               <div className={styles.infoItem}>
-                <label>Model xe</label>
-                <p>{testDrive.vehicleModel}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Info */}
-          <div className={styles.infoSection}>
-            <div className={styles.sectionHeader}>
-              <i className="fas fa-user"></i>
-              <h3>Thông tin khách hàng</h3>
-            </div>
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <label>Mã khách hàng</label>
-                <p>#{testDrive.customerId}</p>
-              </div>
-              <div className={styles.infoItem}>
-                <label>Tên khách hàng</label>
+                <label><i className="fas fa-user"></i> Khách hàng</label>
                 <p>{testDrive.customerName}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Dealer Info */}
-          <div className={styles.infoSection}>
-            <div className={styles.sectionHeader}>
-              <i className="fas fa-store"></i>
-              <h3>Thông tin đại lý</h3>
-            </div>
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <label>Mã đại lý</label>
-                <p>#{testDrive.dealerId}</p>
+                <span className={styles.subtext}>ID: {testDrive.customerId}</span>
               </div>
               <div className={styles.infoItem}>
-                <label>Tên đại lý</label>
+                <label><i className="fas fa-car"></i> Xe điện</label>
+                <p>{testDrive.vehicleModel}</p>
+                <span className={styles.subtext}>ID: {testDrive.vehicleId}</span>
+              </div>
+              <div className={styles.infoItem}>
+                <label><i className="fas fa-store"></i> Đại lý</label>
                 <p>{testDrive.dealerName}</p>
+                <span className={styles.subtext}>ID: {testDrive.dealerId}</span>
               </div>
             </div>
           </div>
@@ -138,7 +113,7 @@ const TestDriveDetailModal: React.FC<TestDriveDetailModalProps> = ({
             </div>
             <div className={styles.infoGrid}>
               <div className={styles.infoItem}>
-                <label>Thời gian lái thử</label>
+                <label>Thời gian đăng ký</label>
                 <p>{formatDateTime(testDrive.scheduleDatetime)}</p>
               </div>
               {testDrive.completedAt && (
