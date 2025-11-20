@@ -357,6 +357,9 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
       console.log('✅ Test drive created successfully!');
       console.log('✅ Test drive response:', createdTestDrive);
 
+      // Trigger notification reload
+      window.dispatchEvent(new Event('testDriveCreated'));
+
       setIsSuccessModalOpen(true);
       
       // Reset form

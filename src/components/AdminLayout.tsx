@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/authApi';
+import NotificationDropdown from './NotificationDropdown';
 import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
 
 interface AdminLayoutProps {
@@ -215,6 +216,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
           </div>
 
           <div className={styles.topBarRight}>
+            <NotificationDropdown />
             <div className={styles.searchBox}>
               <i className="fas fa-search"></i>
               <input type="text" placeholder="Tìm kiếm..." />

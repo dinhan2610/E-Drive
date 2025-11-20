@@ -441,11 +441,6 @@ const AdminPage: React.FC = () => {
   //   }
   // }, [navigate]);
 
-  // ===== HELPER: Format mã đơn hàng ngắn gọn =====
-  const formatOrderCode = (orderId: number | string): string => {
-    return `ORD${String(orderId).padStart(4, '0')}`;
-  };
-
   const [showAddCarModal, setShowAddCarModal] = useState<boolean>(false);
   const [showViewCarModal, setShowViewCarModal] = useState<boolean>(false);
   const [showEditCarModal, setShowEditCarModal] = useState<boolean>(false);
@@ -716,6 +711,34 @@ const AdminPage: React.FC = () => {
         status: v.status === 'AVAILABLE' ? 'available' : (v.status === 'DISCONTINUED' ? 'unavailable' : 'available'),
         lastMaintenance: '2024-09-15',
         color: v.color // Add color field
+      }));
+      setCars(apiCars);
+    } catch (err) {
+      // Silent fail
+    }
+  };
+
+  // Function to reload cars from API
+  const reloadCars = async () => {
+    try {
+      const { vehicles } = await fetchVehiclesFromApi({ page: 0, size: 20 });
+      const apiCars: CarWithStatus[] = vehicles.map((v) => ({
+        id: v.vehicleId,
+        name: `${v.modelName} ${v.version}`,
+        img: (v as any).imageUrl || `/src/images/cars-big/car-${v.vehicleId}.jpg`,
+        mark: v.modelName,
+        model: v.version || v.modelName,
+        year: (v as any).manufactureYear || 2024,
+        doors: '4/5',
+        air: 'Yes',
+        transmission: 'Automatic',
+        fuel: 'Electric',
+        price: v.priceRetail,
+        rating: 4.2 + Math.random() * 0.8,
+        totalBookings: Math.floor(Math.random() * 50) + 10,
+        status: v.status === 'AVAILABLE' ? 'available' : (v.status === 'DISCONTINUED' ? 'unavailable' : 'available'),
+        lastMaintenance: '2024-09-15',
+        color: v.color
       }));
       setCars(apiCars);
     } catch (err) {
@@ -1016,6 +1039,44 @@ const AdminPage: React.FC = () => {
     fetchOrdersData();
   }, []); // Empty dependency array - only run once on mount
 
+  // Auto-refresh all admin data every 15 seconds
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      // Reload all data based on active tab
+      if (activeTab === 'cars') {
+        reloadCars();
+      } else if (activeTab === 'dealers') {
+        (async () => {
+          try {
+            const dealerList = await fetchDealers();
+            setDealers(dealerList);
+            const accounts = await fetchUnverifiedAccounts();
+            setUnverifiedAccounts(accounts);
+          } catch (error) {
+            // Silent fail
+          }
+        })();
+      } else if (activeTab === 'inventory') {
+        reloadInventory();
+      } else if (activeTab === 'discounts') {
+        reloadDiscounts();
+      } else if (activeTab === 'bookings') {
+        reloadOrders();
+      } else if (activeTab === 'colors') {
+        (async () => {
+          try {
+            const colorList = await fetchColors();
+            setColors(colorList);
+          } catch (error) {
+            // Silent fail
+          }
+        })();
+      }
+    }, 7000); // Refresh every 7 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [activeTab]); // Re-create interval when active tab changes
+
   // Handle view order detail
   const handleViewOrderDetail = async (orderId: number | string) => {
     setLoadingOrderDetail(true);
@@ -1149,7 +1210,7 @@ const AdminPage: React.FC = () => {
     // Show confirmation dialog for CANCELLED status
     if (newStatus === 'CANCELLED') {
       const booking = bookings.find(b => b.id === orderId);
-      const orderInfo = booking ? `${formatOrderCode(booking.id)} - ${booking.dealerName}` : formatOrderCode(orderId);
+      const orderInfo = booking ? `#${booking.id} - ${booking.dealerName}` : `#${orderId}`;
       
       setConfirmDialog({
         isOpen: true,
@@ -1164,7 +1225,7 @@ const AdminPage: React.FC = () => {
     // Show info dialog for PAID status (backend will validate bill)
     if (newStatus === 'PAID') {
       const booking = bookings.find(b => b.id === orderId);
-      const orderInfo = booking ? `${formatOrderCode(booking.id)} - ${booking.dealerName}` : formatOrderCode(orderId);
+      const orderInfo = booking ? `#${booking.id} - ${booking.dealerName}` : `#${orderId}`;
       
       setConfirmDialog({
         isOpen: true,
@@ -2928,8 +2989,8 @@ const AdminPage: React.FC = () => {
 
                     return (
                     <tr key={booking.id}>
-                      <td title={`Order ID: ${booking.id}`}>
-                        {formatOrderCode(booking.id)}
+                      <td title={String(booking.id)}>
+                        #{typeof booking.id === 'string' ? booking.id.substring(0, 8) + '...' : booking.id}
                       </td>
                       <td>{booking.dealerName}</td>
                       <td>{booking.carName}</td>
@@ -3020,7 +3081,7 @@ const AdminPage: React.FC = () => {
                                 setConfirmDialog({
                                   isOpen: true,
                                   title: 'Xác nhận giao hàng',
-                                  message: `Xác nhận đơn hàng "${formatOrderCode(booking.id)} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
+                                  message: `Xác nhận đơn hàng "#${booking.id} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
                                   type: 'success',
                                   onConfirm: async () => {
                                     try {
@@ -3081,7 +3142,7 @@ const AdminPage: React.FC = () => {
                   </h2>
                   {selectedOrder && (
                     <div className={modalStyles.headerMeta}>
-                      <span className={modalStyles.orderId}>{formatOrderCode(selectedOrder.orderId)}</span>
+                      <span className={modalStyles.orderId}>#{selectedOrder.orderId}</span>
                       <span className={`${modalStyles.statusBadge} ${modalStyles[getOrderStatusClass(selectedOrder.orderStatus)]}`}>
                         {formatOrderStatus(selectedOrder.orderStatus)}
                       </span>

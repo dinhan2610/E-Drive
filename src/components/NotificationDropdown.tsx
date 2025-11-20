@@ -1,38 +1,114 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchAdminNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../services/notificationApi';
+import { fetchAdminNotifications, fetchDealerNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../services/notificationApi';
+import { getCurrentUserRole } from '../utils/roleUtils';
+import { getProfile } from '../services/profileApi';
 import type { Notification } from '../types/notification';
 import styles from '../styles/AdminStyles/NotificationDropdown.module.scss';
 
-const NotificationDropdown: React.FC = () => {
+interface NotificationDropdownProps {
+  direction?: 'up' | 'down'; // Hướng hiển thị dropdown
+}
+
+const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction = 'down' }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Load notifications
-  const loadNotifications = async () => {
-    setIsLoading(true);
+  // Load dealerId once on mount
+  useEffect(() => {
+    const loadDealerId = async () => {
+      const userRole = getCurrentUserRole();
+      if (userRole !== 'admin') {
+        try {
+          const profile = await getProfile();
+          setCurrentDealerId(profile.dealerId);
+        } catch (err) {
+          console.error('Failed to load dealerId:', err);
+        }
+      }
+    };
+    
+    loadDealerId();
+  }, []);
+
+  // Load notifications based on user role
+  const loadNotifications = async (silent = false) => {
+    // Chỉ hiển thị loading khi chưa có dữ liệu (lần đầu tiên)
+    if (!silent && notifications.length === 0) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
-      const data = await fetchAdminNotifications();
-      setNotifications(data);
-    } catch (err) {
+      const userRole = getCurrentUserRole();
+      
+      let data: Notification[];
+      
+      if (userRole === 'admin') {
+        // Admin: fetch admin notifications
+        data = await fetchAdminNotifications();
+      } else {
+        // Manager/Dealer: fetch notifications cho dealer cụ thể
+        if (!currentDealerId) {
+          throw new Error('Không tìm thấy dealer ID');
+        }
+        
+        data = await fetchDealerNotifications(currentDealerId);
+      }
+      
+      // Sắp xếp thông báo từ mới đến cũ (createdAt giảm dần)
+      const sortedData = data.sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      
+      setNotifications(sortedData);
+    } catch (err: any) {
       console.error('Failed to load notifications:', err);
-      setError('Không thể tải thông báo');
+      if (err.response?.status === 403) {
+        setError('Không có quyền truy cập thông báo');
+      } else {
+        setError('Không thể tải thông báo');
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent && notifications.length === 0) {
+        setIsLoading(false);
+      }
     }
   };
 
-  // Initial load and polling every 30 seconds
+  // Initial load and polling every 5 seconds for real-time updates
   useEffect(() => {
-    loadNotifications();
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    // Chỉ load notifications khi đã có dealerId (cho manager) hoặc là admin
+    const userRole = getCurrentUserRole();
+    if (userRole === 'admin' || currentDealerId !== null) {
+      loadNotifications(); // Lần đầu tiên hiển thị loading
+      
+      // Polling mỗi 5 giây để cập nhật thông báo mới (silent mode)
+      const interval = setInterval(() => loadNotifications(true), 5000);
+      
+      // Listen for custom events to reload notifications
+      const handleReloadNotifications = () => {
+        loadNotifications(true); // Silent reload
+      };
+      
+      window.addEventListener('reloadNotifications', handleReloadNotifications);
+      window.addEventListener('testDriveCreated', handleReloadNotifications);
+      window.addEventListener('orderCreated', handleReloadNotifications);
+      
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('reloadNotifications', handleReloadNotifications);
+        window.removeEventListener('testDriveCreated', handleReloadNotifications);
+        window.removeEventListener('orderCreated', handleReloadNotifications);
+      };
+    }
+  }, [currentDealerId]); // Chạy lại khi currentDealerId thay đổi
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -69,15 +145,21 @@ const NotificationDropdown: React.FC = () => {
   };
 
   const handleMarkAllAsRead = async () => {
-    if (unreadCount === 0) return;
+    if (unreadCount === 0 || isMarkingAllRead) return;
 
+    setIsMarkingAllRead(true);
     try {
       await markAllNotificationsAsRead();
+      // Reload notifications để cập nhật trạng thái từ server
+      await loadNotifications(true);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+      // Fallback: cập nhật local state nếu API thành công nhưng reload lỗi
       setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       );
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
+    } finally {
+      setIsMarkingAllRead(false);
     }
   };
 
@@ -114,7 +196,7 @@ const NotificationDropdown: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className={styles.dropdownMenu}>
+        <div className={direction === 'up' ? styles.dropdownMenuUp : styles.dropdownMenu}>
           <div className={styles.dropdownHeader}>
             <h3>
               <i className="fas fa-bell"></i>
@@ -123,9 +205,16 @@ const NotificationDropdown: React.FC = () => {
             <button
               className={styles.markAllRead}
               onClick={handleMarkAllAsRead}
-              disabled={unreadCount === 0}
+              disabled={unreadCount === 0 || isMarkingAllRead}
             >
-              Đánh dấu tất cả đã đọc
+              {isMarkingAllRead ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  Đang xử lý...
+                </>
+              ) : (
+                'Đánh dấu tất cả đã đọc'
+              )}
             </button>
           </div>
 
@@ -137,7 +226,7 @@ const NotificationDropdown: React.FC = () => {
             <div className={styles.errorState}>
               <i className="fas fa-exclamation-circle"></i>
               <p>{error}</p>
-              <button className={styles.retryButton} onClick={loadNotifications}>
+              <button className={styles.retryButton} onClick={() => loadNotifications()}>
                 Thử lại
               </button>
             </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import Logo from "../images/logo/logo.png";
 import AuthManager from "./AuthManager";
-import { canManagePromotions, canCreateOrder, getCurrentUserRole, isStaff } from "../utils/roleUtils";
+import NotificationDropdown from "./NotificationDropdown";
+import { canManagePromotions, canCreateOrder } from "../utils/roleUtils";
 import { getValidAuthData, clearAuthData } from "../utils/authUtils";
 import { authApi } from "../services/authApi";
 import "../styles/NavbarStyles/_navbar.scss";
@@ -208,7 +209,13 @@ const Navbar: React.FC = () => {
 
         <div className="navbar__actions">
           {isLoggedIn && userProfile ? (
-            <div className="user-profile">
+            <>
+              {/* Notification Icon - Only for Manager/Admin */}
+              {!userProfile.role?.toLowerCase().includes('staff') && (
+                <NotificationDropdown />
+              )}
+              
+              <div className="user-profile">
               <div className="profile-avatar-container">
                 <img 
                   src={userProfile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.fullName || userProfile.name || 'User')}&background=ff4d30&color=fff&size=100`}
@@ -269,6 +276,7 @@ const Navbar: React.FC = () => {
                 </div>
               </div>
             </div>
+            </>
           ) : (
             <>
               <button 

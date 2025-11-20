@@ -211,6 +211,38 @@
     gap: 2rem;
     align-items: center;
 
+    // Notification wrapper styles
+    :global(.notificationDropdown) {
+      :global(.notificationButton) {
+        background: transparent;
+        border: 2px solid rgba(255, 77, 48, 0.2);
+        color: #64748b;
+        padding: 12px;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(255, 77, 48, 0.1);
+          border-color: #ff4d30;
+          color: #ff4d30;
+          transform: scale(1.05);
+        }
+
+        i {
+          font-size: 20px;
+        }
+      }
+
+      :global(.badge) {
+        animation: bellPulse 2s infinite;
+      }
+    }
+
     &__signin {
       display: flex;
       align-items: center;
@@ -306,6 +338,15 @@
   }
   100% {
     transform: translateX(100%);
+  }
+}
+
+@keyframes bellPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
   }
 }
 
