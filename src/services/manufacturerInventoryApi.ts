@@ -16,22 +16,27 @@ export async function fetchManufacturerInventorySummary(): Promise<ManufacturerI
     // Check if API returns an array (take first item) or direct object
     let summary: ManufacturerInventorySummary;
     
-    // Format 1: Array response
-    if (Array.isArray(response.data) && response.data.length > 0) {
-      console.log('📦 API returned array, using first item');
+    // Format 1: Wrapped response with data as array { statusCode, message, data: [...] }
+    if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+      console.log('📦 API returned wrapped response with data array, using first item');
+      summary = response.data.data[0];
+    }
+    // Format 2: Direct array response
+    else if (Array.isArray(response.data) && response.data.length > 0) {
+      console.log('📦 API returned direct array, using first item');
       summary = response.data[0];
     } 
-    // Format 2: Wrapped in data property { statusCode, message, data: {...} }
+    // Format 3: Wrapped in data property { statusCode, message, data: {...} }
     else if (response.data?.data && typeof response.data.data === 'object' && 'vehicles' in response.data.data) {
       console.log('📦 API returned wrapped object with data property');
       summary = response.data.data;
     }
-    // Format 3: Direct object
+    // Format 4: Direct object
     else if (response.data && typeof response.data === 'object' && 'vehicles' in response.data) {
       console.log('📦 API returned direct object');
       summary = response.data;
     } 
-    // Format 4: Empty or unexpected
+    // Format 5: Empty or unexpected
     else {
       console.warn('⚠️ Unexpected response format:', response.data);
       return {

@@ -441,6 +441,11 @@ const AdminPage: React.FC = () => {
   //   }
   // }, [navigate]);
 
+  // ===== HELPER: Format mã đơn hàng ngắn gọn =====
+  const formatOrderCode = (orderId: number | string): string => {
+    return `ORD${String(orderId).padStart(4, '0')}`;
+  };
+
   const [showAddCarModal, setShowAddCarModal] = useState<boolean>(false);
   const [showViewCarModal, setShowViewCarModal] = useState<boolean>(false);
   const [showEditCarModal, setShowEditCarModal] = useState<boolean>(false);
@@ -645,15 +650,6 @@ const AdminPage: React.FC = () => {
 
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId, getContractStatus, reload: reloadContractMap } = useContractCheck();
-
-  /**
-   * Check if contract is already signed (ACTIVE or COMPLETED status)
-   * Used to hide signing button for contracts that don't need signing
-   */
-  const isContractSigned = (orderId: string | number): boolean => {
-    const status = getContractStatus(String(orderId));
-    return status === 'ACTIVE' || status === 'COMPLETED';
-  };
 
   // Reload contract map when navigating back from contract creation
   // Use ref to track if we've already reloaded for this timestamp
@@ -1153,7 +1149,7 @@ const AdminPage: React.FC = () => {
     // Show confirmation dialog for CANCELLED status
     if (newStatus === 'CANCELLED') {
       const booking = bookings.find(b => b.id === orderId);
-      const orderInfo = booking ? `#${booking.id} - ${booking.dealerName}` : `#${orderId}`;
+      const orderInfo = booking ? `${formatOrderCode(booking.id)} - ${booking.dealerName}` : formatOrderCode(orderId);
       
       setConfirmDialog({
         isOpen: true,
@@ -1168,7 +1164,7 @@ const AdminPage: React.FC = () => {
     // Show info dialog for PAID status (backend will validate bill)
     if (newStatus === 'PAID') {
       const booking = bookings.find(b => b.id === orderId);
-      const orderInfo = booking ? `#${booking.id} - ${booking.dealerName}` : `#${orderId}`;
+      const orderInfo = booking ? `${formatOrderCode(booking.id)} - ${booking.dealerName}` : formatOrderCode(orderId);
       
       setConfirmDialog({
         isOpen: true,
@@ -2932,8 +2928,8 @@ const AdminPage: React.FC = () => {
 
                     return (
                     <tr key={booking.id}>
-                      <td title={String(booking.id)}>
-                        #{typeof booking.id === 'string' ? booking.id.substring(0, 8) + '...' : booking.id}
+                      <td title={`Order ID: ${booking.id}`}>
+                        {formatOrderCode(booking.id)}
                       </td>
                       <td>{booking.dealerName}</td>
                       <td>{booking.carName}</td>
@@ -2993,7 +2989,7 @@ const AdminPage: React.FC = () => {
                           >
                             <i className={hasContract(String(booking.id)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
                           </button>
-                          {hasContract(String(booking.id)) && !isContractSigned(booking.id) && (
+                          {hasContract(String(booking.id)) && getContractStatus(String(booking.id)) !== 'ACTIVE' && (
                             <button 
                               className={styles.signButton}
                               title="✍️ Ký hợp đồng điện tử"
@@ -3024,7 +3020,7 @@ const AdminPage: React.FC = () => {
                                 setConfirmDialog({
                                   isOpen: true,
                                   title: 'Xác nhận giao hàng',
-                                  message: `Xác nhận đơn hàng "#${booking.id} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
+                                  message: `Xác nhận đơn hàng "${formatOrderCode(booking.id)} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
                                   type: 'success',
                                   onConfirm: async () => {
                                     try {
@@ -3085,7 +3081,7 @@ const AdminPage: React.FC = () => {
                   </h2>
                   {selectedOrder && (
                     <div className={modalStyles.headerMeta}>
-                      <span className={modalStyles.orderId}>#{selectedOrder.orderId}</span>
+                      <span className={modalStyles.orderId}>{formatOrderCode(selectedOrder.orderId)}</span>
                       <span className={`${modalStyles.statusBadge} ${modalStyles[getOrderStatusClass(selectedOrder.orderStatus)]}`}>
                         {formatOrderStatus(selectedOrder.orderStatus)}
                       </span>

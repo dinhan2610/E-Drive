@@ -224,6 +224,10 @@ const Navbar: React.FC = () => {
                     <i className="fas fa-balance-scale"></i>
                     So sánh xe
                   </Link>
+                  <Link to="/dealer-order" className="dropdown-item">
+                    <i className="fas fa-shopping-cart"></i>
+                    Giỏ hàng
+                  </Link>
                   <div className="dropdown-divider"></div>
                   <button className="dropdown-item logout" onClick={handleLogout}>
                     <i className="fas fa-sign-out-alt"></i>

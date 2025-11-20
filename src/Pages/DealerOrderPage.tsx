@@ -45,6 +45,13 @@ interface DealerOrderForm {
   urgentOrder: boolean;
 }
 
+// Helper: Tính ngày giao hàng dự kiến (hiện tại + 4 ngày)
+const getEstimatedDeliveryDate = (): string => {
+  const today = new Date();
+  today.setDate(today.getDate() + 4); // Thêm 4 ngày
+  return today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+};
+
 const DealerOrderPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -83,7 +90,7 @@ const DealerOrderPage: React.FC = () => {
     district: '',
     city: '',
     selectedProducts: [],
-    preferredDeliveryDate: '',
+    preferredDeliveryDate: getEstimatedDeliveryDate(), // Auto-set: hiện tại + 4 ngày
     deliveryAddress: '',
     deliveryNote: '',
     paymentMethod: 'bank-transfer',
@@ -94,6 +101,16 @@ const DealerOrderPage: React.FC = () => {
   const [showProductSelector, setShowProductSelector] = useState(false);
   const SESSION_KEY = 'dealerOrder_selectedProducts_v1';
   const [isSessionRestored, setIsSessionRestored] = useState(false);
+
+  // 🛒 RESTORE giỏ hàng từ sessionStorage ngay khi component mount
+  useEffect(() => {
+    const restored = restoreSelectedProductsFromSession();
+    if (restored && restored.length > 0) {
+      console.log('♻️ Khôi phục giỏ hàng từ session:', restored.length, 'sản phẩm');
+      setFormData(prev => ({ ...prev, selectedProducts: restored }));
+    }
+    setIsSessionRestored(true);
+  }, []); // Chỉ chạy 1 lần khi mount
 
   // Auto-load profile data
   useEffect(() => {
@@ -179,19 +196,27 @@ const DealerOrderPage: React.FC = () => {
 
   
 
+  // 📊 Load danh sách xe có sẵn khi component mount
   useEffect(() => {
-    let mounted = true;
     window.scrollTo(0, 0);
     fetchVehicles();
-    // Restore any in-progress selected products from session (in case user navigated away to /select-car)
-    const restored = restoreSelectedProductsFromSession();
-    if (mounted) {
-      if (restored) {
-        setFormData(prev => ({ ...prev, selectedProducts: restored }));
-      }
-      setIsSessionRestored(true);
+  }, []);
+
+  // 💾 TỰ ĐỘNG LƯU giỏ hàng vào sessionStorage mỗi khi thay đổi
+  useEffect(() => {
+    if (!isSessionRestored) return; // Chờ restore xong mới bắt đầu auto-save
+    if (formData.selectedProducts.length > 0) {
+      saveSelectedProductsToSession(formData.selectedProducts);
+      console.log('💾 Auto-save giỏ hàng:', formData.selectedProducts.length, 'sản phẩm');
     }
-    return () => { mounted = false; };
+  }, [formData.selectedProducts, isSessionRestored]);
+
+  // 🧹 XÓA sessionStorage khi unmount (thoát trang) - CHỈ nếu chưa submit
+  useEffect(() => {
+    return () => {
+      // Nếu vẫn còn sản phẩm trong giỏ khi unmount → GIỮ LẠI để restore sau
+      console.log('🚪 Component unmounting, giữ lại session để restore sau');
+    };
   }, []);
 
   const fetchVehicles = async () => {
@@ -311,12 +336,12 @@ const DealerOrderPage: React.FC = () => {
           ...updated[existingProductIndex],
           quantity: qty + 1,
         };
-        saveSelectedProductsToSession(updated);
+        // Auto-save sẽ xử lý việc lưu vào sessionStorage
         return { ...prev, selectedProducts: updated };
       }
 
       const next = [...prev.selectedProducts, newProduct];
-      saveSelectedProductsToSession(next);
+      // Auto-save sẽ xử lý việc lưu vào sessionStorage
       return { ...prev, selectedProducts: next };
     });
 
@@ -324,8 +349,7 @@ const DealerOrderPage: React.FC = () => {
   };
 
   const handleNavigateToSelect = () => {
-    // snapshot current selections before leaving the page so they can be restored
-    saveSelectedProductsToSession(formData.selectedProducts);
+    // Auto-save đã lưu giỏ hàng vào sessionStorage
     navigate('/select-car');
   };
   // Unified handler for navigation-passed vehicle(s).
@@ -368,8 +392,7 @@ const DealerOrderPage: React.FC = () => {
     setFormData(prev => {
       const updated = [...prev.selectedProducts];
       updated[index].quantity = newQuantity;
-      // persist change
-      saveSelectedProductsToSession(updated);
+      // Auto-save sẽ xử lý việc lưu vào sessionStorage
       return { ...prev, selectedProducts: updated };
     });
   };
@@ -377,7 +400,12 @@ const DealerOrderPage: React.FC = () => {
   const handleRemoveProduct = (index: number) => {
     setFormData(prev => {
       const next = prev.selectedProducts.filter((_, i) => i !== index);
-      saveSelectedProductsToSession(next);
+      // Auto-save sẽ xử lý việc lưu vào sessionStorage
+      // Nếu giỏ hàng rỗng, xóa luôn sessionStorage
+      if (next.length === 0) {
+        sessionStorage.removeItem(SESSION_KEY);
+        console.log('🧹 Giỏ hàng trống, đã xóa session');
+      }
       return { ...prev, selectedProducts: next };
     });
   };
@@ -447,7 +475,7 @@ const DealerOrderPage: React.FC = () => {
     }
 
     if (!formData.preferredDeliveryDate) {
-      alert('Vui lòng chọn ngày giao hàng mong muốn');
+      alert('Vui lòng chọn ngày giao hàng dự kiến');
       return;
     }
 
@@ -497,7 +525,7 @@ const DealerOrderPage: React.FC = () => {
         district: '',
         city: '',
         selectedProducts: [],
-        preferredDeliveryDate: '',
+        preferredDeliveryDate: getEstimatedDeliveryDate(), // Auto-set lại ngày dự kiến
         deliveryAddress: '',
         deliveryNote: '',
         paymentMethod: 'bank-transfer',
@@ -739,7 +767,8 @@ const DealerOrderPage: React.FC = () => {
                 <div className={styles.grid}>
                   <div className={styles.formGroup}>
                     <label htmlFor="preferredDeliveryDate">
-                      Ngày giao hàng mong muốn
+                      Ngày giao hàng dự kiến   ({formData.preferredDeliveryDate ? new Date(formData.preferredDeliveryDate).toLocaleDateString('vi-VN') : 'Chưa chọn'})
+                      
                     </label>
                     <input
                       type="date"
@@ -747,7 +776,7 @@ const DealerOrderPage: React.FC = () => {
                       name="preferredDeliveryDate"
                       value={formData.preferredDeliveryDate}
                       onChange={handleInputChange}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={getEstimatedDeliveryDate()}
                     />
                   </div>
 
