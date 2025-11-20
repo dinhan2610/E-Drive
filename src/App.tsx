@@ -16,7 +16,7 @@ import OrderManagementPage from "./Pages/OrderManagementPage";
 import PromotionsPage from "./Pages/PromotionsPage";
 import ServiceAccessoryManagementPage from "./Pages/ServiceAccessoryManagementPage";
 import FinancingPage from "./Pages/FinancingPage";
-import TicketsPage from "./Pages/TicketsPage";
+import FeedbackPage from "./Pages/FeedbackPage";
 import ContractCreatePageNew from "./Pages/ContractCreatePage_new";
 import ContractSignPage from "./Pages/ContractSignPage";
 import CreateQuotePage from "./Pages/CreateQuotePage";
@@ -151,7 +151,7 @@ function App() {
         } />
         <Route path="/feedback" element={
           <ProtectedRoute requiredRole="dealer">
-            <TicketsPage />
+            <FeedbackPage />
           </ProtectedRoute>
         } />
         <Route path="/customers" element={

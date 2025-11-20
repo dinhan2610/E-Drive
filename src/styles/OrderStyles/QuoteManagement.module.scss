@@ -278,7 +278,7 @@
     tr {
       th {
         padding: 2.5rem 2rem;
-        text-align: left;
+        text-align: center;
         font-size: 1.3rem;
         font-weight: 800;
         color: white;
@@ -289,11 +289,11 @@
         
         &:first-child {
           padding-left: 3rem;
+          text-align: left;
         }
         
         &:last-child {
           padding-right: 3rem;
-          text-align: center;
         }
       }
     }
@@ -319,16 +319,17 @@
         font-size: 1.4rem;
         color: #495057;
         vertical-align: middle;
+        text-align: center;
         
         &:first-child {
           padding-left: 3rem;
+          text-align: left;
           font-weight: 700;
-          color: #212529;
+          color: #ff4d30;
         }
         
         &:last-child {
           padding-right: 3rem;
-          text-align: center;
         }
       }
     }

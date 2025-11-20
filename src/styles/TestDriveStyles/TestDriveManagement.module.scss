@@ -522,7 +522,7 @@
     tr {
       th {
         padding: 2rem 1.5rem;
-        text-align: left;
+        text-align: center;
         font-size: 1.3rem;
         font-weight: 800;
         color: white;
@@ -532,13 +532,13 @@
         border-bottom: 3px solid #ff4d30;
         
         // Tối ưu width cho từng cột
-        &:nth-child(1) { width: 70px; text-align: center; } // ID
-        &:nth-child(2) { width: 200px; } // Khách hàng
+        &:nth-child(1) { width: 70px; } // ID
+        &:nth-child(2) { width: 200px; text-align: left; } // Khách hàng
         &:nth-child(3) { width: 180px; } // Xe lái thử
         &:nth-child(4) { width: 140px; } // Thời gian
         &:nth-child(5) { width: 160px; } // Trạng thái
         &:nth-child(6) { width: 160px; } // Xác nhận đại lý
-        &:nth-child(7) { width: 140px; text-align: center; } // Thao tác
+        &:nth-child(7) { width: 140px; } // Thao tác
         
         &:first-child {
           padding-left: 2rem;
@@ -571,12 +571,13 @@
         font-size: 1.4rem;
         color: #495057;
         vertical-align: middle;
+        text-align: center;
         overflow: hidden;
         text-overflow: ellipsis;
         
-        // Align theo header
-        &:nth-child(1) { text-align: center; font-weight: 700; color: #ff4d30; } // ID
-        &:nth-child(7) { text-align: center; } // Thao tác
+        // Căn trái cho cột khách hàng
+        &:nth-child(1) { font-weight: 700; color: #ff4d30; } // ID
+        &:nth-child(2) { text-align: left; } // Khách hàng
         
         &:first-child {
           padding-left: 2rem;

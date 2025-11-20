@@ -195,10 +195,8 @@ const ContractCreatePage: React.FC = () => {
     try {
       setLoading(true);
       
-      console.log('📝 Creating contract with orderId:', payload.orderId);
       const contract = await createContract(payload);
       setCreatedContractId(contract.id);
-      console.log('✅ Contract created:', contract);
       
       if (!contract.orderId) {
         console.error('⚠️ WARNING: Contract created without orderId!');
@@ -209,24 +207,17 @@ const ContractCreatePage: React.FC = () => {
         });
       }
       
-      console.log('📄 Generating optimized PDF...');
       const pdfBlob = await generatePdfFromPreview();
-      const fileSizeKB = (pdfBlob.size / 1024).toFixed(2);
-      console.log('✅ PDF generated, size:', fileSizeKB, 'KB');
       
       if (pdfBlob.size > 5 * 1024 * 1024) {
         console.warn('⚠️ PDF size is large (> 5MB)');
       }
       
-      console.log('☁️ Uploading PDF to server...');
       await uploadContractPdf(contract.id, pdfBlob);
-      console.log('✅ PDF uploaded successfully!');
       
-      console.log('🔄 Reloading contract map...');
       await reloadContractMap();
-      console.log('✅ Contract map refreshed!');
       
-      showToast('success', `✅ Đã tạo hợp đồng ${contract.id} thành công! Đang quay về trang quản lý...`);
+      showToast('success', `✅ Đã tạo hợp đồng ${contract.id} thành công!`);
       
       setTimeout(() => {
         navigate('/admin', { 
@@ -235,7 +226,7 @@ const ContractCreatePage: React.FC = () => {
             refresh: Date.now()
           } 
         });
-      }, 1000);
+      }, 1500);
     } catch (error: any) {
       console.error('❌ Error:', error);
       

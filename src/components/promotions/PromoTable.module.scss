@@ -44,14 +44,27 @@
   display: grid;
   grid-template-columns: 2fr 1fr 1.5fr 1.8fr 1.2fr 200px;
   gap: 1.6rem;
-  padding: 1.8rem 2.4rem;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-bottom: 2px solid #dee2e6;
-  font-weight: 700;
+  padding: 2rem 2.4rem;
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  border-bottom: 3px solid #ff4d30;
+  font-weight: 800;
   font-size: 1.3rem;
-  color: #495057;
+  color: white;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  
+  > div {
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  > :first-child {
+    text-align: left;
+    justify-content: flex-start;
+    padding-left: 0.5rem;
+  }
 }
 
 .row {
@@ -59,16 +72,28 @@
   grid-template-columns: 2fr 1fr 1.5fr 1.8fr 1.2fr 200px;
   gap: 1.6rem;
   padding: 2rem 2.4rem;
-  border-bottom: 1px solid #f4f4f4;
+  border-bottom: 1px solid #f1f3f5;
   align-items: center;
   transition: all 0.2s ease;
 
   &:hover {
-    background: #f8f9fa;
+    background: linear-gradient(90deg, rgba(255, 77, 48, 0.03) 0%, rgba(255, 255, 255, 1) 100%);
+    transform: scale(1.002);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   &:last-child {
     border-bottom: none;
+  }
+  
+  > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  > :first-child {
+    justify-content: flex-start;
   }
 }
 
@@ -96,30 +121,56 @@
 
 .value {
   font-weight: 700;
-  font-size: 1.6rem;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .valueLabel {
   color: #ff4d30;
   font-size: 1.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, rgba(255, 77, 48, 0.1), rgba(255, 77, 48, 0.05));
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255, 77, 48, 0.2);
 }
 
 .scope {
   font-size: 1.4rem;
-  color: #6c757d;
+  color: #495057;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  span {
+    background: #e9ecef;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    color: #495057;
+  }
 }
 
 .dates {
   font-size: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 
   div {
     color: #495057;
+    font-weight: 600;
     margin-bottom: 0.4rem;
   }
 
   small {
     color: #6c757d;
     font-size: 1.2rem;
+    font-style: italic;
   }
 }
 

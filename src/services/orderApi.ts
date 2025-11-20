@@ -44,8 +44,8 @@ export interface Order {
   grandTotal: number;
   deliveryAddress: string;
   deliveryNote: string;
-  orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
-  paymentStatus: 'PENDING' | 'PAID' | 'CANCELLED';
+  orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'CHỜ_DUYỆT' | 'ĐÃ_XÁC_NHẬN';
+  paymentStatus: 'PENDING' | 'PAID' | 'CANCELLED' | 'CHỜ_DUYỆT' | 'ĐÃ_THANH_TOÁN';
   paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'INSTALLMENT' | 'FULL';
   orderItems?: OrderItem[];
 }
@@ -61,6 +61,61 @@ export class OrderApiError extends Error {
     this.details = details;
   }
 }
+
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Deduplicate order items by vehicleId + color
+ * Backend sometimes returns duplicate items - we need to merge them intelligently
+ */
+const deduplicateOrderItems = (items: any[]): OrderItem[] => {
+  if (!items || !Array.isArray(items)) return [];
+  
+  const itemsMap = new Map();
+  items.forEach((item: any) => {
+    const uniqueKey = `${item.vehicleId}-${item.colorName || item.color || ''}`;
+    
+    if (itemsMap.has(uniqueKey)) {
+      const existing = itemsMap.get(uniqueKey);
+      
+      // Check if this is truly a duplicate (same values) or additional quantity
+      const isTrueDuplicate = 
+        existing.unitPrice === item.unitPrice &&
+        existing.quantity === item.quantity &&
+        existing.itemTotal === item.itemTotal;
+      
+      if (isTrueDuplicate) {
+        // True duplicate - backend error, skip it
+        console.warn(`⚠️ Skipping duplicate item:`, {
+          vehicleId: item.vehicleId,
+          color: item.colorName,
+          quantity: item.quantity
+        });
+      } else {
+        // Different values - actually different orders, sum them
+        existing.quantity += (item.quantity || 1);
+        existing.itemSubtotal += (item.itemSubtotal || 0);
+        existing.itemDiscount += (item.itemDiscount || 0);
+        existing.itemTotal += (item.itemTotal || 0);
+      }
+    } else {
+      itemsMap.set(uniqueKey, {
+        vehicleId: item.vehicleId,
+        vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
+        vehicleVersion: item.vehicleVersion || item.version || '',
+        colorName: item.colorName || item.color || '',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        itemSubtotal: item.itemSubtotal || 0,
+        itemDiscount: item.itemDiscount || 0,
+        itemTotal: item.itemTotal || 0,
+        color: item.colorName || item.color || ''
+      });
+    }
+  });
+  
+  return Array.from(itemsMap.values());
+};
 
 // ===== API FUNCTIONS =====
 
@@ -105,35 +160,31 @@ export const getOrders = async (): Promise<Order[]> => {
     console.log('✅ Orders array:', orders);
 
     // Map backend field names to frontend Order interface
-    const mappedOrders: Order[] = orders.map((order: any) => ({
-      orderId: order.orderId || order.id || order.orderID,
-      dealerId: order.dealerId,
-      dealerName: order.dealerName,
-      orderDate: order.orderDate,
-      desiredDeliveryDate: order.desiredDeliveryDate || '',
-      actualDeliveryDate: order.actualDeliveryDate,
-      subtotal: order.subtotal || 0,
-      dealerDiscount: order.totalDiscount || order.dealerDiscount || 0,
-      vatAmount: order.vatAmount || 0,
-      grandTotal: order.totalPrice || order.grandTotal || 0,
-      deliveryAddress: order.deliveryAddress || '',
-      deliveryNote: order.deliveryNote || '',
-      orderStatus: order.orderStatus || 'PENDING',
-      paymentStatus: order.paymentStatus || 'PENDING',
-      paymentMethod: order.paymentMethod || 'CASH',
-      orderItems: order.orderItems ? order.orderItems.map((item: any) => ({
-        vehicleId: item.vehicleId,
-        vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
-        vehicleVersion: item.vehicleVersion || item.version || '',
-        colorName: item.colorName || item.color || '',
-        quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || 0,
-        itemSubtotal: item.itemSubtotal || 0,
-        itemDiscount: item.itemDiscount || 0,
-        itemTotal: item.itemTotal || 0,
-        color: item.colorName || item.color || '' // Map colorName to color
-      })) : []
-    }));
+    const mappedOrders: Order[] = orders.map((order: any) => {
+      // Deduplicate items and calculate correct subtotal
+      const deduplicatedItems = deduplicateOrderItems(order.orderItems || []);
+      const calculatedSubtotal = deduplicatedItems.reduce((sum, item) => sum + item.itemTotal, 0);
+      const correctSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : (order.subtotal || 0);
+      
+      return {
+        orderId: order.orderId || order.id || order.orderID,
+        dealerId: order.dealerId,
+        dealerName: order.dealerName,
+        orderDate: order.orderDate,
+        desiredDeliveryDate: order.desiredDeliveryDate || '',
+        actualDeliveryDate: order.actualDeliveryDate,
+        subtotal: correctSubtotal, // ✅ Use calculated subtotal
+        dealerDiscount: order.totalDiscount || order.dealerDiscount || 0,
+        vatAmount: order.vatAmount || 0,
+        grandTotal: order.totalPrice || order.grandTotal || 0,
+        deliveryAddress: order.deliveryAddress || '',
+        deliveryNote: order.deliveryNote || '',
+        orderStatus: order.orderStatus || 'PENDING',
+        paymentStatus: order.paymentStatus || 'PENDING',
+        paymentMethod: order.paymentMethod || 'CASH',
+        orderItems: deduplicatedItems // ✅ Use deduplicated items
+      };
+    });
 
     console.log('✅ Mapped orders:', mappedOrders);
     return mappedOrders;
@@ -181,33 +232,31 @@ export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
     }
 
     // Map to frontend Order interface
-    const mappedOrders: Order[] = filteredOrders.map((order: any) => ({
-      orderId: order.orderId || order.id || order.orderID,
-      dealerId: Number(order.dealerId),
-      dealerName: order.dealerName,
-      orderDate: order.orderDate,
-      desiredDeliveryDate: order.desiredDeliveryDate || '',
-      actualDeliveryDate: order.actualDeliveryDate || null,
-      subtotal: Number(order.subtotal || 0),
-      dealerDiscount: Number(order.totalDiscount || order.dealerDiscount || 0),
-      vatAmount: Number(order.vatAmount || 0),
-      grandTotal: Number(order.totalPrice || order.grandTotal || 0),
-      deliveryAddress: order.deliveryAddress || '',
-      deliveryNote: order.deliveryNote || '',
-      orderStatus: order.orderStatus || 'PENDING',
-      paymentStatus: order.paymentStatus || 'PENDING',
-      paymentMethod: order.paymentMethod || 'CASH',
-      orderItems: order.orderItems?.map((item: any) => ({
-        vehicleId: item.vehicleId,
-        vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
-        quantity: Number(item.quantity || 1),
-        unitPrice: Number(item.unitPrice || 0),
-        itemSubtotal: Number(item.itemSubtotal || 0),
-        itemDiscount: Number(item.itemDiscount || 0),
-        itemTotal: Number(item.itemTotal || 0),
-        color: item.color
-      })) || []
-    }));
+    const mappedOrders: Order[] = filteredOrders.map((order: any) => {
+      // Deduplicate items and calculate correct subtotal
+      const deduplicatedItems = deduplicateOrderItems(order.orderItems || []);
+      const calculatedSubtotal = deduplicatedItems.reduce((sum, item) => sum + item.itemTotal, 0);
+      const correctSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : Number(order.subtotal || 0);
+      
+      return {
+        orderId: order.orderId || order.id || order.orderID,
+        dealerId: Number(order.dealerId),
+        dealerName: order.dealerName,
+        orderDate: order.orderDate,
+        desiredDeliveryDate: order.desiredDeliveryDate || '',
+        actualDeliveryDate: order.actualDeliveryDate || null,
+        subtotal: correctSubtotal, // ✅ Use calculated subtotal
+        dealerDiscount: Number(order.totalDiscount || order.dealerDiscount || 0),
+        vatAmount: Number(order.vatAmount || 0),
+        grandTotal: Number(order.totalPrice || order.grandTotal || 0),
+        deliveryAddress: order.deliveryAddress || '',
+        deliveryNote: order.deliveryNote || '',
+        orderStatus: order.orderStatus || 'PENDING',
+        paymentStatus: order.paymentStatus || 'PENDING',
+        paymentMethod: order.paymentMethod || 'CASH',
+        orderItems: deduplicatedItems // ✅ Use deduplicated items
+      };
+    });
 
     console.log(`✅ Loaded ${mappedOrders.length} orders for dealer ${dealerId}`);
     return mappedOrders;
@@ -246,6 +295,28 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
 
     console.log('✅ Order data:', orderData);
 
+    // Deduplicate and calculate correct subtotal from items
+    const deduplicatedItems = deduplicateOrderItems(orderData.orderItems || []);
+    
+    // Calculate subtotal from items (sum of all itemTotal)
+    const calculatedSubtotal = deduplicatedItems.reduce((sum, item) => sum + item.itemTotal, 0);
+    
+    // Debug: Log subtotal calculation
+    console.log('📊 Subtotal calculation:', {
+      backendSubtotal: orderData.subtotal,
+      calculatedSubtotal: calculatedSubtotal,
+      itemsCount: deduplicatedItems.length,
+      items: deduplicatedItems.map(i => ({
+        name: `${i.vehicleName} - ${i.vehicleVersion}`,
+        color: i.colorName,
+        quantity: i.quantity,
+        itemTotal: i.itemTotal
+      }))
+    });
+    
+    // Use calculated subtotal if backend subtotal is incorrect
+    const correctSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : (orderData.subtotal || 0);
+
     // Map backend field names to frontend Order interface
     const mappedOrder: Order = {
       orderId: orderData.orderId || orderData.id || orderData.orderID,
@@ -254,7 +325,7 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
       orderDate: orderData.orderDate,
       desiredDeliveryDate: orderData.desiredDeliveryDate || '',
       actualDeliveryDate: orderData.actualDeliveryDate,
-      subtotal: orderData.subtotal || 0,
+      subtotal: correctSubtotal, // ✅ Use calculated subtotal
       dealerDiscount: orderData.totalDiscount || orderData.dealerDiscount || 0,
       vatAmount: orderData.vatAmount || 0,
       grandTotal: orderData.totalPrice || orderData.grandTotal || 0,
@@ -263,18 +334,7 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
       orderStatus: orderData.orderStatus || 'PENDING',
       paymentStatus: orderData.paymentStatus || 'PENDING',
       paymentMethod: orderData.paymentMethod || 'CASH',
-      orderItems: orderData.orderItems ? orderData.orderItems.map((item: any) => ({
-        vehicleId: item.vehicleId,
-        vehicleName: item.vehicleName || item.name || `Vehicle #${item.vehicleId}`,
-        vehicleVersion: item.vehicleVersion || item.version || '',
-        colorName: item.colorName || item.color || '',
-        quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || 0,
-        itemSubtotal: item.itemSubtotal || 0,
-        itemDiscount: item.itemDiscount || 0,
-        itemTotal: item.itemTotal || 0,
-        color: item.colorName || item.color || '' // Map colorName to color
-      })) : []
+      orderItems: deduplicatedItems // ✅ Use deduplicated items
     };
 
     return mappedOrder;
@@ -340,16 +400,13 @@ export const updatePaymentStatus = async (
  */
 export const updateOrderStatus = async (
   orderId: number | string, 
-  orderStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+  orderStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'CHỜ_DUYỆT' | 'ĐÃ_XÁC_NHẬN'
 ): Promise<Order> => {
   try {
-    console.log('📦 Updating order status for order:', orderId, '→', orderStatus);
-    
     const response = await api.put<Order>(`/api/orders/${orderId}`, {
       orderStatus
     });
     
-    console.log('✅ Order status updated:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('❌ Error updating order status:', error);
@@ -433,17 +490,23 @@ export const formatOrderStatus = (status: string): string => {
   const normalizedStatus = status?.toUpperCase().replace(/_/g, ' ').trim();
   
   const statusMap: Record<string, string> = {
-    'PENDING': 'Chờ xử lý',
-    'CHỜ DUYỆT': 'Chờ xử lý',
+    'PENDING': 'Chờ duyệt',
+    'CHO DUYET': 'Chờ duyệt',
+    'CHỜ DUYỆT': 'Chờ duyệt',
     'CONFIRMED': 'Đã xác nhận',
+    'DA XAC NHAN': 'Đã xác nhận',
     'ĐÃ XÁC NHẬN': 'Đã xác nhận',
     'PROCESSING': 'Đang xử lý',
+    'DANG XU LY': 'Đang xử lý',
     'ĐANG XỬ LÝ': 'Đang xử lý',
     'SHIPPED': 'Đang giao hàng',
+    'DANG GIAO': 'Đang giao hàng',
     'ĐANG GIAO': 'Đang giao hàng',
     'DELIVERED': 'Đã giao hàng',
+    'DA GIAO': 'Đã giao hàng',
     'ĐÃ GIAO': 'Đã giao hàng',
     'CANCELLED': 'Đã hủy',
+    'DA HUY': 'Đã hủy',
     'ĐÃ HỦY': 'Đã hủy',
   };
   return statusMap[normalizedStatus] || status;
@@ -451,20 +514,37 @@ export const formatOrderStatus = (status: string): string => {
 
 /**
  * Utility: Format payment status to Vietnamese
+ * Auto-corrects invalid payment status from backend (e.g., "CHỜ_DUYỆT" → "Chờ thanh toán")
  */
 export const formatPaymentStatus = (status: string): string => {
   // Normalize status: remove underscores and convert to uppercase
   const normalizedStatus = status?.toUpperCase().replace(/_/g, ' ').trim();
   
+  // Mapping with business logic correction:
+  // Backend sometimes returns order status values for payment status (e.g., "CHỜ_DUYỆT")
+  // We auto-correct these to proper payment status values
   const statusMap: Record<string, string> = {
+    // Valid payment statuses
     'PENDING': 'Chờ thanh toán',
+    'CHO THANH TOAN': 'Chờ thanh toán',
     'CHỜ THANH TOÁN': 'Chờ thanh toán',
     'PAID': 'Đã thanh toán',
+    'DA THANH TOAN': 'Đã thanh toán',
     'ĐÃ THANH TOÁN': 'Đã thanh toán',
     'CANCELLED': 'Đã hủy',
+    'DA HUY': 'Đã hủy',
     'ĐÃ HỦY': 'Đã hủy',
+    
+    // Auto-correct: Backend incorrectly returns order status as payment status
+    // "Chờ duyệt" is an ORDER status, not a PAYMENT status
+    // Convert to proper payment status: "Chờ thanh toán"
+    'CHO DUYET': 'Chờ thanh toán',
+    'CHỜ DUYỆT': 'Chờ thanh toán',
+    'CONFIRMED': 'Chờ thanh toán',
+    'DA XAC NHAN': 'Chờ thanh toán',
+    'ĐÃ XÁC NHẬN': 'Chờ thanh toán',
   };
-  return statusMap[normalizedStatus] || status;
+  return statusMap[normalizedStatus] || 'Chờ thanh toán';
 };
 
 /**
@@ -475,16 +555,22 @@ export const getOrderStatusClass = (status: string): string => {
   
   const classMap: Record<string, string> = {
     'PENDING': 'pending',
+    'CHO DUYET': 'pending',
     'CHỜ DUYỆT': 'pending',
     'CONFIRMED': 'confirmed',
+    'DA XAC NHAN': 'confirmed',
     'ĐÃ XÁC NHẬN': 'confirmed',
     'PROCESSING': 'processing',
+    'DANG XU LY': 'processing',
     'ĐANG XỬ LÝ': 'processing',
     'SHIPPED': 'shipped',
+    'DANG GIAO': 'shipped',
     'ĐANG GIAO': 'shipped',
     'DELIVERED': 'delivered',
+    'DA GIAO': 'delivered',
     'ĐÃ GIAO': 'delivered',
     'CANCELLED': 'cancelled',
+    'DA HUY': 'cancelled',
     'ĐÃ HỦY': 'cancelled',
   };
   return classMap[normalizedStatus] || 'pending';
@@ -498,10 +584,15 @@ export const getPaymentStatusClass = (status: string): string => {
   
   const classMap: Record<string, string> = {
     'PENDING': 'pending',
+    'CHO THANH TOAN': 'pending',
     'CHỜ THANH TOÁN': 'pending',
+    'CHO DUYET': 'pending',
+    'CHỜ DUYỆT': 'pending',
     'PAID': 'paid',
+    'DA THANH TOAN': 'paid',
     'ĐÃ THANH TOÁN': 'paid',
     'CANCELLED': 'cancelled',
+    'DA HUY': 'cancelled',
     'ĐÃ HỦY': 'cancelled',
   };
   return classMap[normalizedStatus] || 'pending';

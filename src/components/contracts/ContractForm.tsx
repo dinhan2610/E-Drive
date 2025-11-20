@@ -133,19 +133,37 @@ const ContractForm: React.FC<ContractFormProps> = ({ orderData }) => {
 
           <div className={styles.paymentOverview}>
             <div className={styles.paymentRow}>
-              <span className={styles.label}>Tạm tính:</span>
-              <span className={styles.value}>{formatCurrency(orderData.money.subtotal)}</span>
+              <span className={styles.label}>Tổng giá trị sản phẩm:</span>
+              <span className={styles.value}>
+                {formatCurrency(
+                  orderData.orderItems?.reduce((sum, item) => sum + item.itemSubtotal, 0) || orderData.money.subtotal
+                )}
+              </span>
             </div>
-            <div className={styles.paymentRow}>
-              <span className={styles.label}>Chiết khấu đại lý:</span>
-              <span className={styles.value}>-{formatCurrency(orderData.money.discount)}</span>
-            </div>
+            {orderData.orderItems && orderData.orderItems.some(item => item.itemDiscount > 0) && (
+              <div className={styles.paymentRow}>
+                <span className={styles.label}>Chiết khấu sản phẩm:</span>
+                <span className={styles.value}>
+                  -{formatCurrency(
+                    orderData.orderItems?.reduce((sum, item) => sum + item.itemDiscount, 0) || 0
+                  )}
+                </span>
+              </div>
+            )}
             <div className={styles.paymentRow}>
               <span className={styles.label}>VAT ({orderData.money.taxPercent}%):</span>
-              <span className={styles.value}>{formatCurrency((orderData.money.subtotal - orderData.money.discount) * orderData.money.taxPercent / 100)}</span>
+              <span className={styles.value}>
+                {formatCurrency(
+                  orderData.orderItems 
+                    ? ((orderData.orderItems.reduce((sum, item) => sum + item.itemSubtotal, 0) - 
+                        orderData.orderItems.reduce((sum, item) => sum + item.itemDiscount, 0)) * 
+                        orderData.money.taxPercent / 100)
+                    : ((orderData.money.subtotal - orderData.money.discount) * orderData.money.taxPercent / 100)
+                )}
+              </span>
             </div>
             <div className={`${styles.paymentRow} ${styles.totalRow}`}>
-              <span className={styles.label}><strong>Tổng cộng:</strong></span>
+              <span className={styles.label}><strong>Tổng thanh toán:</strong></span>
               <span className={styles.value}><strong>{formatCurrency(orderData.money.total)}</strong></span>
             </div>
           </div>

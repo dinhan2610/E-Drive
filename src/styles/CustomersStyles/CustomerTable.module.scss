@@ -23,7 +23,7 @@
 
 .headerCell {
   padding: 16px 12px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   color: #374151;
   font-size: 13px;
@@ -33,6 +33,17 @@
 
   &:first-child {
     padding-left: 20px;
+    min-width: 80px;
+    text-align: center;
+  }
+  
+  &:nth-child(2) {
+    text-align: left;
+    min-width: 180px;
+  }
+  
+  &:nth-child(7) {
+    text-align: left;
     min-width: 200px;
   }
 
@@ -67,9 +78,21 @@
 .dataCell {
   padding: 14px 12px;
   vertical-align: middle;
+  text-align: center;
 
   &:first-child {
     padding-left: 20px;
+    font-weight: 600;
+    color: #ff4d30;
+  }
+  
+  &:nth-child(2) {
+    text-align: left;
+    font-weight: 600;
+  }
+  
+  &:nth-child(7) {
+    text-align: left;
   }
 
   &:last-child {

@@ -6,14 +6,13 @@ import { fetchVehiclesFromApi, createVehicle, getVehicleById, updateVehicle, del
 import { fetchManufacturerInventorySummary, createInventoryRecord, updateInventoryRecord, deleteInventoryRecord, type CreateInventoryRequest, type UpdateInventoryRequest } from '../services/manufacturerInventoryApi';
 import type { ManufacturerInventorySummary, VehicleInventoryItem } from '../types/inventory';
 import { fetchDealers, createDealer, getDealerById, updateDealer, deleteDealer, fetchUnverifiedAccounts, verifyAccount, type Dealer, type UnverifiedAccount } from '../services/dealerApi';
-import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, markOrderAsPaid, type Order } from '../services/orderApi';
+import { getOrders, getOrderById, cancelOrder, getBillPreview, updatePaymentStatus, markOrderAsPaid, formatOrderStatus, formatPaymentStatus, getOrderStatusClass, getPaymentStatusClass, type Order } from '../services/orderApi';
 import { confirmDelivery } from '../services/deliveryApi';
 import { createColor, updateColor, deleteColor, fetchColors } from '../services/colorApi';
 import type { VehicleColor, CreateColorRequest, UpdateColorRequest } from '../types/color';
 import { fetchDiscountPolicies, createDiscountPolicy, updateDiscountPolicy, deleteDiscountPolicy } from '../services/discountApi';
 import type { DiscountPolicy, CreateDiscountRequest, UpdateDiscountRequest } from '../types/discount';
-import { downloadContractPdf, getAllContracts } from '../services/contractsApi';
-import type { Contract } from '../types/contract';
+import { downloadContractPdf } from '../services/contractsApi';
 import { useContractCheck } from '../hooks/useContractCheck';
 import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
@@ -88,7 +87,6 @@ const compressImage = (file: File): Promise<string> => {
           return;
         }
         
-        console.log(`✅ Image compressed: ${(compressedBase64.length / 1024).toFixed(2)} KB`);
         resolve(compressedBase64);
       };
       
@@ -410,18 +408,12 @@ const AdminPage: React.FC = () => {
   useEffect(() => {
     (window as any).setAdminToken = (token: string) => {
       localStorage.setItem('token', token);
-      console.log('✅ Token đã được set! Reload trang để áp dụng.');
     };
     
     (window as any).getToken = () => {
       const token = localStorage.getItem('token');
-      console.log('Current token:', token);
       return token;
     };
-    
-    console.log('💡 Helper functions available:');
-    console.log('  - window.setAdminToken("your-token") - Set token mới');
-    console.log('  - window.getToken() - Xem token hiện tại');
     
     return () => {
       delete (window as any).setAdminToken;
@@ -650,10 +642,18 @@ const AdminPage: React.FC = () => {
   const [editDiscountErrors, setEditDiscountErrors] = useState<Record<string, string>>({});
 
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [updateTrigger, setUpdateTrigger] = useState(0); // Force re-render trigger
 
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId, getContractStatus, reload: reloadContractMap } = useContractCheck();
+
+  /**
+   * Check if contract is already signed (ACTIVE or COMPLETED status)
+   * Used to hide signing button for contracts that don't need signing
+   */
+  const isContractSigned = (orderId: string | number): boolean => {
+    const status = getContractStatus(String(orderId));
+    return status === 'ACTIVE' || status === 'COMPLETED';
+  };
 
   // Reload contract map when navigating back from contract creation
   // Use ref to track if we've already reloaded for this timestamp
@@ -666,9 +666,9 @@ const AdminPage: React.FC = () => {
     // 1. There's a refresh signal
     // 2. It's a NEW timestamp (not the same as last time)
     if (refreshTimestamp && refreshTimestamp !== lastRefreshTimestamp.current) {
-      console.log('🔄 Refresh signal detected from ContractCreatePage, reloading contract map...');
       lastRefreshTimestamp.current = refreshTimestamp;
       reloadContractMap();
+      reloadOrders();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]); // Only depend on location.state, NOT reloadContractMap
@@ -676,10 +676,9 @@ const AdminPage: React.FC = () => {
   // Auto-reload orders when switching to bookings tab
   useEffect(() => {
     if (activeTab === 'bookings') {
-      console.log('📋 Bookings tab active - reloading orders to ensure fresh data...');
       reloadOrders();
     }
-  }, [activeTab]); // Reload when activeTab changes to 'bookings'
+  }, [activeTab]);
 
   const [stats, setStats] = useState<AdminStats>({
     totalCars: 0,
@@ -702,7 +701,6 @@ const AdminPage: React.FC = () => {
   // Function to reload vehicles from API
   const reloadVehicles = async () => {
     try {
-      console.log('🔄 Reloading vehicles from API...');
       const { vehicles } = await fetchVehiclesFromApi({ page: 0, size: 20 });
       const apiCars: CarWithStatus[] = vehicles.map((v) => ({
         // Map API fields to UI fields
@@ -724,28 +722,24 @@ const AdminPage: React.FC = () => {
         color: v.color // Add color field
       }));
       setCars(apiCars);
-      console.log('✅ Vehicles reloaded successfully');
     } catch (err) {
-      console.error('❌ Failed to reload vehicles:', err);
+      // Silent fail
     }
   };
 
   // Function to reload inventory from API
   const reloadInventory = async () => {
     try {
-      console.log('🔄 Reloading inventory from API...');
       const summary = await fetchManufacturerInventorySummary();
       setInventorySummary(summary);
-      console.log('✅ Inventory reloaded successfully:', summary);
     } catch (err) {
-      console.error('❌ Failed to reload inventory:', err);
+      // Silent fail
     }
   };
 
   // Function to reload discounts from API
   const reloadDiscounts = async () => {
     try {
-      console.log('🔄 Reloading discounts from API...');
       const response = await fetchDiscountPolicies();
 
       // Handle response - might be array or object with data property
@@ -757,9 +751,7 @@ const AdminPage: React.FC = () => {
       }
 
       setDiscounts(discountList);
-      console.log('✅ Discounts reloaded successfully:', discountList);
     } catch (err) {
-      console.error('❌ Failed to reload discounts:', err);
       setDiscounts([]);
     }
   };
@@ -767,9 +759,7 @@ const AdminPage: React.FC = () => {
   // Function to reload orders from API
   const reloadOrders = async () => {
     try {
-      console.log('🔄 Reloading orders from API...');
       const ordersData = await getOrders();
-      console.log('📦 Orders fetched:', ordersData);
       
       // Map Order data to Booking interface
       const mappedBookings: Booking[] = ordersData.map((order: Order) => {
@@ -792,13 +782,9 @@ const AdminPage: React.FC = () => {
         let paymentSt: Booking['paymentStatus'] = 'pending';
         const paymentStatusUpper = order.paymentStatus?.toUpperCase() || '';
         
-        console.log(`🔍 Order ${order.orderId} - Raw paymentStatus from backend:`, order.paymentStatus, '→ Upper:', paymentStatusUpper);
-        
         if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ THANH TOÁN' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
         else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ THANH TOÁN' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
         else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ HỦY' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
-        
-        console.log(`✅ Order ${order.orderId} - Mapped paymentStatus:`, paymentSt);
         
         return {
           id: order.orderId,
@@ -818,9 +804,6 @@ const AdminPage: React.FC = () => {
       });
       
       setBookings(mappedBookings);
-      setUpdateTrigger(prev => prev + 1); // Force component re-render
-      console.log('✅ Orders reloaded successfully:', mappedBookings.length, 'orders');
-      console.log('📊 Payment statuses after mapping:', mappedBookings.map(b => ({ id: b.id, paymentStatus: b.paymentStatus })));
 
       // Update stats
       setStats(prev => ({
@@ -839,7 +822,7 @@ const AdminPage: React.FC = () => {
         totalBookings: mappedBookings.length
       }));
     } catch (err) {
-      console.error('❌ Failed to reload orders:', err);
+      // Silent fail
     }
   };
 
@@ -888,10 +871,7 @@ const AdminPage: React.FC = () => {
       try {
         const dealerList = await fetchDealers();
         setDealers(dealerList);
-        console.log('✅ Loaded dealers:', dealerList);
-        console.log('🔍 First dealer structure:', dealerList[0]);
       } catch (error) {
-        console.error('❌ Failed to load dealers:', error);
         setDealers([]);
       }
     })();
@@ -901,9 +881,7 @@ const AdminPage: React.FC = () => {
       try {
         const accounts = await fetchUnverifiedAccounts();
         setUnverifiedAccounts(accounts);
-        console.log('✅ Loaded unverified accounts:', accounts);
       } catch (error) {
-        console.error('❌ Failed to load unverified accounts:', error);
         setUnverifiedAccounts([]);
       }
     })();
@@ -911,9 +889,7 @@ const AdminPage: React.FC = () => {
     // Fetch discount policies from API
     (async () => {
       try {
-        console.log('💰 Fetching discount policies from API...');
         const response = await fetchDiscountPolicies();
-        console.log('📦 Raw discount response:', response);
 
         // Handle response - might be array or object with data property
         let discountList: DiscountPolicy[] = [];
@@ -924,9 +900,7 @@ const AdminPage: React.FC = () => {
         }
 
         setDiscounts(discountList);
-        console.log('✅ Loaded discount policies:', discountList);
       } catch (error) {
-        console.error('❌ Failed to load discount policies:', error);
         setDiscounts([]);
       }
     })();
@@ -934,12 +908,9 @@ const AdminPage: React.FC = () => {
     // Fetch inventory summary from API
     (async () => {
       try {
-        console.log('📦 Fetching inventory summary from API...');
         const summary = await fetchManufacturerInventorySummary();
         setInventorySummary(summary);
-        console.log('✅ Loaded inventory summary:', summary);
       } catch (error) {
-        console.error('❌ Failed to load inventory summary:', error);
         setInventorySummary(null);
       }
     })();
@@ -947,12 +918,9 @@ const AdminPage: React.FC = () => {
     // Fetch colors from API
     (async () => {
       try {
-        console.log('🎨 Fetching colors from API...');
         const colorList = await fetchColors();
         setColors(colorList);
-        console.log('✅ Loaded colors:', colorList);
       } catch (error) {
-        console.error('❌ Failed to load colors:', error);
         setColors([]);
       }
     })();
@@ -960,9 +928,7 @@ const AdminPage: React.FC = () => {
     // Fetch orders from API
     const fetchOrdersData = async () => {
       try {
-        console.log('🔄 Fetching orders from API...');
         const ordersData = await getOrders();
-        console.log('📦 Orders fetched:', ordersData);
         
         // Map Order data to Booking interface
         const mappedBookings: Booking[] = ordersData.map((order: Order) => {
@@ -985,13 +951,13 @@ const AdminPage: React.FC = () => {
           let paymentSt: Booking['paymentStatus'] = 'pending';
           const paymentStatusUpper = order.paymentStatus?.toUpperCase() || '';
           
-          console.log(`🔍 [Initial Load] Order ${order.orderId} - Raw paymentStatus:`, order.paymentStatus, '→ Upper:', paymentStatusUpper);
+
           
           if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ THANH TOÁN' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
           else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ THANH TOÁN' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
           else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ HỦY' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
           
-          console.log(`✅ [Initial Load] Order ${order.orderId} - Mapped paymentStatus:`, paymentSt);
+
           
           return {
             id: order.orderId,
@@ -1011,8 +977,8 @@ const AdminPage: React.FC = () => {
         });
         
         setBookings(mappedBookings);
-        console.log('✅ [Initial Load] Bookings mapped:', mappedBookings.length, 'orders');
-        console.log('📊 [Initial Load] Payment statuses after mapping:', mappedBookings.map(b => ({ id: b.id, paymentStatus: b.paymentStatus })));
+
+
 
     // Calculate enhanced stats
       setStats({
@@ -1034,7 +1000,7 @@ const AdminPage: React.FC = () => {
       pendingMaintenance: 0
     });
       } catch (error) {
-        console.error('❌ Error fetching orders:', error);
+
         
         // Fallback to empty bookings
         setBookings([]);
@@ -1052,53 +1018,43 @@ const AdminPage: React.FC = () => {
     };
     
     fetchOrdersData();
-
-    // Fetch contracts from API
-    (async () => {
-      try {
-        console.log('📑 Fetching contracts from API...');
-        const contractList = await getAllContracts();
-        setContracts(contractList);
-        console.log('✅ Loaded contracts:', contractList);
-      } catch (error) {
-        console.error('❌ Failed to load contracts:', error);
-        setContracts([]);
-      }
-    })();
   }, []); // Empty dependency array - only run once on mount
 
   // Handle view order detail
   const handleViewOrderDetail = async (orderId: number | string) => {
     setLoadingOrderDetail(true);
-    setShowOrderDetail(true);
+    setSelectedOrder(null); // Clear old data first
     
     try {
-      console.log('🔍 Fetching order detail for ID:', orderId);
       const orderDetail = await getOrderById(orderId);
       setSelectedOrder(orderDetail);
-      console.log('✅ Order detail loaded:', orderDetail);
+      setShowOrderDetail(true); // ✅ Only open modal after data loaded
     } catch (error) {
-      console.error('❌ Error loading order detail:', error);
       alert('Không thể tải chi tiết đơn hàng. Vui lòng thử lại.');
-      setShowOrderDetail(false);
     } finally {
       setLoadingOrderDetail(false);
     }
   };
 
+  // Close order detail modal and clear data
+  const closeOrderDetail = () => {
+    setShowOrderDetail(false);
+    setSelectedOrder(null); // ✅ Clear data when closing
+  };
+
   // Handle contract action - smart: download if exists, create if not
   const handleContractAction = async (orderId: number | string) => {
     try {
-      console.log('📄 Order:', orderId, '→ Checking contract...');
+
 
       // Use optimized O(1) lookup to get contractId directly
       const contractId = getContractId(String(orderId));
 
-      console.log('🎯 Contract mapping:', orderId, '→', contractId || 'NOT FOUND');
+
 
       if (contractId) {
         // Contract exists -> Download PDF directly using contractId
-        console.log('✅ Contract ID found:', contractId, '- Downloading PDF...');
+
 
         setNotification({
           isVisible: true,
@@ -1125,14 +1081,14 @@ const AdminPage: React.FC = () => {
           type: 'success'
         });
 
-        console.log('💾 PDF downloaded for contract:', contractId);
+
       } else {
         // Contract doesn't exist -> Navigate to create page
-        console.log('⚠️ No contract found for order:', orderId, '- Navigating to create page...');
+
         window.location.href = `/admin/contracts/new?orderId=${orderId}`;
       }
     } catch (error: any) {
-      console.error('❌ Error handling contract:', error);
+
       setNotification({
         isVisible: true,
         message: `❌ ${error.message || 'Không thể xử lý hợp đồng'}`,
@@ -1144,7 +1100,7 @@ const AdminPage: React.FC = () => {
   // Handle view bill preview
   const handleViewBill = async (orderId: number | string) => {
     try {
-      console.log('📄 Viewing bill for order:', orderId);
+
 
       setNotification({
         isVisible: true,
@@ -1168,9 +1124,9 @@ const AdminPage: React.FC = () => {
         type: 'success'
       });
 
-      console.log('✅ Bill opened successfully');
+
     } catch (error: any) {
-      console.error('❌ Error viewing bill:', error);
+
 
       let errorMessage = 'Không thể tải hóa đơn';
 
@@ -1234,7 +1190,7 @@ const AdminPage: React.FC = () => {
     newStatus: 'PENDING' | 'PAID' | 'CANCELLED'
   ) => {
     try {
-      console.log('💳 Updating payment status:', orderId, '→', newStatus);
+
 
       // Check current status first to avoid duplicate updates
       const currentBooking = bookings.find(b => b.id === orderId);
@@ -1266,7 +1222,7 @@ const AdminPage: React.FC = () => {
           type: 'success'
         });
 
-        console.log('✅ Order marked as paid successfully');
+
         return;
       }
 
@@ -1289,7 +1245,7 @@ const AdminPage: React.FC = () => {
           type: 'success'
         });
 
-        console.log('✅ Order cancelled successfully');
+
         return;
       }
 
@@ -1311,9 +1267,9 @@ const AdminPage: React.FC = () => {
         type: 'success'
       });
 
-      console.log('✅ Payment status updated successfully');
+
     } catch (error: any) {
-      console.error('❌ Error updating payment status:', error);
+
 
       let errorMessage = 'Không thể cập nhật trạng thái thanh toán';
 
@@ -1343,108 +1299,6 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  // Handle cancel order
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleCancelOrder = async (orderId: number | string, orderInfo: string) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Hủy đơn hàng',
-      message: `Bạn có chắc chắn muốn hủy đơn hàng "${orderInfo}"?\n\nHành động này không thể hoàn tác!`,
-      type: 'danger',
-      onConfirm: async () => {
-        try {
-          console.log('🚫 Cancelling order:', orderId);
-
-          // Show loading notification
-          setNotification({
-            isVisible: true,
-            message: '⏳ Đang hủy đơn hàng...',
-            type: 'info'
-          });
-
-          await cancelOrder(orderId);
-
-          // Remove from bookings list
-          setBookings(prev => prev.filter(b => b.id !== orderId));
-
-          // Show success notification
-          setNotification({
-            isVisible: true,
-            message: '✅ Đơn hàng đã được hủy thành công',
-            type: 'success'
-          });
-
-          console.log('✅ Order cancelled successfully');
-        } catch (error) {
-          console.error('❌ Error cancelling order:', error);
-          setNotification({
-            isVisible: true,
-            message: `❌ Không thể hủy đơn hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
-            type: 'error'
-          });
-        } finally {
-          // Close confirm dialog
-          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        }
-      }
-    });
-  };
-
-  // Handle confirm delivery
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleConfirmDelivery = async (orderId: number | string, orderInfo: string) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Xác nhận giao hàng',
-      message: `Xác nhận đơn hàng "${orderInfo}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
-      type: 'success',
-      onConfirm: async () => {
-        try {
-          console.log('🚚 Confirming delivery for order:', orderId);
-
-          // Show loading notification
-          setNotification({
-            isVisible: true,
-            message: '⏳ Đang xác nhận giao hàng...',
-            type: 'info'
-          });
-
-          await confirmDelivery(orderId);
-
-          // Update booking status in the list
-          setBookings(prev => prev.map(b => 
-            b.id === orderId 
-              ? { ...b, status: 'delivered' as const, orderStatus: 'DELIVERED' }
-              : b
-          ));
-
-          // Show success notification
-          setNotification({
-            isVisible: true,
-            message: '✅ Đã xác nhận giao hàng thành công',
-            type: 'success'
-          });
-
-          console.log('✅ Delivery confirmed successfully');
-        } catch (error) {
-          console.error('❌ Error confirming delivery:', error);
-          setNotification({
-            isVisible: true,
-            message: `❌ Không thể xác nhận giao hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
-            type: 'error'
-          });
-        } finally {
-          // Close confirm dialog
-          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        }
-      }
-    });
-  };
-
-  // Preserve unused handlers for future use
-  const _unusedHandlers = { handleCancelOrder, handleConfirmDelivery };
-  console.debug('Reserved handlers:', _unusedHandlers); // Prevent tree-shaking
-
   const handleDeleteCar = async (carId: number, carName: string) => {
     try {
       // Check if vehicle has inventory
@@ -1467,7 +1321,7 @@ const AdminPage: React.FC = () => {
         return; // Người dùng hủy xóa
       }
 
-      console.log('🗑️ Deleting car with ID:', carId);
+
 
       // Gọi API để xóa xe từ database
       await deleteVehicle(carId);
@@ -1489,7 +1343,7 @@ const AdminPage: React.FC = () => {
       }));
 
     } catch (error) {
-      console.error('❌ Error deleting car:', error);
+
       
       // Show error notification
       setNotification({
@@ -1502,7 +1356,7 @@ const AdminPage: React.FC = () => {
 
   const handleViewCar = async (carId: number) => {
     try {
-      console.log('🔍 Viewing car color variants for ID:', carId);
+
 
       // Show loading notification
       setNotification({
@@ -1521,22 +1375,22 @@ const AdminPage: React.FC = () => {
 
       // Get the variant (mark = modelName, model = version)
       const variantName = `${clickedCar.mark} ${clickedCar.model}`;
-      console.log('📦 Variant:', variantName);
+
 
       // Filter all cars with same mark (modelName) AND model (version) - different colors
       const colorVariants = cars.filter(c =>
         c.mark === clickedCar.mark &&
         c.model === clickedCar.model
       );
-      console.log('🎨 Found color variants (local):', colorVariants);
+
 
       // Fetch detailed info for each variant from API
-      console.log('📡 Fetching detailed info from API for all variants...');
+
       const detailedVariants = await Promise.all(
         colorVariants.map(async (variant) => {
           try {
             const vehicleDetail = await getVehicleById(variant.id);
-            console.log(`✅ Fetched detail for vehicle ${variant.id}:`, vehicleDetail);
+
 
             // Merge API data with existing car data
             return {
@@ -1566,14 +1420,14 @@ const AdminPage: React.FC = () => {
               img: (vehicleDetail as any).imageUrl || variant.img
             };
           } catch (error) {
-            console.error(`❌ Error fetching detail for vehicle ${variant.id}:`, error);
+
             // Return original variant if API call fails
             return variant;
           }
         })
       );
 
-      console.log('✅ All variants with detailed info:', detailedVariants);
+
 
       // Hide loading notification
       setNotification({ isVisible: false, message: '', type: 'info' });
@@ -1590,7 +1444,7 @@ const AdminPage: React.FC = () => {
       setSelectedColorIndex(0); // Reset to first color
       setShowViewCarModal(true);
     } catch (error) {
-      console.error('❌ Error fetching car variants:', error);
+
       setNotification({
         isVisible: true,
         message: '❌ Không thể tải thông tin xe. Vui lòng thử lại.',
@@ -1603,7 +1457,7 @@ const AdminPage: React.FC = () => {
 
   const handleEditCar = async (carId: number) => {
     try {
-      console.log('✏️ Editing car with ID:', carId);
+
 
       const vehicleData = await getVehicleById(carId);
       setEditingCar(vehicleData);
@@ -1635,7 +1489,7 @@ const AdminPage: React.FC = () => {
   setEditCarImageUrl((vehicleData as any).imageUrl || '');
       setShowEditCarModal(true);
     } catch (error) {
-      console.error('❌ Error fetching car details for edit:', error);
+
       alert('❌ Không thể tải thông tin xe để chỉnh sửa. Vui lòng thử lại.');
     }
   };
@@ -1680,7 +1534,7 @@ const AdminPage: React.FC = () => {
 
       // Create dealer via API
       const createdDealer = await createDealer(newDealer);
-      console.log('✅ Dealer created successfully:', createdDealer);
+
 
       // Update dealers list
       setDealers(prev => [...prev, createdDealer]);
@@ -1706,7 +1560,7 @@ const AdminPage: React.FC = () => {
       setShowAddDealerModal(false);
 
     } catch (error) {
-      console.error('❌ Error creating dealer:', error);
+
       
       // Parse API error and map to fields
       if (error instanceof Error) {
@@ -1738,19 +1592,19 @@ const AdminPage: React.FC = () => {
 
   const handleViewDealer = async (dealerId: number) => {
     try {
-      console.log('🔍 Viewing dealer with ID:', dealerId);
+
       const dealerData = await getDealerById(dealerId);
       setSelectedDealer(dealerData);
       setShowViewDealerModal(true);
     } catch (error) {
-      console.error('❌ Error fetching dealer details:', error);
+
       alert('❌ Không thể tải thông tin đại lý. Vui lòng thử lại.');
     }
   };
 
   const handleEditDealer = async (dealerId: number) => {
     try {
-      console.log('✏️ Editing dealer with ID:', dealerId);
+
       const dealerData = await getDealerById(dealerId);
       setEditingDealer(dealerData);
       
@@ -1770,7 +1624,7 @@ const AdminPage: React.FC = () => {
       setEditDealerErrors({});
       setShowEditDealerModal(true);
     } catch (error) {
-      console.error('❌ Error fetching dealer details for edit:', error);
+
       alert('❌ Không thể tải thông tin đại lý để chỉnh sửa. Vui lòng thử lại.');
     }
   };
@@ -1808,7 +1662,7 @@ const AdminPage: React.FC = () => {
 
       // Update dealer via API
       const updatedDealer = await updateDealer(editingDealer.dealerId, editDealer);
-      console.log('✅ Dealer updated successfully:', updatedDealer);
+
 
       // Update dealers list
       setDealers(prev => prev.map(d => 
@@ -1827,7 +1681,7 @@ const AdminPage: React.FC = () => {
       setEditingDealer(null);
 
     } catch (error) {
-      console.error('❌ Error updating dealer:', error);
+
       
       // Parse API error and map to fields
       if (error instanceof Error) {
@@ -1865,7 +1719,7 @@ const AdminPage: React.FC = () => {
       type: 'danger',
       onConfirm: async () => {
     try {
-      console.log('🗑️ Deleting dealer with ID:', dealerId);
+
           
           // Show loading notification
           setNotification({
@@ -1887,7 +1741,7 @@ const AdminPage: React.FC = () => {
               type: 'success'
             });
       
-      console.log('✅ Dealer deleted successfully');
+
           } else {
             // Show error notification
             setNotification({
@@ -1897,7 +1751,7 @@ const AdminPage: React.FC = () => {
             });
           }
     } catch (error) {
-      console.error('❌ Error deleting dealer:', error);
+
           setNotification({
             isVisible: true,
             message: `❌ Không thể xóa đại lý "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
@@ -1936,7 +1790,7 @@ const AdminPage: React.FC = () => {
         type: 'success'
       });
     } catch (error) {
-      console.error('❌ Error loading business license:', error);
+
       setNotification({
         isVisible: true,
         message: 'Không thể tải giấy phép kinh doanh. Có thể đại lý này chưa có giấy phép.',
@@ -1953,7 +1807,7 @@ const AdminPage: React.FC = () => {
       type: 'success',
       onConfirm: async () => {
         try {
-          console.log('✅ Verifying account - userId:', userId, 'dealerId:', dealerId);
+
           
           // Set loading state
           setVerifyingUserId(userId);
@@ -1969,7 +1823,7 @@ const AdminPage: React.FC = () => {
           const result = await verifyAccount(userId, dealerId);
 
           if (result.success) {
-            console.log('✅ Account verified successfully, reloading data...');
+
             
             // Reload both lists from server to ensure sync
             try {
@@ -1981,13 +1835,13 @@ const AdminPage: React.FC = () => {
               try {
                 const dealerList = await fetchDealers();
                 setDealers(dealerList);
-                console.log('✅ Dealers reloaded:', dealerList.length);
+
               } catch (dealerError) {
-                console.warn('⚠️ Could not reload dealers list (may not have permission):', dealerError);
+
                 // This is OK - the important thing is removing from unverified list
               }
               
-              console.log('✅ Unverified accounts reloaded:', unverifiedList.length);
+
               
               // Show success notification
               const message = result.alreadyVerified 
@@ -2000,7 +1854,7 @@ const AdminPage: React.FC = () => {
                 type: result.alreadyVerified ? 'info' : 'success'
               });
             } catch (reloadError) {
-              console.error('❌ Error reloading unverified accounts:', reloadError);
+
               // Fallback: just remove from local state
               setUnverifiedAccounts(prev => prev.filter(account => account.userId !== userId));
               
@@ -2018,7 +1872,7 @@ const AdminPage: React.FC = () => {
             });
           }
         } catch (error) {
-          console.error('❌ Error verifying account:', error);
+
           setNotification({
             isVisible: true,
             message: `❌ Không thể xác minh tài khoản "${dealerName}". ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
@@ -2489,7 +2343,7 @@ const AdminPage: React.FC = () => {
                                       });
                                       await reloadInventory();
                                     } catch (error) {
-                                      console.error('Delete error:', error);
+
                                       setNotification({
                                         isVisible: true,
                                         message: 'Xóa tồn kho thất bại!',
@@ -2642,7 +2496,7 @@ const AdminPage: React.FC = () => {
                                       });
                                       await reloadDiscounts();
                                     } catch (error) {
-                                      console.error('Delete error:', error);
+
                                       setNotification({
                                         isVisible: true,
                                         message: 'Xóa chính sách chiết khấu thất bại!',
@@ -3053,7 +2907,7 @@ const AdminPage: React.FC = () => {
                   Đang xử lý ({bookings.filter(b => b.status === 'processing' || b.status === 'shipped').length})
                 </button>
                 <button className={styles.filterButton}>
-                  Đã giao ({bookings.filter(b => b.status === 'delivered').length})
+                  Đã giao hàng ({bookings.filter(b => b.status === 'delivered').length})
                 </button>
               </div>
             </div>
@@ -3075,7 +2929,7 @@ const AdminPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {bookings.map(booking => {
-                    console.log(`🎨 Rendering order ${booking.id} - paymentStatus:`, booking.paymentStatus);
+
                     return (
                     <tr key={booking.id}>
                       <td title={String(booking.id)}>
@@ -3092,7 +2946,7 @@ const AdminPage: React.FC = () => {
                           {booking.status === 'confirmed' && 'Đã xác nhận'}
                           {booking.status === 'processing' && 'Đang xử lý'}
                           {booking.status === 'shipped' && 'Đang giao'}
-                          {booking.status === 'delivered' && 'Đã giao'}
+                          {booking.status === 'delivered' && 'Đã giao hàng'}
                           {booking.status === 'cancelled' && 'Đã hủy'}
                         </span>
                       </td>
@@ -3102,9 +2956,9 @@ const AdminPage: React.FC = () => {
                           className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
                           value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
                           onChange={(e) => {
-                            console.log('🔄 Dropdown changed for order:', booking.id);
-                            console.log('   Current booking.paymentStatus:', booking.paymentStatus);
-                            console.log('   New value selected:', e.target.value);
+
+
+
                             handleUpdatePaymentStatus(booking.id, e.target.value as any);
                           }}
                           title={
@@ -3139,7 +2993,7 @@ const AdminPage: React.FC = () => {
                           >
                             <i className={hasContract(String(booking.id)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
                           </button>
-                          {hasContract(String(booking.id)) && getContractStatus(String(booking.id)) !== 'ACTIVE' && (
+                          {hasContract(String(booking.id)) && !isContractSigned(booking.id) && (
                             <button 
                               className={styles.signButton}
                               title="✍️ Ký hợp đồng điện tử"
@@ -3166,7 +3020,42 @@ const AdminPage: React.FC = () => {
                             <button
                               className={styles.billButton}
                               title="Giao hàng"
-                              onClick={() => handleConfirmDelivery(booking.id, `#${booking.id} - ${booking.dealerName}`)}
+                              onClick={async () => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Xác nhận giao hàng',
+                                  message: `Xác nhận đơn hàng "#${booking.id} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
+                                  type: 'success',
+                                  onConfirm: async () => {
+                                    try {
+                                      setNotification({
+                                        isVisible: true,
+                                        message: '⏳ Đang xác nhận giao hàng...',
+                                        type: 'info'
+                                      });
+                                      await confirmDelivery(booking.id);
+                                      setBookings(prev => prev.map(b => 
+                                        b.id === booking.id 
+                                          ? { ...b, status: 'delivered' as const, orderStatus: 'DELIVERED' }
+                                          : b
+                                      ));
+                                      setNotification({
+                                        isVisible: true,
+                                        message: '✅ Đã xác nhận giao hàng thành công',
+                                        type: 'success'
+                                      });
+                                    } catch (error) {
+                                      setNotification({
+                                        isVisible: true,
+                                        message: `❌ Không thể xác nhận giao hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+                                        type: 'error'
+                                      });
+                                    } finally {
+                                      setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                                    }
+                                  }
+                                });
+                              }}
                               style={{ backgroundColor: '#f97316', color: 'white' }}
                             >
                               <i className="fas fa-truck"></i>
@@ -3185,15 +3074,29 @@ const AdminPage: React.FC = () => {
 
         {/* Order Detail Modal */}
         {showOrderDetail && (
-          <div className={modalStyles.modalOverlay} onClick={() => setShowOrderDetail(false)}>
+          <div className={modalStyles.modalOverlay} onClick={closeOrderDetail}>
             <div className={modalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+              {/* Enhanced Header with Order Status */}
               <div className={modalStyles.modalHeader}>
-                <h2>
-                  <i className="fas fa-file-invoice"></i>
-                  Chi tiết đơn hàng
-                </h2>
+                <div className={modalStyles.headerLeft}>
+                  <h2>
+                    <i className="fas fa-file-invoice"></i>
+                    Chi tiết đơn hàng
+                  </h2>
+                  {selectedOrder && (
+                    <div className={modalStyles.headerMeta}>
+                      <span className={modalStyles.orderId}>#{selectedOrder.orderId}</span>
+                      <span className={`${modalStyles.statusBadge} ${modalStyles[getOrderStatusClass(selectedOrder.orderStatus)]}`}>
+                        {formatOrderStatus(selectedOrder.orderStatus)}
+                      </span>
+                      <span className={`${modalStyles.statusBadge} ${modalStyles[getPaymentStatusClass(selectedOrder.paymentStatus)]}`}>
+                        {formatPaymentStatus(selectedOrder.paymentStatus)}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <button 
-                  onClick={() => setShowOrderDetail(false)} 
+                  onClick={closeOrderDetail} 
                   className={modalStyles.closeBtn}
                 >
                   <i className="fas fa-times"></i>
@@ -3208,64 +3111,54 @@ const AdminPage: React.FC = () => {
                   </div>
                 ) : selectedOrder ? (
                   <>
-                    {/* Order Info Section */}
-                    <div className={modalStyles.detailSection}>
-                      <h3><i className="fas fa-info-circle"></i> Thông tin đơn hàng</h3>
-                      <div className={modalStyles.infoGrid}>
-                        <div className={modalStyles.infoRow}>
-                          <span className={modalStyles.label}>Mã đơn hàng:</span>
-                          <span className={modalStyles.value} title={String(selectedOrder.orderId)}>
-                            #{typeof selectedOrder.orderId === 'string' 
-                              ? selectedOrder.orderId.substring(0, 12) + '...' 
-                              : selectedOrder.orderId}
-                          </span>
+                    {/* Summary Cards - Top Priority */}
+                    <div className={modalStyles.summaryCards}>
+                      <div className={modalStyles.summaryCard}>
+                        <div className={modalStyles.cardIcon}>
+                          <i className="fas fa-coins"></i>
                         </div>
-                        <div className={modalStyles.infoRow}>
-                          <span className={modalStyles.label}>Đại lý:</span>
-                          <span className={modalStyles.value}>{selectedOrder.dealerName || 'N/A'}</span>
+                        <div className={modalStyles.cardContent}>
+                          <span className={modalStyles.cardLabel}>Tổng tiền</span>
+                          <span className={modalStyles.cardValue}>{formatCurrency(selectedOrder.grandTotal)}</span>
                         </div>
-                        <div className={modalStyles.infoRow}>
-                          <span className={modalStyles.label}>Ngày đặt:</span>
-                          <span className={modalStyles.value}>{selectedOrder.orderDate || 'N/A'}</span>
+                      </div>
+                      <div className={modalStyles.summaryCard}>
+                        <div className={modalStyles.cardIcon} style={{ background: '#3b82f6' }}>
+                          <i className="fas fa-calendar-alt"></i>
                         </div>
-                        <div className={modalStyles.infoRow}>
-                          <span className={modalStyles.label}>Ngày giao dự kiến:</span>
-                          <span className={modalStyles.value}>{selectedOrder.desiredDeliveryDate}</span>
+                        <div className={modalStyles.cardContent}>
+                          <span className={modalStyles.cardLabel}>Ngày đặt</span>
+                          <span className={modalStyles.cardValue}>{selectedOrder.orderDate || 'N/A'}</span>
                         </div>
-                        <div className={modalStyles.infoRow}>
-                          <span className={modalStyles.label}>Trạng thái đơn hàng:</span>
-                          <span className={`${modalStyles.badge} ${modalStyles[selectedOrder.orderStatus.toLowerCase()]}`}>
-                            {selectedOrder.orderStatus}
-                          </span>
+                      </div>
+                      <div className={modalStyles.summaryCard}>
+                        <div className={modalStyles.cardIcon} style={{ background: '#10b981' }}>
+                          <i className="fas fa-truck"></i>
                         </div>
-                        <div className={modalStyles.infoRow}>
-                          <span className={modalStyles.label}>Trạng thái thanh toán:</span>
-                          <span className={`${modalStyles.badge} ${modalStyles[selectedOrder.paymentStatus.toLowerCase()]}`}>
-                            {selectedOrder.paymentStatus}
-                          </span>
+                        <div className={modalStyles.cardContent}>
+                          <span className={modalStyles.cardLabel}>Giao dự kiến</span>
+                          <span className={modalStyles.cardValue}>{selectedOrder.desiredDeliveryDate}</span>
+                        </div>
+                      </div>
+                      <div className={modalStyles.summaryCard}>
+                        <div className={modalStyles.cardIcon} style={{ background: '#f59e0b' }}>
+                          <i className="fas fa-building"></i>
+                        </div>
+                        <div className={modalStyles.cardContent}>
+                          <span className={modalStyles.cardLabel}>Đại lý</span>
+                          <span className={modalStyles.cardValue}>{selectedOrder.dealerName || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Order Items Section */}
-                    {selectedOrder.orderItems && selectedOrder.orderItems.length > 0 && (
-                      <div className={modalStyles.detailSection}>
-                        <h3><i className="fas fa-car"></i> Danh sách xe</h3>
-                        <table className={modalStyles.itemsTable}>
-                          <thead>
-                            <tr>
-                              <th>Tên xe</th>
-                              <th>Màu sắc</th>
-                              <th>Số lượng</th>
-                              <th>Đơn giá</th>
-                              <th>Tạm tính</th>
-                              <th>Chiết khấu</th>
-                              <th>Thành tiền</th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                    {/* Two Column Layout for Order Items and Pricing */}
+                    <div className={modalStyles.twoColumnGrid}>
+                      {/* Order Items - Simplified Table */}
+                      {selectedOrder.orderItems && selectedOrder.orderItems.length > 0 && (
+                        <div className={modalStyles.detailSection}>
+                          <h3><i className="fas fa-car"></i> Danh sách xe ({selectedOrder.orderItems.length})</h3>
+                          <div className={modalStyles.itemsList}>
                             {selectedOrder.orderItems.map((item, index) => {
-                              // Parse vehicle name and version for display
                               const displayName = item.vehicleName || 'N/A';
                               const vehicleVersion = item.vehicleVersion || '';
                               const fullVehicleName = vehicleVersion 
@@ -3273,67 +3166,95 @@ const AdminPage: React.FC = () => {
                                 : displayName;
                               
                               return (
-                                <tr key={index}>
-                                  <td>{fullVehicleName}</td>
-                                  <td>{item.color || 'Chưa xác định'}</td>
-                                  <td>{item.quantity}</td>
-                                  <td>{formatCurrency(item.unitPrice)}</td>
-                                  <td>{formatCurrency(item.itemSubtotal)}</td>
-                                  <td className={modalStyles.discount}>-{formatCurrency(item.itemDiscount)}</td>
-                                  <td><strong>{formatCurrency(item.itemTotal)}</strong></td>
-                                </tr>
+                                <div key={index} className={modalStyles.itemCard}>
+                                  <div className={modalStyles.itemHeader}>
+                                    <div className={modalStyles.itemName}>
+                                      <i className="fas fa-car" style={{ color: '#ff4d30' }}></i>
+                                      <span>{fullVehicleName}</span>
+                                    </div>
+                                    <span className={modalStyles.itemQuantity}>x{item.quantity}</span>
+                                  </div>
+                                  <div className={modalStyles.itemDetails}>
+                                    <div className={modalStyles.itemRow}>
+                                      <span>Màu sắc:</span>
+                                      <strong>{item.color || 'Chưa xác định'}</strong>
+                                    </div>
+                                    <div className={modalStyles.itemRow}>
+                                      <span>Đơn giá (1 xe):</span>
+                                      <strong>{formatCurrency(item.unitPrice)}</strong>
+                                    </div>
+                                    <div className={modalStyles.itemRow}>
+                                      <span>Tạm tính ({item.quantity} xe):</span>
+                                      <strong>{formatCurrency(item.itemSubtotal)}</strong>
+                                    </div>
+                                    {item.itemDiscount > 0 && (
+                                      <div className={modalStyles.itemRow}>
+                                        <span>Chiết khấu sản phẩm:</span>
+                                        <strong className={modalStyles.discountText}>-{formatCurrency(item.itemDiscount)}</strong>
+                                      </div>
+                                    )}
+                                    <div className={`${modalStyles.itemRow} ${modalStyles.itemTotal}`}>
+                                      <span>Thành tiền:</span>
+                                      <strong>{formatCurrency(item.itemTotal)}</strong>
+                                    </div>
+                                  </div>
+                                </div>
                               );
                             })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {/* Pricing Summary Section */}
-                    <div className={modalStyles.detailSection}>
-                      <h3><i className="fas fa-calculator"></i> Tổng quan thanh toán</h3>
-                      <div className={modalStyles.pricingSummary}>
-                        <div className={modalStyles.priceRow}>
-                          <span>Tạm tính:</span>
-                          <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                          </div>
                         </div>
-                        {selectedOrder.dealerDiscount > 0 && (
+                      )}
+
+                      {/* Pricing Summary - Enhanced */}
+                      <div className={modalStyles.detailSection}>
+                        <h3><i className="fas fa-calculator"></i> Tổng quan thanh toán</h3>
+                        <div className={modalStyles.pricingCard}>
                           <div className={modalStyles.priceRow}>
-                            <span>Chiết khấu đại lý:</span>
-                            <span className={modalStyles.discount}>-{formatCurrency(selectedOrder.dealerDiscount)}</span>
+                            <span>Tổng giá trị sản phẩm:</span>
+                            <span>
+                              {formatCurrency(
+                                selectedOrder.orderItems?.reduce((sum, item) => sum + item.itemSubtotal, 0) || 0
+                              )}
+                            </span>
                           </div>
-                        )}
-                        <div className={modalStyles.priceRow}>
-                          <span>VAT (10%):</span>
-                          <span>{formatCurrency(selectedOrder.vatAmount)}</span>
+                          {selectedOrder.orderItems?.some(item => item.itemDiscount > 0) && (
+                            <div className={modalStyles.priceRow}>
+                              <span>Chiết khấu sản phẩm:</span>
+                              <span className={modalStyles.discountValue}>
+                                -{formatCurrency(
+                                  selectedOrder.orderItems?.reduce((sum, item) => sum + item.itemDiscount, 0) || 0
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          <div className={modalStyles.priceRow}>
+                            <span>VAT (10%):</span>
+                            <span>{formatCurrency(selectedOrder.vatAmount)}</span>
+                          </div>
+                          <div className={modalStyles.priceDivider}></div>
+                          <div className={modalStyles.priceTotal}>
+                            <span>Tổng thanh toán:</span>
+                            <span>{formatCurrency(selectedOrder.grandTotal)}</span>
+                          </div>
                         </div>
-                        <div className={`${modalStyles.priceRow} ${modalStyles.total}`}>
-                          <strong>Tổng cộng:</strong>
-                          <strong className={modalStyles.totalPrice}>{formatCurrency(selectedOrder.grandTotal)}</strong>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Delivery Info Section */}
-                    <div className={modalStyles.detailSection}>
-                      <h3><i className="fas fa-truck"></i> Thông tin giao hàng</h3>
-                      <div className={modalStyles.deliveryInfo}>
-                        <div className={modalStyles.infoRow}>
-                          <span className={modalStyles.label}>Địa chỉ:</span>
-                          <span className={modalStyles.value}>{selectedOrder.deliveryAddress}</span>
+                        {/* Delivery Info - Compact */}
+                        <div className={modalStyles.deliveryCard}>
+                          <h4><i className="fas fa-map-marker-alt"></i> Địa chỉ giao hàng</h4>
+                          <p className={modalStyles.deliveryAddress}>{selectedOrder.deliveryAddress}</p>
+                          {selectedOrder.deliveryNote && (
+                            <>
+                              <h4><i className="fas fa-sticky-note"></i> Ghi chú</h4>
+                              <p className={modalStyles.deliveryNote}>{selectedOrder.deliveryNote}</p>
+                            </>
+                          )}
+                          {selectedOrder.actualDeliveryDate && (
+                            <div className={modalStyles.deliveryDate}>
+                              <i className="fas fa-check-circle"></i>
+                              <span>Đã giao: {selectedOrder.actualDeliveryDate}</span>
+                            </div>
+                          )}
                         </div>
-                        {selectedOrder.deliveryNote && (
-                          <div className={modalStyles.infoRow}>
-                            <span className={modalStyles.label}>Ghi chú:</span>
-                            <span className={modalStyles.value}>{selectedOrder.deliveryNote}</span>
-                          </div>
-                        )}
-                        {selectedOrder.actualDeliveryDate && (
-                          <div className={modalStyles.infoRow}>
-                            <span className={modalStyles.label}>Ngày giao thực tế:</span>
-                            <span className={modalStyles.value}>{selectedOrder.actualDeliveryDate}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </>
@@ -3345,11 +3266,33 @@ const AdminPage: React.FC = () => {
                 )}
               </div>
 
+              {/* Enhanced Footer with Actions */}
               <div className={modalStyles.modalFooter}>
+                {!loadingOrderDetail && selectedOrder && (
+                  <>
+                    <button 
+                      onClick={() => handleViewBill(selectedOrder.orderId)}
+                      className={modalStyles.actionButton}
+                      style={{ background: '#3b82f6' }}
+                    >
+                      <i className="fas fa-file-pdf"></i>
+                      Xem hóa đơn
+                    </button>
+                    <button 
+                      onClick={() => handleContractAction(selectedOrder.orderId)}
+                      className={modalStyles.actionButton}
+                      style={{ background: '#8b5cf6' }}
+                    >
+                      <i className="fas fa-file-contract"></i>
+                      {hasContract(String(selectedOrder.orderId)) ? 'Tải hợp đồng' : 'Tạo hợp đồng'}
+                    </button>
+                  </>
+                )}
                 <button 
-                  onClick={() => setShowOrderDetail(false)} 
+                  onClick={closeOrderDetail}
                   className={modalStyles.closeButton}
                 >
+                  <i className="fas fa-times"></i>
                   Đóng
                 </button>
               </div>
@@ -4222,7 +4165,7 @@ const AdminPage: React.FC = () => {
                                       }
                                       
                                       // Show loading
-                                      console.log('🔄 Compressing image...');
+
                                       
                                       // Compress image
                                       compressImage(file)
@@ -4234,10 +4177,10 @@ const AdminPage: React.FC = () => {
                                               imagePreview: compressedBase64
                                             }
                                           }));
-                                          console.log('✅ Image uploaded and compressed successfully');
+
                                         })
                                         .catch((error) => {
-                                          console.error('❌ Image compression error:', error);
+
                                           alert(`❌ ${error.message}`);
                                         });
                                     }
@@ -4377,7 +4320,7 @@ const AdminPage: React.FC = () => {
                           
                           // Validate image URL length (max 1024 chars for database)
                           if (imageUrl.length > 1024) {
-                            console.warn(`⚠️ Image URL too long for color ${colorId}: ${imageUrl.length} chars`);
+
                             // Truncate or show error
                             throw new Error(`Hình ảnh cho màu ID ${colorId} quá lớn (${(imageUrl.length / 1024).toFixed(2)} KB). Vui lòng chọn ảnh nhỏ hơn.`);
                           }
@@ -4408,14 +4351,14 @@ const AdminPage: React.FC = () => {
                         manufactureYear: newCar.manufactureYear
                       };
 
-                      console.log('🚗 Creating vehicle with NEW API format:', vehicleData);
-                      console.log('🎨 Colors with images:', colorsArray);
+
+
 
                       // Gửi lên API để lưu vào database
                       const apiResponse = await createVehicle(vehicleData);
 
                       // API trả về: { statusCode: 201, message: "Vehicles created", data: [...] }
-                      console.log('📦 API Response:', apiResponse);
+
 
                       // Xử lý response dựa trên type
                       let createdVehicles: any[] = [];
@@ -4423,15 +4366,15 @@ const AdminPage: React.FC = () => {
                       if ('data' in apiResponse && Array.isArray(apiResponse.data)) {
                         // Format: CreateVehiclesResponse { statusCode, message, data: [...] }
                         createdVehicles = apiResponse.data;
-                        console.log(`✅ Response format: CreateVehiclesResponse với ${createdVehicles.length} xe`);
+
                       } else if (Array.isArray(apiResponse)) {
                         // Format: Array of VehicleApiResponse
                         createdVehicles = apiResponse;
-                        console.log(`✅ Response format: VehicleApiResponse[] với ${createdVehicles.length} xe`);
+
                       } else if ('vehicleId' in apiResponse) {
                         // Format: Single VehicleApiResponse
                         createdVehicles = [apiResponse];
-                        console.log('✅ Response format: Single VehicleApiResponse');
+
                       }
 
                       if (createdVehicles.length === 0) {
@@ -4517,11 +4460,11 @@ const AdminPage: React.FC = () => {
                         message: `✅ Đã thêm ${newCars.length} xe mới thành công (${newCar.colorIds.length} màu)!`,
                         type: 'success'
                       });
-                      console.log(`✅ Đã thêm ${newCars.length} xe mới thành công!`);
+
                       
                     } catch (imageError) {
                       // Catch validation errors từ image processing
-                      console.error('❌ Image validation error:', imageError);
+
                       if (imageError instanceof Error && imageError.message.includes('quá lớn')) {
                         setNewCarErrors({ 
                           general: imageError.message
@@ -4535,10 +4478,10 @@ const AdminPage: React.FC = () => {
                     }
                     
                     } catch (error) {
-                      console.error('❌ Lỗi khi thêm xe:', error);
+
 
                       if (error instanceof Error) {
-                        console.error('❌ Error message:', error.message);
+
                         
                         // Parse lỗi từ API response và hiển thị dưới từng ô
                         const apiErrors: Record<string, string> = {};
@@ -4674,17 +4617,17 @@ const AdminPage: React.FC = () => {
                                 return;
                               }
                               
-                              console.log('🔄 Compressing image for edit...');
+
                               
                               // Compress image
                               compressImage(file)
                                 .then((compressedBase64) => {
                                   setEditCarImagePreview(compressedBase64);
                                   setEditCarImageUrl(''); // Clear URL when file is selected
-                                  console.log('✅ Edit image compressed successfully');
+
                                 })
                                 .catch((error) => {
-                                  console.error('❌ Image compression error:', error);
+
                                   alert(`❌ ${error.message}`);
                                 });
                             } else {
@@ -5244,7 +5187,7 @@ const AdminPage: React.FC = () => {
                         manufactureYear: editCar.manufactureYear
                       };
 
-                      console.log('✏️ Updating vehicle with API format (colors array):', vehicleData);
+
 
                       // Gửi lên API để cập nhật trong database
                       await updateVehicle(editingCar.vehicleId, vehicleData);
@@ -5285,12 +5228,12 @@ const AdminPage: React.FC = () => {
                         message: '✅ Đã cập nhật xe thành công!',
                         type: 'success'
                       });
-                      console.log('✅ Đã cập nhật xe thành công!');
+
                     } catch (error) {
-                      console.error('❌ Lỗi khi cập nhật xe:', error);
+
 
                       if (error instanceof Error) {
-                        console.error('❌ Error message:', error.message);
+
                         
                         // Parse lỗi từ API response và hiển thị dưới từng ô
                         const apiErrors: Record<string, string> = {};
@@ -5921,9 +5864,9 @@ const AdminPage: React.FC = () => {
 
                     setIsCreatingColor(true);
                     try {
-                      console.log('🎨 Submitting color data:', newColor);
+
                       const createdColor = await createColor(newColor);
-                      console.log('✅ Color created successfully:', createdColor);
+
                       setColors([...colors, createdColor]);
                       setShowAddColorModal(false);
                       setNewColor({ colorName: '', hexCode: '#000000' });
@@ -5933,7 +5876,7 @@ const AdminPage: React.FC = () => {
                         type: 'success'
                       });
                     } catch (error: any) {
-                      console.error('❌ Failed to create color:', error);
+
                       setNotification({
                         isVisible: true,
                         message: error.message || 'Lỗi khi thêm màu xe!',
@@ -6581,7 +6524,7 @@ const AdminPage: React.FC = () => {
                       });
                       await reloadInventory();
                     } catch (error) {
-                      console.error('Create inventory error:', error);
+
                       setNotification({
                         isVisible: true,
                         message: 'Thêm tồn kho thất bại!',
@@ -6728,7 +6671,7 @@ const AdminPage: React.FC = () => {
                       });
                       await reloadInventory();
                     } catch (error) {
-                      console.error('Update inventory error:', error);
+
                       setNotification({
                         isVisible: true,
                         message: 'Cập nhật tồn kho thất bại!',
@@ -7109,7 +7052,7 @@ const AdminPage: React.FC = () => {
                       });
                       await reloadDiscounts();
                     } catch (error) {
-                      console.error('Create discount error:', error);
+
                       setNotification({
                         isVisible: true,
                         message: 'Thêm chính sách chiết khấu thất bại!',
@@ -7396,7 +7339,7 @@ const AdminPage: React.FC = () => {
                       });
                       await reloadDiscounts();
                     } catch (error) {
-                      console.error('Update discount error:', error);
+
                       setNotification({
                         isVisible: true,
                         message: 'Cập nhật chính sách chiết khấu thất bại!',

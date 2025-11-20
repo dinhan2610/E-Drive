@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { startVnPay, payCash } from '../../services/paymentApi';
-import { getOrderById } from '../../services/orderApi';
+import { getOrderById, formatOrderStatus, formatPaymentStatus, getOrderStatusClass, getPaymentStatusClass } from '../../services/orderApi';
 import type { Order } from '../../services/orderApi';
 import type { CashRequest } from '../../types/payment';
 import styles from './PaymentPage.module.scss';
@@ -323,7 +323,7 @@ const PaymentPage: React.FC = () => {
                           </div>
                           <div>
                             <span>Trạng thái:</span>
-                            <span className={styles.badge}>{cashResult.paymentStatus}</span>
+                            <span className={styles.badge}>{formatPaymentStatus(cashResult.paymentStatus)}</span>
                           </div>
                         </div>
                         {cashResult.remaining === 0 && (
@@ -351,8 +351,8 @@ const PaymentPage: React.FC = () => {
 
               <div className={styles.summaryRow}>
                 <span>Trạng thái:</span>
-                <span className={`${styles.badge} ${styles[order.orderStatus.toLowerCase()]}`}>
-                  {order.orderStatus}
+                <span className={`${styles.badge} ${styles[getOrderStatusClass(order.orderStatus)]}`}>
+                  {formatOrderStatus(order.orderStatus)}
                 </span>
               </div>
 
@@ -382,8 +382,8 @@ const PaymentPage: React.FC = () => {
 
               <div className={styles.summaryRow}>
                 <span>Trạng thái thanh toán:</span>
-                <span className={`${styles.badge} ${styles[order.paymentStatus.toLowerCase()]}`}>
-                  {order.paymentStatus}
+                <span className={`${styles.badge} ${styles[getPaymentStatusClass(order.paymentStatus)]}`}>
+                  {formatPaymentStatus(order.paymentStatus)}
                 </span>
               </div>
             </div>

@@ -99,7 +99,10 @@ const FeedbackPage: React.FC = () => {
       
       console.log(`✅ Loaded ${response.content?.length || 0} feedbacks for dealer ${dealerId}`);
       
-      setFeedbacks(response.content);
+      // Sắp xếp theo ID giảm dần (mới nhất trước) để đảm bảo thứ tự cố định
+      const sortedFeedbacks = [...response.content].sort((a, b) => b.feedbackId - a.feedbackId);
+      
+      setFeedbacks(sortedFeedbacks);
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
     } catch (error) {
@@ -145,10 +148,11 @@ const FeedbackPage: React.FC = () => {
 
   const stats = {
     total: totalElements,
-    excellent: feedbacks.filter(f => f.rating === 5).length,
-    good: feedbacks.filter(f => f.rating === 4).length,
-    average: feedbacks.filter(f => f.rating === 3).length,
-    poor: feedbacks.filter(f => f.rating <= 2).length,
+    rating5: feedbacks.filter(f => f.rating === 5).length,
+    rating4: feedbacks.filter(f => f.rating === 4).length,
+    rating3: feedbacks.filter(f => f.rating === 3).length,
+    rating2: feedbacks.filter(f => f.rating === 2).length,
+    rating1: feedbacks.filter(f => f.rating === 1).length,
     avgRating: feedbacks.length > 0 
       ? (feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1)
       : '0.0'
@@ -156,136 +160,35 @@ const FeedbackPage: React.FC = () => {
 
   return (
     <div className={styles.feedbackPage}>
-      <div className={styles.pageHeader}>
-        <div className={styles.headerTop}>
-          <div className={styles.headerLeft}>
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <div className={styles.headerContent}>
             <div className={styles.headerIcon}>
               <i className="fas fa-star"></i>
             </div>
             <div className={styles.headerText}>
-              <h1 className={styles.pageTitle}>Quản lý Phản hồi Khách hàng</h1>
-              <p className={styles.pageSubtitle}>
-                Theo dõi đánh giá và phản hồi từ khách hàng về trải nghiệm lái thử xe điện
-              </p>
+              <h1>Quản lý Phản hồi Khách hàng</h1>
+              <p>Theo dõi đánh giá và phản hồi từ khách hàng về trải nghiệm lái thử xe điện</p>
             </div>
           </div>
-          {dealerId !== null && (
-            <div className={styles.dealerBadge}>
-              <i className="fas fa-store"></i>
-              <span>{dealerName || `Dealer #${dealerId}`} (ID: {dealerId})</span>
-            </div>
-          )}
+
         </div>
 
-        <div className={styles.statsContainer}>
-          <div className={styles.statsCard} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
-            <div className={styles.statsIcon}>
-              <i className="fas fa-comments"></i>
-            </div>
-            <div className={styles.statsContent}>
-              <div className={styles.statsValue}>{stats.total}</div>
-              <div className={styles.statsLabel}>Tổng phản hồi</div>
-            </div>
-          </div>
+       
 
-          <div className={styles.statsCard} style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-            <div className={styles.statsIcon}>
-              <i className="fas fa-star"></i>
-            </div>
-            <div className={styles.statsContent}>
-              <div className={styles.statsValue}>{stats.avgRating} ★</div>
-              <div className={styles.statsLabel}>Đánh giá TB</div>
-            </div>
-          </div>
-
-          <div className={styles.statsCard} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' }}>
-            <div className={styles.statsIcon}>
-              <i className="fas fa-trophy"></i>
-            </div>
-            <div className={styles.statsContent}>
-              <div className={styles.statsValue}>{stats.excellent}</div>
-              <div className={styles.statsLabel}>5 sao</div>
-            </div>
-          </div>
-
-          <div className={styles.statsCard} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
-            <div className={styles.statsIcon}>
-              <i className="fas fa-thumbs-up"></i>
-            </div>
-            <div className={styles.statsContent}>
-              <div className={styles.statsValue}>{stats.good}</div>
-              <div className={styles.statsLabel}>4 sao</div>
-            </div>
-          </div>
-
-          <div className={styles.statsCard} style={{ background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)' }}>
-            <div className={styles.statsIcon}>
-              <i className="fas fa-meh"></i>
-            </div>
-            <div className={styles.statsContent}>
-              <div className={styles.statsValue}>{stats.average}</div>
-              <div className={styles.statsLabel}>3 sao</div>
-            </div>
-          </div>
-
-          <div className={styles.statsCard} style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
-            <div className={styles.statsIcon}>
-              <i className="fas fa-exclamation-circle"></i>
-            </div>
-            <div className={styles.statsContent}>
-              <div className={styles.statsValue}>{stats.poor}</div>
-              <div className={styles.statsLabel}>≤ 2 sao</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.mainContent}>
-        <div className={styles.contentContainer}>
-          <div className={styles.filterBar}>
-            <div className={styles.filterSection}>
-              <div className={styles.filterTitle}>
-                <i className="fas fa-filter"></i>
-                <span>Bộ lọc</span>
-              </div>
-              <select 
-                value={filterRating || 'ALL'} 
-                onChange={(e) => handleFilterChange(e.target.value)}
-                className={styles.filterSelect}
-              >
-                <option value="ALL">📊 Tất cả đánh giá</option>
-                <option value="5">⭐⭐⭐⭐⭐ Xuất sắc (5 sao)</option>
-                <option value="4">⭐⭐⭐⭐ Tốt (4 sao)</option>
-                <option value="3">⭐⭐⭐ Trung bình (3 sao)</option>
-                <option value="2">⭐⭐ Kém (2 sao)</option>
-                <option value="1">⭐ Rất kém (1 sao)</option>
-              </select>
-            </div>
-
-            <div className={styles.resultSection}>
-              <div className={styles.resultBadge}>
-                <i className="fas fa-list-ul"></i>
-                <span>Hiển thị <strong>{feedbacks.length}</strong> / <strong>{totalElements}</strong> kết quả</span>
-              </div>
-            </div>
-          </div>
-
+        <div className={styles.contentSection}>
+          
+        
           {isLoading ? (
-            <div className={styles.loadingContainer}>
-              <div className={styles.loadingSpinner}></div>
-              <p className={styles.loadingText}>Đang tải dữ liệu...</p>
+            <div className={styles.loadingState}>
+              <div className={styles.spinner}></div>
+              <p>Đang tải dữ liệu...</p>
             </div>
           ) : feedbacks.length === 0 ? (
-            <div className={styles.emptyContainer}>
-              <div className={styles.emptyIcon}>
-                <i className="fas fa-inbox"></i>
-              </div>
-              <h3 className={styles.emptyTitle}>Chưa có phản hồi nào</h3>
-              <p className={styles.emptyText}>
-                {filterRating 
-                  ? 'Không tìm thấy phản hồi phù hợp với bộ lọc đã chọn'
-                  : 'Chưa có khách hàng nào gửi phản hồi về dịch vụ của bạn'}
-              </p>
+            <div className={styles.emptyState}>
+              <i className="fas fa-inbox"></i>
+              <h3>Chưa có phản hồi nào</h3>
+              
             </div>
           ) : (
             <>
@@ -295,7 +198,6 @@ const FeedbackPage: React.FC = () => {
                     <tr>
                       <th className={styles.colId}>ID</th>
                       <th className={styles.colRating}>Đánh giá</th>
-                      <th className={styles.colContent}>Nội dung phản hồi</th>
                       <th className={styles.colCustomer}>Khách hàng</th>
                       <th className={styles.colDate}>Thời gian</th>
                       <th className={styles.colActions}>Thao tác</th>
@@ -318,11 +220,6 @@ const FeedbackPage: React.FC = () => {
                             <div className={styles.ratingScore} style={{ color: getRatingColor(feedback.rating) }}>
                               {feedback.rating}/5
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          <div className={styles.contentCell}>
-                            <p>{feedback.content}</p>
                           </div>
                         </td>
                         <td>
@@ -434,19 +331,33 @@ const FeedbackPage: React.FC = () => {
             </div>
             
             <div className={styles.modalBody}>
-              <div className={styles.modalRatingSection}>
-                <div className={styles.modalRatingCard} style={{ 
-                  background: `linear-gradient(135deg, ${getRatingColor(selectedFeedback.rating)} 0%, ${getRatingColor(selectedFeedback.rating)}dd 100%)`
-                }}>
-                  <div className={styles.modalRatingStars}>
-                    {getRatingStars(selectedFeedback.rating)}
-                  </div>
-                  <div className={styles.modalRatingScore}>{selectedFeedback.rating}/5</div>
-                  <div className={styles.modalRatingLabel}>{getRatingLabel(selectedFeedback.rating)}</div>
-                </div>
-              </div>
-
               <div className={styles.modalInfoGrid}>
+                <div className={styles.modalInfoCard}>
+                  <div className={styles.modalInfoIcon} style={{ background: 'linear-gradient(135deg, #ff4d30 0%, #fa4226 100%)' }}>
+                    <i className="fas fa-hashtag"></i>
+                  </div>
+                  <div className={styles.modalInfoContent}>
+                    <div className={styles.modalInfoLabel}>Mã phản hồi</div>
+                    <div className={styles.modalInfoValue}>#{selectedFeedback.feedbackId}</div>
+                  </div>
+                </div>
+
+                <div className={styles.modalInfoCard}>
+                  <div className={styles.modalInfoIcon} style={{ 
+                    background: `linear-gradient(135deg, ${getRatingColor(selectedFeedback.rating)}, ${getRatingColor(selectedFeedback.rating)}dd)`
+                  }}>
+                    <i className="fas fa-star"></i>
+                  </div>
+                  <div className={styles.modalInfoContent}>
+                    <div className={styles.modalInfoLabel}>Đánh giá</div>
+                    <div className={styles.modalInfoValue}>
+                      <span style={{ color: getRatingColor(selectedFeedback.rating) }}>
+                        {getRatingStars(selectedFeedback.rating)} {selectedFeedback.rating}/5
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className={styles.modalInfoCard}>
                   <div className={styles.modalInfoIcon} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
                     <i className="fas fa-user"></i>
@@ -467,7 +378,7 @@ const FeedbackPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className={styles.modalInfoCard}>
+                <div className={styles.modalInfoCard} style={{ gridColumn: '1 / -1' }}>
                   <div className={styles.modalInfoIcon} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
                     <i className="fas fa-calendar-alt"></i>
                   </div>

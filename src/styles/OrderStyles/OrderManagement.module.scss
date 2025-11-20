@@ -196,7 +196,7 @@
     tr {
       th {
         padding: 2.5rem 2rem;
-        text-align: left;
+        text-align: center;
         font-size: 1.3rem;
         font-weight: 800;
         color: white;
@@ -207,10 +207,34 @@
         
         &:first-child {
           padding-left: 3rem;
+          text-align: left;
+          width: 12%;
+        }
+        
+        &:nth-child(2) {
+          text-align: left;
+          width: 25%;
+        }
+        
+        &:nth-child(3) {
+          width: 8%;
+        }
+        
+        &:nth-child(4) {
+          width: 15%;
+        }
+        
+        &:nth-child(5) {
+          width: 12%;
+        }
+        
+        &:nth-child(6) {
+          width: 12%;
         }
         
         &:last-child {
           padding-right: 3rem;
+          width: 16%;
         }
       }
     }
@@ -256,12 +280,22 @@
   font-size: 1.4rem;
   color: #495057;
   vertical-align: middle;
+  text-align: center;
+  
+  &:first-child {
+    text-align: left;
+  }
+  
+  &:nth-child(2) {
+    text-align: left;
+  }
 }
 
 .orderId {
   font-weight: 700;
   color: #ff4d30;
   font-size: 1.5rem;
+  display: inline-block;
 }
 
 .dealerName {
@@ -280,12 +314,16 @@
 
 .centerAlign {
   text-align: center;
+  font-weight: 600;
+  font-size: 1.5rem;
+  color: #212529;
 }
 
 .price {
   font-weight: 700;
   color: #10b981;
   font-size: 1.5rem;
+  display: inline-block;
 }
 
 .statusBadge, .paymentBadge {
