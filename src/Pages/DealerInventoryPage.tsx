@@ -465,14 +465,7 @@ const DealerInventoryPage: React.FC = () => {
                   </div>
 
                   <div className={styles.detailGrid}>
-                    <div className={styles.detailItem}>
-                      <label><i className="fas fa-car"></i> Tên xe</label>
-                      <span>{selectedItem.modelName}</span>
-                    </div>
-                    <div className={styles.detailItem}>
-                      <label><i className="fas fa-tag"></i> Phiên bản</label>
-                      <span>{selectedItem.version}</span>
-                    </div>
+                   
                     <div className={styles.detailItem}>
                       <label><i className="fas fa-palette"></i> Màu sắc</label>
                       <span>{selectedItem.colorName}</span>
