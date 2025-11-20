@@ -56,7 +56,11 @@ export async function getProfile(): Promise<UserProfile> {
     const response = await api.get<any>('/api/profile/me');
     console.log('📦 Raw Profile API Response:', response.data);
     
-    const normalized = normalizeProfileData(response.data);
+    // Extract data from wrapper if exists
+    const profileData = response.data.data || response.data;
+    console.log('📦 Profile data to normalize:', profileData);
+    
+    const normalized = normalizeProfileData(profileData);
     console.log('✅ Normalized Profile Data:', normalized);
     
     return normalized;
@@ -77,23 +81,32 @@ export async function getDealerProfile(dealerId: number): Promise<UserProfile> {
     
     // Map dealer response to UserProfile format
     const dealerData = response.data.data || response.data;
+    console.log('📦 Dealer data to map:', dealerData);
+    
+    // Check if dealerData is valid
+    if (!dealerData || typeof dealerData !== 'object') {
+      console.error('❌ Invalid dealer data received:', dealerData);
+      throw new Error('Invalid dealer data format');
+    }
+    
     const normalized: UserProfile = {
-      profileId: dealerData.dealerId,
-      fullName: dealerData.contactPerson || dealerData.fullName,
+      profileId: dealerData.dealerId || dealerData.id || 0,
+      fullName: dealerData.contactPerson || dealerData.fullName || dealerData.name || '',
       username: dealerData.username || '',
-      email: dealerData.dealerEmail || dealerData.email,
-      phoneNumber: dealerData.contactPhone || dealerData.phone,
-      agencyName: dealerData.dealerName,
-      contactPerson: dealerData.contactPerson,
-      agencyPhone: dealerData.contactPhone || dealerData.phone,
-      streetAddress: dealerData.houseNumberAndStreet,
-      ward: dealerData.wardOrCommune,
-      district: dealerData.district,
-      city: dealerData.provinceOrCity,
-      fullAddress: `${dealerData.houseNumberAndStreet}, ${dealerData.wardOrCommune}, ${dealerData.district}, ${dealerData.provinceOrCity}`,
-      dealerId: dealerData.dealerId,
-      dealerEmail: dealerData.dealerEmail || dealerData.email,
-      contactPhone: dealerData.contactPhone || dealerData.phone
+      email: dealerData.dealerEmail || dealerData.email || '',
+      phoneNumber: dealerData.contactPhone || dealerData.phone || dealerData.phoneNumber || '',
+      agencyName: dealerData.dealerName || dealerData.agencyName || '',
+      contactPerson: dealerData.contactPerson || '',
+      agencyPhone: dealerData.contactPhone || dealerData.phone || dealerData.agencyPhone || '',
+      streetAddress: dealerData.houseNumberAndStreet || dealerData.streetAddress || '',
+      ward: dealerData.wardOrCommune || dealerData.ward || '',
+      district: dealerData.district || '',
+      city: dealerData.provinceOrCity || dealerData.city || '',
+      fullAddress: dealerData.fullAddress || 
+                   `${dealerData.houseNumberAndStreet || ''}, ${dealerData.wardOrCommune || ''}, ${dealerData.district || ''}, ${dealerData.provinceOrCity || ''}`.replace(/(^, |, $)/g, ''),
+      dealerId: dealerData.dealerId || dealerData.id || 0,
+      dealerEmail: dealerData.dealerEmail || dealerData.email || '',
+      contactPhone: dealerData.contactPhone || dealerData.phone || dealerData.phoneNumber || ''
     };
     
     console.log('✅ Normalized Dealer Profile:', normalized);

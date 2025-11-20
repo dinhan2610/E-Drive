@@ -168,6 +168,23 @@ export async function exportQuotationPDF(id: number): Promise<Blob> {
 }
 
 /**
+ * Send quotation email to customer
+ */
+export async function sendQuotationEmail(id: number): Promise<string> {
+  console.log('📧 Sending quotation email:', id);
+  
+  try {
+    const { data } = await api.post<ApiResponse<string>>(`/api/quotations/${id}/send-email`);
+    
+    console.log('✅ Email sent:', data.message);
+    return data.data;
+  } catch (error: any) {
+    console.error('❌ Send email error:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Không thể gửi email');
+  }
+}
+
+/**
  * Update quotation status
  */
 export async function updateQuotationStatus(request: UpdateQuotationStatusRequest): Promise<QuotationResponse> {

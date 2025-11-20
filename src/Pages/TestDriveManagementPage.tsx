@@ -41,7 +41,6 @@ const TestDriveManagementPage: React.FC = () => {
   const [selectedTestDrive, setSelectedTestDrive] = useState<TestDrive | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
   const [dealerConfirmations, setDealerConfirmations] = useState<Record<number, 'PENDING' | 'APPROVED'>>({});
   const [updatingConfirmation, setUpdatingConfirmation] = useState<number | null>(null);
@@ -311,9 +310,6 @@ const TestDriveManagementPage: React.FC = () => {
   };
 
   const filteredTestDrives = testDrives.filter(td => {
-    // Filter by status
-    const matchesStatus = filterStatus === 'ALL' || td.status === filterStatus;
-    
     // Filter by search query
     const matchesSearch = !searchQuery || 
       td.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -321,7 +317,7 @@ const TestDriveManagementPage: React.FC = () => {
       td.testdriveId?.toString().includes(searchQuery) ||
       td.customerId?.toString().includes(searchQuery);
     
-    return matchesStatus && matchesSearch;
+    return matchesSearch;
   });
 
   return (

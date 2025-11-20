@@ -36,7 +36,6 @@ const CustomersPage: React.FC = () => {
   // Pagination state
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [totalPages, setTotalPages] = useState(0);
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -147,20 +146,15 @@ const CustomersPage: React.FC = () => {
     setTotal(filtered.length);
   }, [searchQuery, allCustomers]);
 
+  // Calculate total pages
+  const totalPages = Math.ceil(total / pageSize);
+
   // Load data when dealer info is ready and when dependencies change
   useEffect(() => {
     if (dealerInfo) {
       loadCustomers();
     }
   }, [dealerInfo, loadCustomers]);
-
-  // Reset page when sort changes
-  useEffect(() => {
-    if (page !== 1) {
-      setPage(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortBy]);
 
   // Handlers for CRUD operations
   const handleCreateCustomer = () => {
@@ -245,11 +239,6 @@ const CustomersPage: React.FC = () => {
     setSearchInput(value);
   };
 
-  // Handler for sorting
-  const handleSortChange = (sort: typeof sortBy) => {
-    setSortBy(sort);
-  };
-
   // Handler for pagination
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -259,16 +248,6 @@ const CustomersPage: React.FC = () => {
     setPageSize(newPageSize);
     setPage(1);
   };
-
-  // Clear all filters
-  const handleClearFilters = () => {
-    setSearchInput('');
-    setSearchQuery('');
-    setSortBy('newest');
-  };
-
-  // Check if any filters are active
-  const hasActiveFilters = searchInput !== '' || searchQuery !== '';
 
   return (
     <div className={styles.customersPage}>

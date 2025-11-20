@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listQuotations, exportQuotationPDF, updateQuotationStatus, type QuotationResponse } from '../services/quotationApi';
+import { listQuotations, exportQuotationPDF, updateQuotationStatus, sendQuotationEmail, type QuotationResponse } from '../services/quotationApi';
 import { getProfile } from '../services/profileApi';
 import { canEditQuoteStatus } from '../utils/roleUtils';
 import styles from '../styles/OrderStyles/QuoteManagement.module.scss';
@@ -280,16 +280,26 @@ const QuoteListPage: React.FC = () => {
   });
 
   // Handler: Send email to customer
-  const handleSendEmail = async (_quoteId: string) => {
+  const handleSendEmail = async (quoteId: string) => {
+    // Confirm trước khi gửi
+    if (!confirm('📧 Bạn có chắc chắn muốn gửi email báo giá cho khách hàng?')) {
+      return;
+    }
+
     try {
-      // TODO: Implement send email functionality with backend API
-      alert(`✉️ Tính năng gửi email đang được phát triển`);
+      console.log('📧 Sending email for quotation:', quoteId);
       
-      // TODO: Call email API
-      // await sendQuotationEmail(quoteId);
+      // Gọi email qua API
+      const result = await sendQuotationEmail(Number(quoteId));
+      
+      console.log('✅ Email sent successfully:', result);
+      
+      // Hiển thị thông báo thành công
+      alert('✅ Gửi email báo giá thành công!\n\nEmail đã được gửi đến khách hàng kèm file PDF báo giá.');
+      
     } catch (error: any) {
       console.error('❌ Error sending email:', error);
-      alert('Không thể gửi email. Vui lòng thử lại.');
+      alert(`❌ ${error.message || 'Không thể gửi email. Vui lòng thử lại.'}`);
     }
   };
 
