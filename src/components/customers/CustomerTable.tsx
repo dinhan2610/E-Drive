@@ -6,6 +6,7 @@ interface CustomerTableProps {
   customers: Customer[];
   loading?: boolean;
   onRowClick?: (customer: Customer) => void;
+  onView?: (customer: Customer) => void;
   onEdit?: (customer: Customer) => void;
   onDelete?: (customer: Customer) => void;
 }
@@ -14,6 +15,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
   customers,
   loading = false,
   onRowClick,
+  onView,
   onEdit,
   onDelete
 }) => {
@@ -39,6 +41,11 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
       return;
     }
     onRowClick?.(customer);
+  };
+
+  const handleView = (customer: Customer, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onView?.(customer);
   };
 
   const handleEdit = (customer: Customer, e: React.MouseEvent) => {
@@ -119,6 +126,15 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                 <td className={styles.dataCell}>{customer.idCardNo}</td>
                 <td className={styles.dataCell}>
                   <div className={styles.actions}>
+                    {onView && (
+                      <button
+                        className={`${styles.actionButton} ${styles.viewButton}`}
+                        onClick={(e) => handleView(customer, e)}
+                        title="Xem chi tiết"
+                      >
+                        <i className="fas fa-eye"></i>
+                      </button>
+                    )}
                     {onEdit && (
                       <button
                         className={`${styles.actionButton} ${styles.editButton}`}

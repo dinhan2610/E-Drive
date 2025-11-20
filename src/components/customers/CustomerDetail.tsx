@@ -58,7 +58,7 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div 
-        className={styles.drawer}
+        className={styles.modal}
         onClick={e => e.stopPropagation()}
         onKeyDown={handleKeyDown}
         role="dialog"
@@ -67,141 +67,133 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({
       >
         {/* Header */}
         <div className={styles.header}>
-          <div className={styles.customerHeader}>
-            <div className={styles.avatar}>
-              {customer.fullName.charAt(0).toUpperCase()}
+          <div className={styles.headerLeft}>
+            <div className={styles.headerIcon}>
+              <i className="fas fa-user-circle" />
             </div>
-            <div className={styles.customerInfo}>
-              <h2 id="customer-detail-title" className={styles.customerName}>
-                {customer.fullName}
+            <div>
+              <h2 id="customer-detail-title" className={styles.modalTitle}>
+                Chi tiết khách hàng
               </h2>
-              <div className={styles.customerMeta}>
-                <span>
-                  <i className="fas fa-id-card" style={{marginRight: '6px'}}></i>
-                  {customer.idCardNo}
-                </span>
-              </div>
+              <p className={styles.modalSubtitle}>ID: #{customer.customerId}</p>
             </div>
           </div>
-          
-          <div className={styles.headerActions}>
-            {onEdit && (
-              <button
-                type="button"
-                className={styles.editButton}
-                onClick={handleEdit}
-                title="Chỉnh sửa"
-              >
-                <i className="fas fa-edit" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                className={styles.deleteButton}
-                onClick={handleDelete}
-                title="Xóa"
-              >
-                <i className="fas fa-trash" />
-              </button>
-            )}
-            <button
-              type="button"
-              className={styles.closeButton}
-              onClick={onClose}
-              title="Đóng"
-            >
-              <i className="fas fa-times" />
-            </button>
-          </div>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            title="Đóng"
+          >
+            <i className="fas fa-times" />
+          </button>
         </div>
 
         {/* Content */}
         <div className={styles.content}>
-          <div className={styles.infoTab}>
-            <div className={styles.infoSection}>
-              <h3 className={styles.sectionTitle}>
-                <i className="fas fa-user" />
-                Thông tin cá nhân
-              </h3>
-              <div className={styles.infoGrid}>
-                <div className={styles.infoItem}>
-                  <div className={styles.infoLabel}>
-                    <i className="fas fa-birthday-cake" />
-                    Ngày sinh
-                  </div>
-                  <div className={styles.infoValue}>
-                    {formatDate(customer.dob)}
-                  </div>
-                </div>
-                
-                <div className={styles.infoItem}>
-                  <div className={styles.infoLabel}>
-                    <i className="fas fa-venus-mars" />
-                    Giới tính
-                  </div>
-                  <div className={styles.infoValue}>
-                    {customer.gender}
-                  </div>
-                </div>
-
-                <div className={styles.infoItem}>
-                  <div className={styles.infoLabel}>
-                    <i className="fas fa-id-card" />
-                    CCCD/CMND
-                  </div>
-                  <div className={styles.infoValue}>
-                    {customer.idCardNo}
-                  </div>
-                </div>
-              </div>
+          <div className={styles.customerCard}>
+            <div className={styles.avatar}>
+              {customer.fullName.charAt(0).toUpperCase()}
             </div>
-
-            <div className={styles.infoSection}>
-              <h3 className={styles.sectionTitle}>
-                <i className="fas fa-address-card" />
-                Thông tin liên hệ
-              </h3>
-              <div className={styles.infoGrid}>
-                <div className={styles.infoItem}>
-                  <div className={styles.infoLabel}>
-                    <i className="fas fa-phone" />
-                    Số điện thoại
-                  </div>
-                  <div className={styles.infoValue}>
-                    <a href={`tel:${customer.phone}`} className={styles.phoneLink}>
-                      <i className="fas fa-phone-alt" style={{marginRight: '8px', fontSize: '12px'}}></i>
-                      {formatPhoneNumber(customer.phone)}
-                    </a>
-                  </div>
-                </div>
-                
-                {customer.email && (
-                  <div className={styles.infoItem}>
-                    <div className={styles.infoLabel}>
-                      <i className="fas fa-envelope" />
-                      Email
-                    </div>
-                    <div className={styles.infoValue}>
-                      <a href={`mailto:${customer.email}`} className={styles.emailLink}>
-                        {customer.email}
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                <div className={styles.infoItem}>
-                  <div className={styles.infoLabel}>
-                    <i className="fas fa-map-marker-alt" />
-                    Địa chỉ
-                  </div>
-                  <div className={styles.infoValue}>
-                    {customer.address}
-                  </div>
-                </div>
+            <div className={styles.customerMainInfo}>
+              <h3>{customer.fullName}</h3>
+              <div className={styles.customerMeta}>
+                <span>
+                  <i className="fas fa-id-card" />
+                  {customer.idCardNo}
+                </span>
+                <span>
+                  <i className="fas fa-venus-mars" />
+                  {customer.gender}
+                </span>
               </div>
             </div>
           </div>
+
+          <div className={styles.infoGrid}>
+            <div className={styles.infoCard}>
+              <div className={styles.infoIcon} style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}>
+                <i className="fas fa-birthday-cake" />
+              </div>
+              <div className={styles.infoContent}>
+                <div className={styles.infoLabel}>Ngày sinh</div>
+                <div className={styles.infoValue}>{formatDate(customer.dob)}</div>
+              </div>
+            </div>
+
+            <div className={styles.infoCard}>
+              <div className={styles.infoIcon} style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+                <i className="fas fa-phone" />
+              </div>
+              <div className={styles.infoContent}>
+                <div className={styles.infoLabel}>Số điện thoại</div>
+                <div className={styles.infoValue}>
+                  <a href={`tel:${customer.phone}`} className={styles.link}>
+                    {formatPhoneNumber(customer.phone)}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.infoCard}>
+              <div className={styles.infoIcon} style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                <i className="fas fa-envelope" />
+              </div>
+              <div className={styles.infoContent}>
+                <div className={styles.infoLabel}>Email</div>
+                <div className={styles.infoValue}>
+                  {customer.email ? (
+                    <a href={`mailto:${customer.email}`} className={styles.link}>
+                      {customer.email}
+                    </a>
+                  ) : (
+                    <span className={styles.emptyValue}>Chưa có</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.infoCard} style={{ gridColumn: '1 / -1' }}>
+              <div className={styles.infoIcon} style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                <i className="fas fa-map-marker-alt" />
+              </div>
+              <div className={styles.infoContent}>
+                <div className={styles.infoLabel}>Địa chỉ</div>
+                <div className={styles.infoValue}>{customer.address}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className={styles.footer}>
+          <button
+            type="button"
+            className={styles.btnClose}
+            onClick={onClose}
+          >
+            <i className="fas fa-times" />
+            <span>Đóng</span>
+          </button>
+          {onEdit && (
+            <button
+              type="button"
+              className={styles.btnEdit}
+              onClick={handleEdit}
+            >
+              <i className="fas fa-edit" />
+              <span>Chỉnh sửa</span>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              className={styles.btnDelete}
+              onClick={handleDelete}
+            >
+              <i className="fas fa-trash-alt" />
+              <span>Xóa</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

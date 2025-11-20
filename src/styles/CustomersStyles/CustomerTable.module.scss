@@ -222,6 +222,14 @@
     transform: translateY(0);
   }
 
+  &.viewButton {
+    &:hover {
+      background: #f0fdf4;
+      border-color: #10b981;
+      color: #10b981;
+    }
+  }
+
   &.editButton {
     &:hover {
       background: #eff6ff;

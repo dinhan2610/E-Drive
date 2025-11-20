@@ -13,12 +13,23 @@ import CustomerDetail from '../components/customers/CustomerDetail';
 import ConfirmDialog from '../components/customers/ConfirmDialog';
 import styles from '../styles/CustomersStyles/CustomersPage.module.scss';
 
+// Helper function để remove dấu tiếng Việt cho tìm kiếm
+const removeVietnameseTones = (str: string): string => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+};
+
 const CustomersPage: React.FC = () => {
   // Dealer info state
   const [dealerInfo, setDealerInfo] = useState<{ id: number; name?: string } | null>(null);
   
   // Customer data state
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]); // Tất cả customers từ API
+  const [customers, setCustomers] = useState<Customer[]>([]); // Customers sau khi filter
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   
@@ -29,6 +40,7 @@ const CustomersPage: React.FC = () => {
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Separate state for input value
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name_asc' | 'name_desc'>('newest');
   
   // Modal and UI state
@@ -75,10 +87,10 @@ const CustomersPage: React.FC = () => {
     try {
       console.log('📋 Loading customers for dealer:', dealerInfo.id);
       
+      // Load tất cả customers không filter backend (vì backend search không chính xác)
       const params: ListCustomersParams = {
-        q: searchQuery || undefined,
         page,
-        pageSize,
+        pageSize: 1000, // Load nhiều để filter client-side
         sort: sortBy
       };
 
@@ -86,16 +98,54 @@ const CustomersPage: React.FC = () => {
       
       console.log(`✅ Loaded ${response.data?.length || 0} customers for dealer ${dealerInfo.id}`);
       
-      setCustomers(response.data || []);
-      setTotal(response.data?.length || 0);
-      setTotalPages(1); // Backend chưa trả về totalPages, tạm set = 1
+      setAllCustomers(response.data || []);
     } catch (error) {
       console.error('Failed to load customers:', error);
       console.error('Error details:', error);
     } finally {
       setLoading(false);
     }
-  }, [dealerInfo, searchQuery, page, pageSize, sortBy]);
+  }, [dealerInfo, page, sortBy]);
+
+  // Debounce search input - chỉ search sau 500ms user ngừng gõ
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchInput !== searchQuery) {
+        setSearchQuery(searchInput);
+        setPage(1); // Reset về trang 1 khi search
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, searchQuery]);
+
+  // Filter customers client-side khi searchQuery thay đổi
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setCustomers(allCustomers);
+      setTotal(allCustomers.length);
+      return;
+    }
+
+    const searchLower = removeVietnameseTones(searchQuery.trim());
+    
+    const filtered = allCustomers.filter(customer => {
+      const fullName = removeVietnameseTones(customer.fullName || '');
+      const email = removeVietnameseTones(customer.email || '');
+      const phone = removeVietnameseTones(customer.phone || '');
+      const address = removeVietnameseTones(customer.address || '');
+      
+      return fullName.includes(searchLower) ||
+             email.includes(searchLower) ||
+             phone.includes(searchLower) ||
+             address.includes(searchLower);
+    });
+
+    console.log(`🔍 Filtered ${filtered.length}/${allCustomers.length} customers for query: "${searchQuery}"`);
+    
+    setCustomers(filtered);
+    setTotal(filtered.length);
+  }, [searchQuery, allCustomers]);
 
   // Load data when dealer info is ready and when dependencies change
   useEffect(() => {
@@ -104,12 +154,13 @@ const CustomersPage: React.FC = () => {
     }
   }, [dealerInfo, loadCustomers]);
 
-  // Reset page when filters change
+  // Reset page when sort changes
   useEffect(() => {
     if (page !== 1) {
       setPage(1);
     }
-  }, [searchQuery, sortBy]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy]);
 
   // Handlers for CRUD operations
   const handleCreateCustomer = () => {
@@ -189,9 +240,9 @@ const CustomersPage: React.FC = () => {
     }
   };
 
-  // Handler for search
+  // Handler for search input (with debounce)
   const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
+    setSearchInput(value);
   };
 
   // Handler for sorting
@@ -211,12 +262,13 @@ const CustomersPage: React.FC = () => {
 
   // Clear all filters
   const handleClearFilters = () => {
+    setSearchInput('');
     setSearchQuery('');
     setSortBy('newest');
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchQuery !== '';
+  const hasActiveFilters = searchInput !== '' || searchQuery !== '';
 
   return (
     <div className={styles.customersPage}>
@@ -258,16 +310,22 @@ const CustomersPage: React.FC = () => {
             <i className="fas fa-search" />
             <input
               type="text"
-              placeholder="Tìm kiếm khách hàng..."
-              value={searchQuery}
+              placeholder="Tìm kiếm khách hàng (tên, email, số điện thoại)..."
+              value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
               className={styles.searchInput}
             />
-            {searchQuery && (
+            {searchInput && searchInput !== searchQuery && (
+              <div className={styles.searchLoading}>
+                <i className="fas fa-spinner fa-spin" />
+              </div>
+            )}
+            {searchInput && (
               <button
                 type="button"
                 className={styles.clearSearch}
                 onClick={() => handleSearchChange('')}
+                title="Xóa tìm kiếm"
               >
                 <i className="fas fa-times" />
               </button>
@@ -276,33 +334,8 @@ const CustomersPage: React.FC = () => {
 
           {/* Filters */}
           <div className={styles.filters}>
-            {/* Sort */}
-            <div className={styles.filterGroup}>
-              <select
-                value={sortBy}
-                onChange={(e) => handleSortChange(e.target.value as typeof sortBy)}
-                className={styles.sortSelect}
-              >
-                <option value="newest">Mới nhất</option>
-                <option value="oldest">Cũ nhất</option>
-                <option value="name_asc">Tên A-Z</option>
-                <option value="name_desc">Tên Z-A</option>
-              </select>
-            </div>
-
-            {/* Clear Filters */}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                className={styles.clearFilters}
-                onClick={handleClearFilters}
-              >
-                <i className="fas fa-times" />
-                Xóa bộ lọc
-              </button>
-            )}
-
-            {/* Add Customer Button */}
+           
+          {/* Add Customer Button */}
             <button 
               className={styles.createButton}
               onClick={handleCreateCustomer}
@@ -319,6 +352,7 @@ const CustomersPage: React.FC = () => {
         <CustomerTable
           customers={customers}
           loading={loading}
+          onView={handleViewCustomer}
           onRowClick={handleViewCustomer}
           onEdit={handleEditCustomer}
           onDelete={handleDeleteCustomer}

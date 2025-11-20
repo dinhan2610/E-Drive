@@ -132,36 +132,87 @@ export function getRelativeTime(dateString: string): string {
 export function validateCustomerData(data: Partial<CreateCustomerPayload>) {
   const errors: Record<string, string> = {};
 
+  // Validate full name
   if (!data.fullName || data.fullName.trim().length < 2) {
     errors.fullName = 'Tên khách hàng phải có ít nhất 2 ký tự';
+  } else if (data.fullName.trim().length > 100) {
+    errors.fullName = 'Tên khách hàng không được vượt quá 100 ký tự';
+  } else if (!/^[\p{L}\s]+$/u.test(data.fullName.trim())) {
+    errors.fullName = 'Tên khách hàng chỉ được chứa chữ cái và khoảng trắng';
   }
 
+  // Validate date of birth
   if (!data.dob) {
     errors.dob = 'Vui lòng chọn ngày sinh';
   } else {
     const dobDate = new Date(data.dob);
     const today = new Date();
+    const minDate = new Date('1900-01-01');
+    
     if (dobDate > today) {
       errors.dob = 'Ngày sinh không thể là ngày trong tương lai';
+    } else if (dobDate < minDate) {
+      errors.dob = 'Ngày sinh không hợp lệ';
+    } else {
+      // Validate age >= 18
+      const age = today.getFullYear() - dobDate.getFullYear();
+      const monthDiff = today.getMonth() - dobDate.getMonth();
+      const dayDiff = today.getDate() - dobDate.getDate();
+      
+      const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+      
+      if (actualAge < 18) {
+        errors.dob = 'Khách hàng phải từ 18 tuổi trở lên';
+      } else if (actualAge > 120) {
+        errors.dob = 'Ngày sinh không hợp lệ';
+      }
     }
   }
 
+  // Validate gender
   if (!data.gender) {
     errors.gender = 'Vui lòng chọn giới tính';
+  } else if (!['Nam', 'Nữ', 'Khác'].includes(data.gender)) {
+    errors.gender = 'Giới tính không hợp lệ';
   }
 
-  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-    errors.email = 'Email không hợp lệ';
+  // Validate email
+  if (!data.email || data.email.trim() === '') {
+    errors.email = 'Vui lòng nhập email';
+  } else if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(data.email.trim())) {
+    errors.email = 'Email không hợp lệ (vd: example@domain.com)';
+  } else if (data.email.trim().length > 100) {
+    errors.email = 'Email không được vượt quá 100 ký tự';
   }
 
+  // Validate phone number
   if (!data.phone) {
     errors.phone = 'Vui lòng nhập số điện thoại';
-  } else if (!/^[0-9]{10}$/.test(data.phone.replace(/\D/g, ''))) {
-    errors.phone = 'Số điện thoại không hợp lệ (cần 10 chữ số)';
+  } else {
+    const phoneDigits = data.phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      errors.phone = 'Số điện thoại phải có đúng 10 chữ số';
+    } else if (!phoneDigits.startsWith('0')) {
+      errors.phone = 'Số điện thoại phải bắt đầu bằng số 0';
+    } else if (!/^(03|05|07|08|09)\d{8}$/.test(phoneDigits)) {
+      errors.phone = 'Số điện thoại không hợp lệ (đầu số: 03, 05, 07, 08, 09)';
+    }
   }
 
-  if (!data.address || data.address.trim().length < 5) {
-    errors.address = 'Vui lòng nhập địa chỉ đầy đủ';
+  // Validate address
+  if (!data.address || data.address.trim().length < 10) {
+    errors.address = 'Địa chỉ phải có ít nhất 10 ký tự';
+  } else if (data.address.trim().length > 500) {
+    errors.address = 'Địa chỉ không được vượt quá 500 ký tự';
+  }
+
+  // Validate ID card number (optional but must be valid if provided)
+  if (data.idCardNo && data.idCardNo.trim()) {
+    const idCard = data.idCardNo.trim();
+    // CMND cũ: 9 chữ số, CCCD mới: 12 chữ số
+    if (!/^(\d{9}|\d{12})$/.test(idCard)) {
+      errors.idCardNo = 'CMND/CCCD phải có 9 hoặc 12 chữ số';
+    }
   }
 
   if (!data.idCardNo || !/^[0-9]{9,12}$/.test(data.idCardNo)) {

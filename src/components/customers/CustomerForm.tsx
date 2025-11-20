@@ -160,7 +160,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             {/* Full Name */}
             <div className={styles.formGroup}>
               <label htmlFor="fullName" className={styles.label}>
-                Họ và tên đầy đủ <span className={styles.required}>*</span>
+                <i className="fas fa-user"></i> Họ và tên đầy đủ <span className={styles.required}>*</span>
               </label>
               <input
                 id="fullName"
@@ -169,7 +169,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
                 onBlur={() => handleBlur('fullName')}
                 className={`${styles.input} ${errors.fullName ? styles.error : ''}`}
-                placeholder="Nhập họ và tên đầy đủ của khách hàng"
+                placeholder="VD: Nguyễn Văn A"
+                maxLength={100}
                 autoFocus
               />
               {errors.fullName && touched.fullName && (
@@ -185,7 +186,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
               {/* Date of Birth */}
               <div className={styles.formGroup}>
                 <label htmlFor="dob" className={styles.label}>
-                  Ngày sinh <span className={styles.required}>*</span>
+                  <i className="fas fa-calendar-alt"></i> Ngày sinh <span className={styles.required}>*</span>
                 </label>
                 <input
                   id="dob"
@@ -194,6 +195,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                   onChange={(e) => handleInputChange('dob', e.target.value)}
                   onBlur={() => handleBlur('dob')}
                   className={`${styles.input} ${errors.dob ? styles.error : ''}`}
+                  min="1900-01-01"
                   max={new Date().toISOString().split('T')[0]}
                 />
                 {errors.dob && touched.dob && (
@@ -207,7 +209,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
               {/* Gender */}
               <div className={styles.formGroup}>
                 <label htmlFor="gender" className={styles.label}>
-                  Giới tính <span className={styles.required}>*</span>
+                  <i className="fas fa-venus-mars"></i> Giới tính <span className={styles.required}>*</span>
                 </label>
                 <select
                   id="gender"
@@ -236,16 +238,17 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             <div className={styles.twoColumnRow}>
               <div className={styles.formGroup}>
                 <label htmlFor="email" className={styles.label}>
-                  Email
+                  <i className="fas fa-envelope"></i> Email <span className={styles.required}>*</span>
                 </label>
                 <input
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => handleInputChange('email', e.target.value.trim())}
                   onBlur={() => handleBlur('email')}
                   className={`${styles.input} ${errors.email ? styles.error : ''}`}
-                  placeholder="Nhập địa chỉ email"
+                  placeholder="VD: example@gmail.com"
+                  maxLength={100}
                 />
                 {errors.email && touched.email && (
                   <span className={styles.errorText}>
@@ -257,16 +260,20 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
 
               <div className={styles.formGroup}>
                 <label htmlFor="phone" className={styles.label}>
-                  Số điện thoại <span className={styles.required}>*</span>
+                  <i className="fas fa-phone"></i> Số điện thoại <span className={styles.required}>*</span>
                 </label>
                 <input
                   id="phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    handleInputChange('phone', value);
+                  }}
                   onBlur={() => handleBlur('phone')}
                   className={`${styles.input} ${errors.phone ? styles.error : ''}`}
-                  placeholder="Nhập số điện thoại"
+                  placeholder="VD: 0901234567"
+                  maxLength={10}
                 />
                 {errors.phone && touched.phone && (
                   <span className={styles.errorText}>
@@ -280,7 +287,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             {/* Address */}
             <div className={styles.formGroup}>
               <label htmlFor="address" className={styles.label}>
-                Địa chỉ <span className={styles.required}>*</span>
+                <i className="fas fa-map-marker-alt"></i> Địa chỉ <span className={styles.required}>*</span>
               </label>
               <input
                 id="address"
@@ -289,7 +296,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                 onChange={(e) => handleInputChange('address', e.target.value)}
                 onBlur={() => handleBlur('address')}
                 className={`${styles.input} ${errors.address ? styles.error : ''}`}
-                placeholder="Nhập địa chỉ đầy đủ"
+                placeholder="VD: 123 Nguyễn Văn Linh, Phường 1, Quận 7, TP.HCM"
+                maxLength={500}
               />
               {errors.address && touched.address && (
                 <span className={styles.errorText}>
@@ -302,16 +310,20 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             {/* ID Card */}
             <div className={styles.formGroup}>
               <label htmlFor="idCardNo" className={styles.label}>
-                CCCD/CMND <span className={styles.required}>*</span>
+                <i className="fas fa-id-card"></i> CCCD/CMND
               </label>
               <input
                 id="idCardNo"
                 type="text"
                 value={formData.idCardNo}
-                onChange={(e) => handleInputChange('idCardNo', e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  handleInputChange('idCardNo', value);
+                }}
                 onBlur={() => handleBlur('idCardNo')}
                 className={`${styles.input} ${errors.idCardNo ? styles.error : ''}`}
-                placeholder="Nhập số CCCD hoặc CMND"
+                placeholder="VD: 001234567890 (9 hoặc 12 số)"
+                maxLength={12}
               />
               {errors.idCardNo && touched.idCardNo && (
                 <span className={styles.errorText}>

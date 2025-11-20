@@ -372,7 +372,7 @@
 
 .searchInput {
   width: 100%;
-  padding: 12px 40px 12px 44px;
+  padding: 12px 80px 12px 44px; // Tăng padding-right để chừa chỗ cho loading icon
   border: 2px solid #e5e7eb;
   border-radius: 10px;
   font-size: 1.0625rem;
@@ -388,6 +388,21 @@
 
   &::placeholder {
     color: #9ca3af;
+  }
+}
+
+.searchLoading {
+  position: absolute;
+  right: 46px; // Đặt trước nút clear
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ff4d30;
+  font-size: 0.9rem;
+  pointer-events: none;
+  
+  i {
+    position: static;
+    transform: none;
   }
 }
 
