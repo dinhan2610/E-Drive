@@ -208,33 +208,30 @@
         &:first-child {
           padding-left: 3rem;
           text-align: left;
-          width: 12%;
+          width: 15%; // Mã đơn
         }
         
         &:nth-child(2) {
-          text-align: left;
-          width: 25%;
+          text-align: center;
+          width: 18%; // Ngày đặt
         }
         
         &:nth-child(3) {
-          width: 8%;
+          text-align: right;
+          width: 20%; // Tổng tiền
         }
         
         &:nth-child(4) {
-          width: 15%;
+          width: 15%; // Trạng thái
         }
         
         &:nth-child(5) {
-          width: 12%;
-        }
-        
-        &:nth-child(6) {
-          width: 12%;
+          width: 15%; // Thanh toán
         }
         
         &:last-child {
           padding-right: 3rem;
-          width: 16%;
+          width: 17%; // Thao tác
         }
       }
     }
@@ -283,11 +280,27 @@
   text-align: center;
   
   &:first-child {
-    text-align: left;
+    text-align: left; // Mã đơn - căn trái
   }
   
   &:nth-child(2) {
-    text-align: left;
+    text-align: center; // Ngày đặt - căn giữa
+  }
+  
+  &:nth-child(3) {
+    text-align: right; // Tổng tiền - căn phải
+  }
+  
+  &:nth-child(4) {
+    text-align: center; // Trạng thái - căn giữa
+  }
+  
+  &:nth-child(5) {
+    text-align: center; // Thanh toán - căn giữa
+  }
+  
+  &:last-child {
+    text-align: center; // Thao tác - căn giữa
   }
 }
 

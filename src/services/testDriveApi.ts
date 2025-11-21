@@ -196,17 +196,8 @@ export const getTestDriveById = async (id: number): Promise<TestDrive> => {
  */
 export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/testdrives`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        ...data,
-        status: data.status || 'PENDING'
-      }),
-    });
-    
-    // If 403 and we have dealerId, try dealer-specific endpoint
-    if (response.status === 403 && data.dealerId) {
+    // If dealerId is provided, use dealer-specific endpoint directly
+    if (data.dealerId) {
       const dealerResponse = await fetch(`${API_BASE_URL}/api/testdrives/dealer/${data.dealerId}`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -218,6 +209,16 @@ export const createTestDrive = async (data: TestDriveRequest): Promise<TestDrive
       
       return handleResponse<TestDrive>(dealerResponse);
     }
+    
+    // Fallback to general endpoint (admin only)
+    const response = await fetch(`${API_BASE_URL}/api/testdrives`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...data,
+        status: data.status || 'PENDING'
+      }),
+    });
 
     return handleResponse<TestDrive>(response);
   } catch (error) {

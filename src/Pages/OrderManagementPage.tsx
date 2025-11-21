@@ -392,8 +392,7 @@ const OrderManagementPage: React.FC = () => {
               <thead>
                 <tr>
                   <th>Mã đơn</th>
-                  <th>Địa chỉ</th>
-                  <th>SL xe</th>
+                  <th>Ngày đặt</th>
                   <th>Tổng tiền</th>
                   <th>Trạng thái</th>
                   <th>Thanh toán</th>
@@ -403,7 +402,7 @@ const OrderManagementPage: React.FC = () => {
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className={styles.emptyState}>
+                    <td colSpan={6} className={styles.emptyState}>
                       <i className="fas fa-inbox"></i>
                       <p>Không có dữ liệu</p>
                     </td>
@@ -413,18 +412,11 @@ const OrderManagementPage: React.FC = () => {
                     <tr key={order.orderId}>
                       <td className={styles.tableCell}>
                         <span className={styles.orderId} title={`#${order.orderId}`}>
-                          #{String(order.orderId).length > 8 
-                            ? `${String(order.orderId).substring(0, 8)}...` 
-                            : order.orderId}
+                          #{order.orderId}
                         </span>
                       </td>
                       <td className={styles.tableCell}>
-                        <span className={styles.address} title={order.deliveryAddress}>
-                          {order.deliveryAddress}
-                        </span>
-                      </td>
-                      <td className={`${styles.tableCell} ${styles.centerAlign}`}>
-                        {order.orderItems?.length || 0}
+                        {order.orderDate ? new Date(order.orderDate).toLocaleDateString('vi-VN') : 'N/A'}
                       </td>
                       <td className={styles.tableCell}>
                         <span className={styles.price}>
