@@ -3,9 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { SuccessModal } from "../components/SuccessModal";
 import { fetchVehiclesFromApi } from "../services/vehicleApi";
 import { createTestDrive, TestDriveApiError } from "../services/testDriveApi";
-import { createCustomer } from "../services/customersApi";
+import { listCustomers } from "../services/customersApi";
 import { getProfile } from "../services/profileApi";
 import type { VehicleApiResponse } from "../types/product";
+import type { Customer } from "../types/customer";
 import styles from "../styles/TestDriveStyles/TestDrivePage.module.scss";
 
 interface GroupedModel {
@@ -20,10 +21,7 @@ interface GroupedModel {
 }
 
 interface BookingFormData {
-  name: string;
-  phone: string;
-  email: string;
-  citizenId: string;
+  customerId: string; // ID của khách hàng được chọn từ dropdown
   model: string; // modelName + version
   variant: string; // vehicleId của màu được chọn
   date: string;
@@ -33,10 +31,7 @@ interface BookingFormData {
 }
 
 interface ValidationErrors {
-  name?: string;
-  phone?: string;
-  email?: string;
-  citizenId?: string;
+  customerId?: string;
   model?: string;
   variant?: string;
   date?: string;
@@ -55,6 +50,11 @@ const TestDrivePage: React.FC = () => {
   const [groupedModels, setGroupedModels] = useState<GroupedModel[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
+  
+  // Customers data from API
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customersError, setCustomersError] = useState<string | null>(null);
   
   // Current logged-in dealer ID and name
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
@@ -125,14 +125,32 @@ const TestDrivePage: React.FC = () => {
     loadVehicles();
   }, []);
   
+  // Load customers when dealerId is available
+  useEffect(() => {
+    if (currentDealerId) {
+      const loadCustomers = async () => {
+        setLoadingCustomers(true);
+        setCustomersError(null);
+        try {
+          const result = await listCustomers(currentDealerId, {});
+          setCustomers(result.data || []);
+          console.log('✅ Loaded customers:', result.data?.length || 0);
+        } catch (error) {
+          console.error('Error loading customers:', error);
+          setCustomersError('Không thể tải danh sách khách hàng.');
+        } finally {
+          setLoadingCustomers(false);
+        }
+      };
+      loadCustomers();
+    }
+  }, [currentDealerId]);
+  
   const [selectedHour, setSelectedHour] = useState<number>(9);
   const [selectedMinute, setSelectedMinute] = useState<number>(0);
 
   const [formData, setFormData] = useState<BookingFormData>({
-    name: "",
-    phone: "",
-    email: "",
-    citizenId: "",
+    customerId: "",
     model: "",
     variant: "",
     date: "",
@@ -173,36 +191,7 @@ const TestDrivePage: React.FC = () => {
   };
 
   const validators = useMemo(() => ({
-    name: (value: string): string => {
-      if (!value) return "Họ tên là bắt buộc";
-      if (value.length < 2) return "Họ tên phải có ít nhất 2 ký tự";
-      if (!/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/.test(value)) {
-        return "Họ tên chỉ được chứa chữ cái và khoảng trắng";
-      }
-      return "";
-    },
-    phone: (value: string): string => {
-      if (!value) return "Số điện thoại là bắt buộc";
-      const cleanPhone = value.replace(/[\s\-]/g, '');
-      if (!/^(\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/.test(cleanPhone)) {
-        return "Số điện thoại Việt Nam không hợp lệ (VD: 0901234567)";
-      }
-      return "";
-    },
-    email: (value: string): string => {
-      if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-        return "Email không hợp lệ";
-      }
-      return "";
-    },
-    citizenId: (value: string): string => {
-      if (!value) return "Căn Cước Công Dân là bắt buộc";
-      const cleanId = value.replace(/[\s\-\.]/g, '');
-      if (!/^[0-9]{9}$|^[0-9]{12}$/.test(cleanId)) {
-        return "Căn Cước Công Dân phải có 9 hoặc 12 số";
-      }
-      return "";
-    },
+    customerId: (value: string): string => !value ? "Vui lòng chọn khách hàng" : "",
     model: (value: string): string => !value ? "Vui lòng chọn mẫu xe" : "",
     variant: (value: string): string => !value ? "Vui lòng chọn màu sắc" : "",
     date: (value: string): string => {
@@ -305,57 +294,37 @@ const TestDrivePage: React.FC = () => {
     setSubmitError(null);
 
     try {
-      // Bước 1: Tạo customer trước (backend validate customerId)
-      console.log('📝 Step 1: Creating customer for validation...');
+      console.log('📝 Creating test drive for customer:', formData.customerId);
       
-      if (!currentDealerId) {
-        throw new Error('Không tìm thấy thông tin đại lý. Vui lòng đăng nhập lại.');
-      }
-      
-      const customerPayload = {
-        fullName: formData.name,
-        dob: '2000-01-01',
-        gender: 'Khác' as const,
-        email: formData.email || `testdrive${Date.now()}@edrive.temp`,
-        phone: formData.phone,
-        address: 'Đăng ký lái thử - Xem chi tiết trong Test Drive Management',
-        idCardNo: formData.citizenId
-      };
-      
-      console.log('📝 Creating customer for dealer:', currentDealerId);
-      const createdCustomer = await createCustomer(currentDealerId, customerPayload);
-      console.log('✅ Customer created with ID:', createdCustomer.customerId);
-      
-      // Bước 2: Tạo test drive với thông tin đầy đủ trong note
-      console.log('📝 Step 2: Creating test drive...');
       const scheduleDatetime = `${formData.date}T${formData.time}:00`;
-      const vehicleId = parseInt(formData.variant); // variant giờ chứa vehicleId
+      const vehicleId = parseInt(formData.variant);
       
-      // Lưu ĐẦY ĐỦ thông tin khách hàng vào note (đây là nguồn thông tin chính)
-      const customerNote = `
+      // Lấy thông tin khách hàng đã chọn
+      const selectedCustomer = customers.find(c => c.customerId.toString() === formData.customerId);
+      
+      // Tạo note với thông tin khách hàng
+      const customerNote = selectedCustomer ? `
 === THÔNG TIN KHÁCH HÀNG ===
-Mã KH: ${createdCustomer.customerId}
-Họ tên: ${formData.name}
-Số điện thoại: ${formData.phone}
-Email: ${formData.email || 'Không cung cấp'}
-CCCD: ${formData.citizenId}
+Mã KH: ${selectedCustomer.customerId}
+Họ tên: ${selectedCustomer.fullName}
+Số điện thoại: ${selectedCustomer.phone}
+Email: ${selectedCustomer.email || 'Không cung cấp'}
+CCCD: ${selectedCustomer.idCardNo || 'Không cung cấp'}
 ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
-      `.trim();
+      `.trim() : formData.note;
       
       const testDrivePayload = {
-        customerId: createdCustomer.customerId, // Customer ID thật từ DB
+        customerId: parseInt(formData.customerId),
         dealerId: currentDealerId,
-        vehicleId: vehicleId, // Lấy từ màu đã chọn
+        vehicleId: vehicleId,
         scheduleDatetime,
         status: 'PENDING' as const,
         note: customerNote
       };
       
-      console.log('🏢 Using dealer ID from profile:', currentDealerId);
       console.log('📤 Test drive payload:', testDrivePayload);
-      const createdTestDrive = await createTestDrive(testDrivePayload);
+      await createTestDrive(testDrivePayload);
       console.log('✅ Test drive created successfully!');
-      console.log('✅ Test drive response:', createdTestDrive);
 
       // Trigger notification reload
       window.dispatchEvent(new Event('testDriveCreated'));
@@ -364,10 +333,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
       
       // Reset form
       setFormData({
-        name: "",
-        phone: "",
-        email: "",
-        citizenId: "",
+        customerId: "",
         model: "",
         variant: "",
         date: "",
@@ -480,96 +446,131 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
                 </div>
               )}
 
-              {/* Personal Information */}
+              {/* Customer Selection */}
               <div className={styles.formGroup}>
                 <h3 className={styles.sectionTitle}>
                   <i className="fas fa-user"></i>
-                  Thông tin cá nhân
+                  Chọn khách hàng
+                  {customers.length > 0 && (
+                    <span className={styles.countBadge}>
+                      {customers.length} khách hàng
+                    </span>
+                  )}
                 </h3>
                 
+                {customersError && (
+                  <div className={styles.warningBanner}>
+                    <i className="fas fa-exclamation-triangle"></i>
+                    <span>{customersError}</span>
+                  </div>
+                )}
+                
                 <div className={styles.formRow}>
-                  <div className={styles.formField}>
-                    <label htmlFor="name">
-                      Họ và tên <span className={styles.required}>*</span>
+                  <div className={styles.formField} style={{ width: '100%' }}>
+                    <label htmlFor="customerId">
+                      Khách hàng <span className={styles.required}>*</span>
+                      {loadingCustomers && (
+                        <span style={{ 
+                          marginLeft: '0.5rem', 
+                          fontSize: '0.875rem', 
+                          color: '#64748b',
+                          fontWeight: 'normal'
+                        }}>
+                          <i className="fas fa-spinner fa-spin"></i> Đang tải...
+                        </span>
+                      )}
                     </label>
-                    <div className={styles.inputWrapper}>
-                      <i className={`fas fa-user ${styles.inputIcon}`}></i>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={errors.name ? styles.error : ''}
-                        placeholder="Nguyễn Văn A"
-                        style={{ paddingLeft: '2.75rem' }}
-                      />
+                    <div className={styles.customerSelectWrapper}>
+                      <div className={styles.inputWrapper}>
+                        <i className={`fas fa-user-circle ${styles.inputIcon}`}></i>
+                        <select
+                          id="customerId"
+                          name="customerId"
+                          value={formData.customerId}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          className={errors.customerId ? styles.error : ''}
+                          disabled={loadingCustomers || !customers.length}
+                          style={{ paddingLeft: '2.75rem' }}
+                        >
+                          <option value="">
+                            {loadingCustomers ? 'Đang tải khách hàng...' : 
+                             !customers.length ? 'Không có khách hàng nào' : 
+                             'Chọn khách hàng'}
+                          </option>
+                          {customers.map((customer) => (
+                            <option key={customer.customerId} value={customer.customerId}>
+                              {customer.fullName} - {customer.phone} {customer.email ? `(${customer.email})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    {errors.name && <span className={styles.errorText}>{errors.name}</span>}
-                  </div>
-
-                  <div className={styles.formField}>
-                    <label htmlFor="phone">
-                      Số điện thoại <span className={styles.required}>*</span>
-                    </label>
-                    <div className={styles.inputWrapper}>
-                      <i className={`fas fa-phone ${styles.inputIcon}`}></i>
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={errors.phone ? styles.error : ''}
-                        placeholder="0901234567"
-                        style={{ paddingLeft: '2.75rem' }}
-                      />
-                    </div>
-                    {errors.phone && <span className={styles.errorText}>{errors.phone}</span>}
-                  </div>
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formField}>
-                    <label htmlFor="email">Email</label>
-                    <div className={styles.inputWrapper}>
-                      <i className={`fas fa-envelope ${styles.inputIcon}`}></i>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={errors.email ? styles.error : ''}
-                        placeholder="email@example.com"
-                        style={{ paddingLeft: '2.75rem' }}
-                      />
-                    </div>
-                    {errors.email && <span className={styles.errorText}>{errors.email}</span>}
-                  </div>
-
-                  <div className={styles.formField}>
-                    <label htmlFor="citizenId">
-                      Căn cước công dân <span className={styles.required}>*</span>
-                    </label>
-                    <div className={styles.inputWrapper}>
-                      <i className={`fas fa-id-card ${styles.inputIcon}`}></i>
-                      <input
-                        type="text"
-                        id="citizenId"
-                        name="citizenId"
-                        value={formData.citizenId}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={errors.citizenId ? styles.error : ''}
-                        placeholder="001234567890"
-                        style={{ paddingLeft: '2.75rem' }}
-                      />
-                    </div>
-                    {errors.citizenId && <span className={styles.errorText}>{errors.citizenId}</span>}
+                    {errors.customerId && <span className={styles.errorText}>{errors.customerId}</span>}
+                    
+                    {/* Customer Info Preview */}
+                    {formData.customerId && (() => {
+                      const selected = customers.find(c => c.customerId.toString() === formData.customerId);
+                      return selected ? (
+                        <div className={styles.customerInfoPreview}>
+                          <div className={styles.previewHeader}>
+                            <i className="fas fa-info-circle"></i>
+                            <span>Thông tin khách hàng</span>
+                          </div>
+                          <div className={styles.previewBody}>
+                            <div className={styles.infoRow}>
+                              <div className={styles.infoItem}>
+                                <i className="fas fa-user"></i>
+                                <div className={styles.infoContent}>
+                                  <span className={styles.infoLabel}>Họ tên:</span>
+                                  <span className={styles.infoValue}>{selected.fullName}</span>
+                                </div>
+                              </div>
+                              <div className={styles.infoItem}>
+                                <i className="fas fa-phone"></i>
+                                <div className={styles.infoContent}>
+                                  <span className={styles.infoLabel}>SĐT:</span>
+                                  <span className={styles.infoValue}>{selected.phone}</span>
+                                </div>
+                              </div>
+                            </div>
+                            {(selected.email || selected.idCardNo) && (
+                              <div className={styles.infoRow}>
+                                {selected.email && (
+                                  <div className={styles.infoItem}>
+                                    <i className="fas fa-envelope"></i>
+                                    <div className={styles.infoContent}>
+                                      <span className={styles.infoLabel}>Email:</span>
+                                      <span className={styles.infoValue}>{selected.email}</span>
+                                    </div>
+                                  </div>
+                                )}
+                                {selected.idCardNo && (
+                                  <div className={styles.infoItem}>
+                                    <i className="fas fa-id-card"></i>
+                                    <div className={styles.infoContent}>
+                                      <span className={styles.infoLabel}>CCCD:</span>
+                                      <span className={styles.infoValue}>{selected.idCardNo}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {selected.address && (
+                              <div className={styles.infoRow}>
+                                <div className={styles.infoItem} style={{ flex: 1 }}>
+                                  <i className="fas fa-map-marker-alt"></i>
+                                  <div className={styles.infoContent}>
+                                    <span className={styles.infoLabel}>Địa chỉ:</span>
+                                    <span className={styles.infoValue}>{selected.address}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               </div>
