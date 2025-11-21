@@ -297,7 +297,14 @@ const OrderManagementPage: React.FC = () => {
       setOrderToCancel(null);
       setCancelReason('');
       
-      await loadOrders();
+      // Update local state instead of reloading to preserve order
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.orderId === orderToCancel.orderId
+            ? { ...order, orderStatus: 'CANCELLED', paymentStatus: 'CANCELLED' }
+            : order
+        )
+      );
     } catch (error: any) {
       console.error('❌ Error cancelling order:', error);
       

@@ -869,8 +869,15 @@ const AdminPage: React.FC = () => {
         });
       }
       
+      // Sort bookings by order date (newest first) to maintain consistent order
+      const sortedBookings = [...mappedBookings].sort((a, b) => {
+        const dateA = new Date(a.startDate).getTime();
+        const dateB = new Date(b.startDate).getTime();
+        return dateB - dateA;
+      });
+      
       console.log('💾 [Admin] Updating bookings state...');
-      setBookings(mappedBookings);
+      setBookings(sortedBookings);
       console.log('✅ [Admin] Bookings state updated successfully');
 
       // Update stats
@@ -1322,8 +1329,14 @@ const AdminPage: React.FC = () => {
 
         await markOrderAsPaid(orderId);
 
-        // Reload orders to get fresh data from backend
-        await reloadOrders();
+        // Update local state instead of reloading to preserve order
+        setBookings(prevBookings => 
+          prevBookings.map(booking => 
+            booking.id === orderId
+              ? { ...booking, paymentStatus: 'paid' }
+              : booking
+          )
+        );
 
         setNotification({
           isVisible: true,
@@ -1345,8 +1358,14 @@ const AdminPage: React.FC = () => {
 
         await cancelOrder(orderId);
 
-        // Reload orders to get fresh data from backend
-        await reloadOrders();
+        // Update local state instead of reloading to preserve order
+        setBookings(prevBookings => 
+          prevBookings.map(booking => 
+            booking.id === orderId
+              ? { ...booking, status: 'cancelled', paymentStatus: 'cancelled' }
+              : booking
+          )
+        );
 
         setNotification({
           isVisible: true,
@@ -1367,8 +1386,14 @@ const AdminPage: React.FC = () => {
 
       await updatePaymentStatus(orderId, newStatus);
 
-      // Reload orders to get fresh data from backend
-      await reloadOrders();
+      // Update local state instead of reloading to preserve order
+      setBookings(prevBookings => 
+        prevBookings.map(booking => 
+          booking.id === orderId
+            ? { ...booking, paymentStatus: 'pending' }
+            : booking
+        )
+      );
 
       setNotification({
         isVisible: true,
@@ -3094,30 +3119,25 @@ const AdminPage: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <select
-                          key={`payment-${booking.id}-${booking.paymentStatus}`}
-                          className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
-                          value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
-                          onChange={(e) => {
-                            handleUpdatePaymentStatus(booking.id, e.target.value as any);
-                          }}
-                          disabled={booking.status === 'cancelled' || booking.paymentStatus === 'cancelled'}
-                          title={
-                            booking.status === 'cancelled' || booking.paymentStatus === 'cancelled'
-                              ? '🚫 Đơn hàng đã hủy - Không thể thay đổi trạng thái thanh toán'
-                              : booking.paymentStatus === 'paid' 
-                                ? '✅ Đơn hàng đã thanh toán' 
-                                : '⏳ Chờ thanh toán - Click để thay đổi'
-                          }
-                          style={{
-                            cursor: booking.status === 'cancelled' || booking.paymentStatus === 'cancelled' ? 'not-allowed' : 'pointer',
-                            opacity: booking.status === 'cancelled' || booking.paymentStatus === 'cancelled' ? 0.6 : 1
-                          }}
-                        >
-                          <option value="PENDING">Chờ thanh toán</option>
-                          <option value="PAID">Đã thanh toán</option>
-                          <option value="CANCELLED">Đã hủy</option>
-                        </select>
+                        {booking.paymentStatus === 'paid' || booking.paymentStatus === 'cancelled' || booking.status === 'cancelled' ? (
+                          <span className={`${styles.paymentBadge} ${styles[getPaymentStatusClass(booking.paymentStatus)]}`}>
+                            {formatPaymentStatus(booking.paymentStatus)}
+                          </span>
+                        ) : (
+                          <select
+                            key={`payment-${booking.id}-${booking.paymentStatus}`}
+                            className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
+                            value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
+                            onChange={(e) => {
+                              handleUpdatePaymentStatus(booking.id, e.target.value as any);
+                            }}
+                            title="⏳ Chờ thanh toán - Click để thay đổi"
+                          >
+                            <option value="PENDING">Chờ thanh toán</option>
+                            <option value="PAID">Đã thanh toán</option>
+                            <option value="CANCELLED">Đã hủy</option>
+                          </select>
+                        )}
                       </td>
                       <td>
                         <div className={styles.tableActions}>

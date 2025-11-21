@@ -580,114 +580,289 @@
 }
 
 .statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
   &.active {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.15), rgba(40, 167, 69, 0.08));
+    color: #1e7e34;
+    border: 2px solid rgba(40, 167, 69, 0.3);
+    
+    &::before {
+      background: #28a745;
+      box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
   }
 
   &.inactive {
-    background: rgba(156, 163, 175, 0.1);
-    color: #6b7280;
+    background: linear-gradient(135deg, rgba(108, 117, 125, 0.15), rgba(108, 117, 125, 0.08));
+    color: #495057;
+    border: 2px solid rgba(108, 117, 125, 0.3);
+    
+    &::before {
+      background: #6c757d;
+      box-shadow: 0 0 8px rgba(108, 117, 125, 0.6);
+    }
   }
 
   &.warning {
-    background: rgba(251, 191, 36, 0.1);
-    color: #d97706;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 193, 7, 0.08));
+    color: #f57c00;
+    border: 2px solid rgba(255, 193, 7, 0.3);
+    
+    &::before {
+      background: #ffc107;
+      box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+    }
   }
 
   &.available {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.15), rgba(40, 167, 69, 0.08));
+    color: #1e7e34;
+    border: 2px solid rgba(40, 167, 69, 0.3);
+    
+    &::before {
+      background: #28a745;
+      box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
   }
 
   &.rented {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.08));
+    color: #bd2130;
+    border: 2px solid rgba(220, 53, 69, 0.3);
+    
+    &::before {
+      background: #dc3545;
+      box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+    }
   }
 
   &.maintenance {
-    background: rgba(251, 191, 36, 0.1);
-    color: #d97706;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 193, 7, 0.08));
+    color: #f57c00;
+    border: 2px solid rgba(255, 193, 7, 0.3);
+    
+    &::before {
+      background: #ffc107;
+      box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+    }
   }
 
   &.unavailable {
-    background: rgba(107, 114, 128, 0.1);
-    color: #6b7280;
+    background: linear-gradient(135deg, rgba(108, 117, 125, 0.15), rgba(108, 117, 125, 0.08));
+    color: #495057;
+    border: 2px solid rgba(108, 117, 125, 0.3);
+    
+    &::before {
+      background: #6c757d;
+      box-shadow: 0 0 8px rgba(108, 117, 125, 0.6);
+    }
   }
 
   &.pending {
-    background: rgba(251, 191, 36, 0.1);
-    color: #d97706;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 193, 7, 0.08));
+    color: #f57c00;
+    border: 2px solid rgba(255, 193, 7, 0.3);
+    
+    &::before {
+      background: #ffc107;
+      box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+    }
   }
 
   &.confirmed {
-    background: rgba(59, 130, 246, 0.1);
-    color: #2563eb;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.15), rgba(40, 167, 69, 0.08));
+    color: #1e7e34;
+    border: 2px solid rgba(40, 167, 69, 0.3);
+    
+    &::before {
+      background: #28a745;
+      box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
   }
 
   &.processing {
-    background: rgba(59, 130, 246, 0.1);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08));
     color: #2563eb;
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    
+    &::before {
+      background: #3b82f6;
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+    }
   }
 
   &.shipped {
-    background: rgba(139, 92, 246, 0.1);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.08));
     color: #7c3aed;
+    border: 2px solid rgba(139, 92, 246, 0.3);
+    
+    &::before {
+      background: #8b5cf6;
+      box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+    }
   }
 
   &.delivered {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+    background: linear-gradient(135deg, rgba(23, 162, 184, 0.15), rgba(23, 162, 184, 0.08));
+    color: #117a8b;
+    border: 2px solid rgba(23, 162, 184, 0.3);
+    
+    &::before {
+      background: #17a2b8;
+      box-shadow: 0 0 8px rgba(23, 162, 184, 0.6);
+    }
   }
 
   &.ongoing {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.15), rgba(40, 167, 69, 0.08));
+    color: #1e7e34;
+    border: 2px solid rgba(40, 167, 69, 0.3);
+    
+    &::before {
+      background: #28a745;
+      box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
   }
 
   &.completed {
-    background: rgba(107, 114, 128, 0.1);
-    color: #6b7280;
+    background: linear-gradient(135deg, rgba(23, 162, 184, 0.15), rgba(23, 162, 184, 0.08));
+    color: #117a8b;
+    border: 2px solid rgba(23, 162, 184, 0.3);
+    
+    &::before {
+      background: #17a2b8;
+      box-shadow: 0 0 8px rgba(23, 162, 184, 0.6);
+    }
   }
 
   &.cancelled {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.08));
+    color: #bd2130;
+    border: 2px solid rgba(220, 53, 69, 0.3);
+    
+    &::before {
+      background: #dc3545;
+      box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+    }
   }
 
   // Contract statuses
   &.draft {
-    background: rgba(156, 163, 175, 0.1);
-    color: #6b7280;
+    background: linear-gradient(135deg, rgba(108, 117, 125, 0.15), rgba(108, 117, 125, 0.08));
+    color: #495057;
+    border: 2px solid rgba(108, 117, 125, 0.3);
+    
+    &::before {
+      background: #6c757d;
+      box-shadow: 0 0 8px rgba(108, 117, 125, 0.6);
+    }
   }
 
   &.signing {
-    background: rgba(59, 130, 246, 0.1);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08));
     color: #2563eb;
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    
+    &::before {
+      background: #3b82f6;
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+    }
   }
 }
 
 .paymentBadge {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
 
   &.pending {
-    background: rgba(251, 191, 36, 0.1);
-    color: #d97706;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 193, 7, 0.08));
+    color: #f57c00;
+    border: 2px solid rgba(255, 193, 7, 0.3);
+    
+    &::before {
+      background: #ffc107;
+      box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+    }
   }
 
   &.paid {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.15), rgba(40, 167, 69, 0.08));
+    color: #1e7e34;
+    border: 2px solid rgba(40, 167, 69, 0.3);
+    
+    &::before {
+      background: #28a745;
+      box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
   }
 
   &.refunded {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.08));
+    color: #bd2130;
+    border: 2px solid rgba(220, 53, 69, 0.3);
+    
+    &::before {
+      background: #dc3545;
+      box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+    }
+  }
+
+  &.cancelled {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.08));
+    color: #bd2130;
+    border: 2px solid rgba(220, 53, 69, 0.3);
+    
+    &::before {
+      background: #dc3545;
+      box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
   }
 }
 
