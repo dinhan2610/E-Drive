@@ -168,18 +168,19 @@ const TestDriveManagementPage: React.FC = () => {
   const handleDealerConfirmationChange = async (testDrive: TestDrive, newStatus: string) => {
     if (updatingConfirmation === testDrive.testdriveId) return; // Prevent double-click
     
+    // If selecting CANCELLED, show dialog to get reason
+    if (newStatus === 'CANCELLED') {
+      setCancellingTestDrive(testDrive);
+      setShowCancelDialog(true);
+      return;
+    }
+    
     try {
       setUpdatingConfirmation(testDrive.testdriveId);
       
-      // If cancelling, sync both status and statusForStaff
       const payload: any = {
         status: newStatus as 'PENDING' | 'APPROVED' | 'CANCELLED'
       };
-      
-      // When manager cancels, also cancel staff status
-      if (newStatus === 'CANCELLED') {
-        payload.statusForStaff = 'CANCELLED';
-      }
       
       // Use PATCH API with dealer confirmation status
       const updated = await updateTestDriveStatus(
@@ -253,17 +254,34 @@ const TestDriveManagementPage: React.FC = () => {
     }
     
     try {
-      setUpdatingStaffStatus(cancellingTestDrive.testdriveId);
+      // Determine if this is from staff or manager based on current action
+      const isStaffCancelling = updatingStaffStatus === cancellingTestDrive.testdriveId || userRole === 'staff';
       
-      // When staff cancels, sync both statusForStaff and status
+      if (isStaffCancelling) {
+        setUpdatingStaffStatus(cancellingTestDrive.testdriveId);
+      } else {
+        setUpdatingConfirmation(cancellingTestDrive.testdriveId);
+      }
+      
+      // Build payload based on who is cancelling
+      const payload: any = {
+        cancelReason: cancelReason.trim()
+      };
+      
+      if (isStaffCancelling) {
+        // Staff cancels: Update both statusForStaff and status
+        payload.statusForStaff = 'CANCELLED';
+        payload.status = 'CANCELLED';
+      } else {
+        // Manager cancels: Update both status and statusForStaff
+        payload.status = 'CANCELLED';
+        payload.statusForStaff = 'CANCELLED';
+      }
+      
       const updated = await updateTestDriveStatus(
         cancellingTestDrive.dealerId,
         cancellingTestDrive.testdriveId,
-        {
-          statusForStaff: 'CANCELLED',
-          status: 'CANCELLED', // Also cancel dealer confirmation
-          cancelReason: cancelReason.trim()
-        }
+        payload
       );
       
       setTestDrives(prev => prev.map(td => 
@@ -278,10 +296,11 @@ const TestDriveManagementPage: React.FC = () => {
       setCancelReason('');
       
     } catch (error: any) {
-      console.error('❌ Error cancelling:', error);
+      console.error('❌ Error cancelling test drive:', error);
       alert(`❌ ${error.message || 'Không thể hủy lịch lái thử'}`);
     } finally {
       setUpdatingStaffStatus(null);
+      setUpdatingConfirmation(null);
     }
   };
 
@@ -421,30 +440,31 @@ const TestDriveManagementPage: React.FC = () => {
                       </td>
                       <td>
                         {userRole === 'staff' ? (
-                          <select 
-                            className={`${styles.statusSelect} ${styles[testDrive.statusForStaff?.toLowerCase() || testDrive.status?.toLowerCase() || 'pending']} ${updatingStaffStatus === testDrive.testdriveId ? styles.updating : ''}`}
-                            value={testDrive.statusForStaff || testDrive.status || 'PENDING'}
-                            onChange={(e) => handleStaffStatusChange(testDrive, e.target.value)}
-                            disabled={
-                              updatingStaffStatus === testDrive.testdriveId ||
-                              testDrive.status !== 'APPROVED' || // Staff can only update when manager approved
-                              testDrive.statusForStaff === 'COMPLETED' || // Lock when completed
-                              testDrive.statusForStaff === 'CANCELLED' // Lock when cancelled
-                            }
-                            title={
-                              testDrive.status !== 'APPROVED' 
-                                ? 'Chỉ cập nhật được khi Manager đã xác nhận'
-                                : testDrive.statusForStaff === 'COMPLETED'
-                                ? 'Đã hoàn thành, không thể sửa'
-                                : testDrive.statusForStaff === 'CANCELLED'
-                                ? 'Đã hủy, không thể sửa'
-                                : 'Staff cập nhật trạng thái xử lý'
-                            }
-                          >
-                            <option value="PENDING">Chờ xử lý</option>
-                            <option value="COMPLETED">Hoàn thành</option>
-                            <option value="CANCELLED">Huỷ</option>
-                          </select>
+                          // Staff: Show badge for final states, dropdown for others
+                          (testDrive.statusForStaff === 'COMPLETED' || testDrive.statusForStaff === 'CANCELLED') ? (
+                            <span className={`${styles.statusBadge} ${styles[testDrive.statusForStaff?.toLowerCase() || testDrive.status?.toLowerCase() || 'pending']}`}>
+                              {getStatusLabel(testDrive.statusForStaff || testDrive.status || 'PENDING')}
+                            </span>
+                          ) : (
+                            <select 
+                              className={`${styles.statusSelect} ${styles[testDrive.statusForStaff?.toLowerCase() || testDrive.status?.toLowerCase() || 'pending']} ${updatingStaffStatus === testDrive.testdriveId ? styles.updating : ''}`}
+                              value={testDrive.statusForStaff || testDrive.status || 'PENDING'}
+                              onChange={(e) => handleStaffStatusChange(testDrive, e.target.value)}
+                              disabled={
+                                updatingStaffStatus === testDrive.testdriveId ||
+                                testDrive.status !== 'APPROVED' // Staff can only update when manager approved
+                              }
+                              title={
+                                testDrive.status !== 'APPROVED' 
+                                  ? 'Chỉ cập nhật được khi Manager đã xác nhận'
+                                  : 'Staff cập nhật trạng thái xử lý'
+                              }
+                            >
+                              <option value="PENDING">Chờ xử lý</option>
+                              <option value="COMPLETED">Hoàn thành</option>
+                              <option value="CANCELLED">Huỷ</option>
+                            </select>
+                          )
                         ) : (
                           <span className={`${styles.statusBadge} ${styles[testDrive.statusForStaff?.toLowerCase() || testDrive.status?.toLowerCase() || 'pending']}`}>
                             {getStatusLabel(testDrive.statusForStaff || testDrive.status || 'PENDING')}
@@ -457,27 +477,24 @@ const TestDriveManagementPage: React.FC = () => {
                             {getStatusLabel(testDrive.status || 'PENDING')}
                           </span>
                         ) : (
-                          <select 
-                            className={`${styles.statusSelect} ${styles[dealerConfirmations[testDrive.testdriveId] || testDrive.status?.toLowerCase() || 'pending']} ${updatingConfirmation === testDrive.testdriveId ? styles.updating : ''}`}
-                            value={dealerConfirmations[testDrive.testdriveId] || testDrive.status || 'PENDING'}
-                            onChange={(e) => handleDealerConfirmationChange(testDrive, e.target.value)}
-                            disabled={
-                              updatingConfirmation === testDrive.testdriveId ||
-                              testDrive.statusForStaff === 'COMPLETED' || // Lock when staff completed
-                              testDrive.status === 'CANCELLED' // Lock when cancelled
-                            }
-                            title={
-                              testDrive.statusForStaff === 'COMPLETED'
-                                ? 'Đã hoàn thành, không thể sửa'
-                                : testDrive.status === 'CANCELLED'
-                                ? 'Đã hủy, không thể sửa'
-                                : 'Manager cập nhật xác nhận đại lý'
-                            }
-                          >
-                            <option value="PENDING">Chờ xử lý</option>
-                            <option value="APPROVED">Đã xác nhận</option>
-                            <option value="CANCELLED">Huỷ</option>
-                          </select>
+                          // Manager: Show badge for final states, dropdown for others
+                          (testDrive.statusForStaff === 'COMPLETED' || testDrive.status === 'CANCELLED') ? (
+                            <span className={`${styles.statusBadge} ${styles[testDrive.status?.toLowerCase() || 'pending']}`}>
+                              {getStatusLabel(testDrive.status || 'PENDING')}
+                            </span>
+                          ) : (
+                            <select 
+                              className={`${styles.statusSelect} ${styles[dealerConfirmations[testDrive.testdriveId] || testDrive.status?.toLowerCase() || 'pending']} ${updatingConfirmation === testDrive.testdriveId ? styles.updating : ''}`}
+                              value={dealerConfirmations[testDrive.testdriveId] || testDrive.status || 'PENDING'}
+                              onChange={(e) => handleDealerConfirmationChange(testDrive, e.target.value)}
+                              disabled={updatingConfirmation === testDrive.testdriveId}
+                              title="Manager cập nhật xác nhận đại lý"
+                            >
+                              <option value="PENDING">Chờ xử lý</option>
+                              <option value="APPROVED">Đã xác nhận</option>
+                              <option value="CANCELLED">Huỷ</option>
+                            </select>
+                          )
                         )}
                       </td>
                       <td>
