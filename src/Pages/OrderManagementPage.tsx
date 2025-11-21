@@ -7,6 +7,7 @@ import {
   getOrderStatusClass,
   getPaymentStatusClass,
   uploadOrderBill,
+  getBillPreview,
   type Order,
   OrderApiError 
 } from '../services/orderApi';
@@ -63,7 +64,6 @@ const OrderManagementPage: React.FC = () => {
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   
   // Search and filter state
-  const [filterStatus, setFilterStatus] = useState<'ALL' | string>('ALL');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -80,6 +80,12 @@ const OrderManagementPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedOrderIdForUpload, setSelectedOrderIdForUpload] = useState<number | string | null>(null);
   
+  // Track which orders have bills (persisted in localStorage)
+  const [billExistence, setBillExistence] = useState<Record<string, boolean>>(() => {
+    const stored = localStorage.getItem('orderBillExistence');
+    return stored ? JSON.parse(stored) : {};
+  });
+  
   // Use contract check hook for optimized one-contract-per-order lookup
   const { hasContract, getContractId } = useContractCheck();
   
@@ -90,6 +96,11 @@ const OrderManagementPage: React.FC = () => {
   const getContractStatus = (orderId: number | string): string | null => {
     const contract = contracts.find(c => c.orderId === String(orderId));
     return contract?.status || null;
+  };
+  
+  // Helper to check if order has bill (sync check from cache)
+  const hasBill = (orderId: number | string): boolean => {
+    return billExistence[String(orderId)] === true;
   };
 
   // ===== LOAD DEALER PROFILE =====
@@ -229,7 +240,39 @@ const OrderManagementPage: React.FC = () => {
     }
   };
 
-  const handleViewFiles = async (orderId: number | string) => {
+  const handleViewBill = async (orderId: number | string) => {
+    try {
+      console.log('📄 Opening bill for order:', orderId);
+      
+      // Fetch bill from API
+      const billBlob = await getBillPreview(orderId);
+      
+      // Create blob URL and open in new tab
+      const blobUrl = URL.createObjectURL(billBlob);
+      window.open(blobUrl, '_blank');
+      
+      // Cleanup blob URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      
+      console.log('✅ Bill opened successfully');
+    } catch (error: any) {
+      console.error('❌ Error opening bill:', error);
+      
+      let errorMessage = 'Không thể mở hóa đơn. Vui lòng thử lại.';
+      
+      if (error.code === 'BILL_NOT_FOUND') {
+        errorMessage = '⚠️ Chưa có hóa đơn cho đơn hàng này. Vui lòng upload hóa đơn trước.';
+      } else if (error.code === 'FORBIDDEN') {
+        errorMessage = '🚫 Bạn không có quyền xem hóa đơn này.';
+      } else if (error.message) {
+        errorMessage = `❌ ${error.message}`;
+      }
+      
+      alert(errorMessage);
+    }
+  };
+  
+  const handleUploadBill = (orderId: number | string) => {
     // Open file picker for bill upload
     setSelectedOrderIdForUpload(orderId);
     fileInputRef.current?.click();
@@ -262,6 +305,12 @@ const OrderManagementPage: React.FC = () => {
       alert(`✅ Đã upload hóa đơn "${file.name}" cho đơn hàng #${selectedOrderIdForUpload} thành công!`);
       console.log('✅ Bill uploaded successfully');
       
+      // Mark bill as existing
+      const orderIdStr = String(selectedOrderIdForUpload);
+      const newBillExistence = { ...billExistence, [orderIdStr]: true };
+      setBillExistence(newBillExistence);
+      localStorage.setItem('orderBillExistence', JSON.stringify(newBillExistence));
+      
       // Reload orders to reflect changes
       await loadOrders();
     } catch (error: any) {
@@ -291,18 +340,8 @@ const OrderManagementPage: React.FC = () => {
     }
   };
 
-  // Handler for status filter
-  const handleStatusFilter = (status: string) => {
-    setFilterStatus(status);
-  };
-
   // ===== FILTER & SORT LOGIC =====
   const filteredOrders = orders.filter(order => {
-    // Status filter
-    if (filterStatus !== 'ALL' && order.orderStatus !== filterStatus) {
-      return false;
-    }
-    
     // Date range filter
     if (dateFrom || dateTo) {
       const orderDate = order.orderDate ? new Date(order.orderDate) : null;
@@ -323,17 +362,6 @@ const OrderManagementPage: React.FC = () => {
     
     return true;
   });
-
-  // ===== STATISTICS =====
-  const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.orderStatus === 'PENDING').length,
-    confirmed: orders.filter(o => o.orderStatus === 'CONFIRMED').length,
-    processing: orders.filter(o => o.orderStatus === 'PROCESSING').length,
-    shipped: orders.filter(o => o.orderStatus === 'SHIPPED').length,
-    delivered: orders.filter(o => o.orderStatus === 'DELIVERED').length,
-    cancelled: orders.filter(o => o.orderStatus === 'CANCELLED').length,
-  };
 
   return (
     <div className={styles.pageWrapper}>
@@ -369,7 +397,7 @@ const OrderManagementPage: React.FC = () => {
           >
             <div className={styles.filterTitle}>
               <i className={`fas fa-filter ${isFilterOpen ? styles.iconActive : ''}`}></i>
-              {(dateFrom || dateTo || filterStatus !== 'ALL') && (
+              {(dateFrom || dateTo) && (
                 <span className={styles.activeFilterBadge}></span>
               )}
             </div>
@@ -573,12 +601,23 @@ const OrderManagementPage: React.FC = () => {
                             </button>
                           )}
                           
-                          {/* Upload hóa đơn - only visible after contract is ACTIVE (signed) */}
+                          {/* View Bill - visible when bill exists */}
+                          {hasContract(String(order.orderId)) && getContractStatus(order.orderId) === 'ACTIVE' && hasBill(order.orderId) && (
+                            <button
+                              className={`${styles.actionButton} ${styles.viewBill}`}
+                              title="Xem hóa đơn"
+                              onClick={() => handleViewBill(order.orderId)}
+                            >
+                              <i className="fas fa-file-invoice"></i>
+                            </button>
+                          )}
+                          
+                          {/* Upload Bill - always visible after contract is ACTIVE (signed) */}
                           {hasContract(String(order.orderId)) && getContractStatus(order.orderId) === 'ACTIVE' && (
                             <button
                               className={`${styles.actionButton} ${styles.upload}`}
-                              title="Upload hóa đơn"
-                              onClick={() => handleViewFiles(order.orderId)}
+                              title={order.billUrl ? 'Tải lại hóa đơn' : 'Upload hóa đơn'}
+                              onClick={() => handleUploadBill(order.orderId)}
                               disabled={uploadingBillOrderId === order.orderId}
                             >
                               {uploadingBillOrderId === order.orderId ? (

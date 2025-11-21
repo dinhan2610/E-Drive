@@ -837,6 +837,22 @@
       transform: translateY(-1px) scale(1.05);
     }
   }
+  
+  &.viewBill {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    
+    &:hover {
+      background: #10b981;
+      color: white;
+      transform: translateY(-3px) scale(1.1);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.05);
+    }
+  }
 }
 
 .emptyState {

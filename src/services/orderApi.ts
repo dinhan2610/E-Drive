@@ -47,6 +47,7 @@ export interface Order {
   orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'CHỜ_DUYỆT' | 'ĐÃ_XÁC_NHẬN';
   paymentStatus: 'PENDING' | 'PAID' | 'CANCELLED' | 'CHỜ_DUYỆT' | 'ĐÃ_THANH_TOÁN';
   paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'INSTALLMENT' | 'FULL';
+  billUrl?: string; // URL to uploaded bill/invoice file
   orderItems?: OrderItem[];
 }
 
