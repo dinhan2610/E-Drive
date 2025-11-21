@@ -196,13 +196,19 @@ const TestDrivePage: React.FC = () => {
     variant: (value: string): string => !value ? "Vui lòng chọn màu sắc" : "",
     date: (value: string): string => {
       if (!value) return "Ngày hẹn là bắt buộc";
+      
       const selectedDate = new Date(value);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      
+      // Kiểm tra ngày trong quá khứ
       if (selectedDate < today) return "Ngày hẹn không thể là ngày trong quá khứ";
       
+      // Kiểm tra ngày trong tuần (0 = Chủ nhật, 1 = Thứ 2, ..., 6 = Thứ 7)
       const dayOfWeek = selectedDate.getDay();
-      if (dayOfWeek === 0) return "Chúng tôi chỉ làm việc từ Thứ 2 đến Thứ 7";
+      if (dayOfWeek === 0) {
+        return "Chỉ được đăng ký từ Thứ 2 đến Thứ 7 (không làm việc Chủ nhật)";
+      }
       
       return "";
     },
@@ -211,14 +217,34 @@ const TestDrivePage: React.FC = () => {
       
       if (!dateValue) return "Vui lòng chọn ngày trước";
       
+      // Kiểm tra lại ngày có hợp lệ không
       const selectedDate = new Date(dateValue);
       const dayOfWeek = selectedDate.getDay();
-      if (dayOfWeek === 0) return "Chúng tôi chỉ làm việc từ Thứ 2 đến Thứ 7";
+      if (dayOfWeek === 0) {
+        return "Chỉ được đăng ký từ Thứ 2 đến Thứ 7";
+      }
       
+      // Kiểm tra giờ trong khoảng 08:00 - 17:00
       const [hours, minutes] = value.split(':').map(Number);
-      if (hours < 8 || hours > 17 || (hours === 17 && minutes > 0)) {
+      if (hours < 8 || hours >= 17) {
         return "Giờ làm việc: 08:00 - 17:00 (Thứ 2 - Thứ 7)";
       }
+      
+      // Kiểm tra nếu chọn ngày hôm nay, giờ phải sau giờ hiện tại
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate.getTime() === today.getTime()) {
+        const now = new Date();
+        const currentHours = now.getHours();
+        const currentMinutes = now.getMinutes();
+        
+        if (hours < currentHours || (hours === currentHours && minutes <= currentMinutes)) {
+          return "Giờ hẹn phải sau giờ hiện tại";
+        }
+      }
+      
       return "";
     },
     confirmInfo: (value: boolean): string => !value ? "Vui lòng xác nhận thông tin" : ""
