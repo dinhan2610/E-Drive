@@ -8,6 +8,7 @@ import {
   getPaymentStatusClass,
   uploadOrderBill,
   getBillPreview,
+  cancelOrder,
   type Order,
   OrderApiError 
 } from '../services/orderApi';
@@ -71,10 +72,14 @@ const OrderManagementPage: React.FC = () => {
   // Modal and UI state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>('');
   
   // Download state
   const [downloadingContractId, setDownloadingContractId] = useState<number | string | null>(null);
   const [uploadingBillOrderId, setUploadingBillOrderId] = useState<number | string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | string | null>(null);
   
   // File input ref for bill upload
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,25 +129,20 @@ const OrderManagementPage: React.FC = () => {
 
   // ===== LOAD ORDERS DATA =====
   const loadOrders = useCallback(async () => {
-    if (!currentDealerId) {
-      console.warn('⚠️ No dealerId available, skipping order load');
-      return;
-    }
+    if (!currentDealerId) return;
     
     setLoading(true);
     try {
-      console.log(`🔄 Loading orders for dealer ${currentDealerId}...`);
       const fetchedOrders = await getOrdersByDealer(currentDealerId);
       
       // Sort orders by newest first
       const sortedOrders = [...fetchedOrders].sort((a, b) => {
         const dateA = new Date(a.orderDate || 0).getTime();
         const dateB = new Date(b.orderDate || 0).getTime();
-        return dateB - dateA; // newest first
+        return dateB - dateA;
       });
       
       setOrders(sortedOrders);
-      console.log('✅ Orders loaded successfully:', sortedOrders.length);
     } catch (error: any) {
       console.error('❌ Error loading orders:', error);
       if (error instanceof OrderApiError) {
@@ -276,6 +276,40 @@ const OrderManagementPage: React.FC = () => {
     // Open file picker for bill upload
     setSelectedOrderIdForUpload(orderId);
     fileInputRef.current?.click();
+  };
+  
+  const handleCancelClick = (order: Order) => {
+    setOrderToCancel(order);
+    setShowCancelModal(true);
+    setCancelReason('');
+  };
+  
+  const handleCancelConfirm = async () => {
+    if (!orderToCancel) return;
+    
+    try {
+      setCancellingOrderId(orderToCancel.orderId);
+      await cancelOrder(orderToCancel.orderId, cancelReason.trim());
+      
+      alert(`✅ Đã hủy đơn hàng #${orderToCancel.orderId} thành công!`);
+      
+      setShowCancelModal(false);
+      setOrderToCancel(null);
+      setCancelReason('');
+      
+      await loadOrders();
+    } catch (error: any) {
+      console.error('❌ Error cancelling order:', error);
+      
+      let errorMessage = 'Không thể hủy đơn hàng. Vui lòng thử lại.';
+      if (error.message) {
+        errorMessage = `❌ ${error.message}`;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setCancellingOrderId(null);
+    }
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -553,6 +587,22 @@ const OrderManagementPage: React.FC = () => {
                       </td>
                       <td className={styles.tableCell}>
                         <div className={styles.actions} onClick={(e) => e.stopPropagation()}>
+                          {/* Cancel order - Show only for non-cancelled orders */}
+                          {(order.orderStatus === 'PENDING' || order.orderStatus === 'CONFIRMED' || order.orderStatus === 'CHỜ_DUYỆT') && (
+                            <button
+                              className={`${styles.actionButton} ${styles.cancel}`}
+                              title="Hủy đơn hàng"
+                              onClick={() => handleCancelClick(order)}
+                              disabled={cancellingOrderId === order.orderId}
+                            >
+                              {cancellingOrderId === order.orderId ? (
+                                <i className="fas fa-spinner fa-spin"></i>
+                              ) : (
+                                <i className="fas fa-times-circle"></i>
+                              )}
+                            </button>
+                          )}
+                          
                           {/* Xem chi tiết */}
                           <button
                             className={`${styles.actionButton} ${styles.view}`}
@@ -637,6 +687,103 @@ const OrderManagementPage: React.FC = () => {
           </div>
         )}
     </div>
+
+    {/* Cancel Order Confirmation Modal */}
+    {showCancelModal && orderToCancel && (
+      <div className={styles.modalOverlay} onClick={() => setShowCancelModal(false)}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+          <div className={styles.modalHeader}>
+            <div className={styles.modalHeaderLeft}>
+              <div className={styles.modalIcon} style={{ backgroundColor: '#fee2e2' }}>
+                <i className="fas fa-exclamation-triangle" style={{ color: '#dc2626' }}></i>
+              </div>
+              <div className={styles.modalHeaderText}>
+                <h2>Xác nhận hủy đơn hàng</h2>
+                <p className={styles.orderId}>#{orderToCancel.orderId}</p>
+              </div>
+            </div>
+            <button onClick={() => setShowCancelModal(false)} className={styles.closeBtn}>
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div className={styles.modalBody}>
+            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
+              <p style={{ color: '#991b1b', fontSize: '14px', margin: 0 }}>
+                <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
+                Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                Lý do hủy đơn (tùy chọn):
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Nhập lý do hủy đơn hàng..."
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="fas fa-times" style={{ marginRight: '8px' }}></i>
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleCancelConfirm}
+                disabled={cancellingOrderId === orderToCancel.orderId}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: cancellingOrderId === orderToCancel.orderId ? '#9ca3af' : '#dc2626',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: cancellingOrderId === orderToCancel.orderId ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {cancellingOrderId === orderToCancel.orderId ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                    Đang hủy...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-check" style={{ marginRight: '8px' }}></i>
+                    Xác nhận hủy
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Order Detail Modal */}
     {showDetailModal && selectedOrder && (

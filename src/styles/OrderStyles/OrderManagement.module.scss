@@ -853,6 +853,34 @@
       transform: translateY(-1px) scale(1.05);
     }
   }
+  
+  &.cancel {
+    background: rgba(220, 38, 38, 0.12);
+    color: #dc2626;
+    
+    &:hover {
+      background: #dc2626;
+      color: white;
+      transform: translateY(-3px) scale(1.1);
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.05);
+    }
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      
+      &:hover {
+        background: rgba(220, 38, 38, 0.12);
+        color: #dc2626;
+        transform: none;
+        box-shadow: none;
+      }
+    }
+  }
 }
 
 .emptyState {

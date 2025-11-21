@@ -140,7 +140,6 @@ export const createOrder = async (orderData: CreateOrderRequest): Promise<Order>
 export const getOrders = async (): Promise<Order[]> => {
   try {
     const response = await api.get<any>('/api/orders');
-    console.log('📦 Get orders response:', response.data);
 
     const data = response.data;
 
@@ -158,16 +157,15 @@ export const getOrders = async (): Promise<Order[]> => {
       return [];
     }
 
-    console.log('✅ Orders array:', orders);
-
     // Map backend field names to frontend Order interface
     const mappedOrders: Order[] = orders.map((order: any) => {
+      
       // Deduplicate items and calculate correct subtotal
       const deduplicatedItems = deduplicateOrderItems(order.orderItems || []);
       const calculatedSubtotal = deduplicatedItems.reduce((sum, item) => sum + item.itemTotal, 0);
       const correctSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : (order.subtotal || 0);
       
-      return {
+      const mappedOrder = {
         orderId: order.orderId || order.id || order.orderID,
         dealerId: order.dealerId,
         dealerName: order.dealerName,
@@ -185,9 +183,10 @@ export const getOrders = async (): Promise<Order[]> => {
         paymentMethod: order.paymentMethod || 'CASH',
         orderItems: deduplicatedItems // ✅ Use deduplicated items
       };
+      
+      return mappedOrder;
     });
 
-    console.log('✅ Mapped orders:', mappedOrders);
     return mappedOrders;
 
   } catch (error: any) {
@@ -259,7 +258,6 @@ export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
       };
     });
 
-    console.log(`✅ Loaded ${mappedOrders.length} orders for dealer ${dealerId}`);
     return mappedOrders;
 
   } catch (error: any) {
@@ -284,7 +282,6 @@ export const getOrdersByDealer = async (dealerId: number): Promise<Order[]> => {
 export const getOrderById = async (id: number | string): Promise<Order> => {
   try {
     const response = await api.get<any>(`/api/orders/${id}`);
-    console.log('📦 Get order by ID response:', response.data);
 
     const data = response.data;
 
@@ -294,26 +291,11 @@ export const getOrderById = async (id: number | string): Promise<Order> => {
       orderData = data.data;
     }
 
-    console.log('✅ Order data:', orderData);
-
     // Deduplicate and calculate correct subtotal from items
     const deduplicatedItems = deduplicateOrderItems(orderData.orderItems || []);
     
     // Calculate subtotal from items (sum of all itemTotal)
     const calculatedSubtotal = deduplicatedItems.reduce((sum, item) => sum + item.itemTotal, 0);
-    
-    // Debug: Log subtotal calculation
-    console.log('📊 Subtotal calculation:', {
-      backendSubtotal: orderData.subtotal,
-      calculatedSubtotal: calculatedSubtotal,
-      itemsCount: deduplicatedItems.length,
-      items: deduplicatedItems.map(i => ({
-        name: `${i.vehicleName} - ${i.vehicleVersion}`,
-        color: i.colorName,
-        quantity: i.quantity,
-        itemTotal: i.itemTotal
-      }))
-    });
     
     // Use calculated subtotal if backend subtotal is incorrect
     const correctSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : (orderData.subtotal || 0);
@@ -370,13 +352,10 @@ export const updatePaymentStatus = async (
   paymentStatus: 'PENDING' | 'PAID' | 'CANCELLED'
 ): Promise<Order> => {
   try {
-    console.log('💳 Updating payment status for order:', orderId, '→', paymentStatus);
-    
     const response = await api.put<Order>(`/api/orders/${orderId}`, {
       paymentStatus
     });
     
-    console.log('✅ Payment status updated:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('❌ Error updating payment status:', error);
@@ -440,12 +419,25 @@ export const deleteOrder = async (id: number): Promise<void> => {
 
 /**
  * PUT /api/orders/{id}/cancel - Cancel order
+ * Updates both orderStatus and paymentStatus to CANCELLED
  */
-export const cancelOrder = async (id: number | string): Promise<void> => {
+export const cancelOrder = async (id: number | string, reason?: string): Promise<Order> => {
   try {
-    console.log('🚫 Cancelling order:', id);
-    const response = await api.put(`/api/orders/${id}/cancel`);
-    console.log('✅ Order cancelled successfully:', response.data);
+    const response = await api.put<any>(`/api/orders/${id}/cancel`, 
+      reason ? { reason } : undefined
+    );
+    
+    // Extract order from response (backend wraps in {statusCode, message, data})
+    const orderData = response.data?.data || response.data;
+    
+    // Ensure both statuses are CANCELLED
+    const cancelledOrder = {
+      ...orderData,
+      orderStatus: 'CANCELLED' as const,
+      paymentStatus: 'CANCELLED' as const
+    };
+    
+    return cancelledOrder;
   } catch (error: any) {
     console.error('❌ Error cancelling order:', error);
     console.error('Error response:', error.response?.data);
@@ -460,9 +452,7 @@ export const cancelOrder = async (id: number | string): Promise<void> => {
  */
 export const markOrderAsPaid = async (id: number | string): Promise<Order> => {
   try {
-    console.log('💰 Marking order as paid:', id);
     const response = await api.put<Order>(`/api/orders/${id}/mark-paid`);
-    console.log('✅ Order marked as paid successfully:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('❌ Error marking order as paid:', error);
@@ -509,7 +499,10 @@ export const formatOrderStatus = (status: string): string => {
     'CANCELLED': 'Đã hủy',
     'DA HUY': 'Đã hủy',
     'ĐÃ HỦY': 'Đã hủy',
+    'DA HUỶ': 'Đã hủy',
+    'ĐÃ HUỶ': 'Đã hủy',
   };
+  
   return statusMap[normalizedStatus] || status;
 };
 
@@ -535,6 +528,8 @@ export const formatPaymentStatus = (status: string): string => {
     'CANCELLED': 'Đã hủy',
     'DA HUY': 'Đã hủy',
     'ĐÃ HỦY': 'Đã hủy',
+    'DA HUỶ': 'Đã hủy',
+    'ĐÃ HUỶ': 'Đã hủy',
     
     // Auto-correct: Backend incorrectly returns order status as payment status
     // "Chờ duyệt" is an ORDER status, not a PAYMENT status
@@ -545,6 +540,7 @@ export const formatPaymentStatus = (status: string): string => {
     'DA XAC NHAN': 'Chờ thanh toán',
     'ĐÃ XÁC NHẬN': 'Chờ thanh toán',
   };
+  
   return statusMap[normalizedStatus] || 'Chờ thanh toán';
 };
 
@@ -573,6 +569,8 @@ export const getOrderStatusClass = (status: string): string => {
     'CANCELLED': 'cancelled',
     'DA HUY': 'cancelled',
     'ĐÃ HỦY': 'cancelled',
+    'DA HUỶ': 'cancelled',
+    'ĐÃ HUỶ': 'cancelled',
   };
   return classMap[normalizedStatus] || 'pending';
 };
@@ -595,6 +593,8 @@ export const getPaymentStatusClass = (status: string): string => {
     'CANCELLED': 'cancelled',
     'DA HUY': 'cancelled',
     'ĐÃ HỦY': 'cancelled',
+    'DA HUỶ': 'cancelled',
+    'ĐÃ HUỶ': 'cancelled',
   };
   return classMap[normalizedStatus] || 'pending';
 };
@@ -627,13 +627,6 @@ export const formatPaymentMethod = (method: string): string => {
  */
 export const uploadOrderBill = async (orderId: number | string, file: File): Promise<void> => {
   try {
-    console.log('📤 Uploading bill for order:', orderId);
-    console.log('📄 File details:', {
-      name: file.name,
-      type: file.type,
-      size: `${(file.size / 1024).toFixed(2)} KB`
-    });
-    
     // Create FormData
     const formData = new FormData();
     formData.append('bill', file);
@@ -644,8 +637,6 @@ export const uploadOrderBill = async (orderId: number | string, file: File): Pro
         'Content-Type': 'multipart/form-data',
       },
     });
-    
-    console.log('✅ Bill uploaded successfully:', response.data);
   } catch (error: any) {
     console.error('❌ Error uploading bill:', error);
     console.error('Response:', error.response?.data);
@@ -673,18 +664,11 @@ export const uploadOrderBill = async (orderId: number | string, file: File): Pro
  */
 export const getBillPreview = async (orderId: number | string): Promise<Blob> => {
   try {
-    console.log('📥 Fetching bill preview for order:', orderId);
-    
     const response = await api.get(`/api/orders/${orderId}/bill-preview`, {
       responseType: 'blob', // Important: Get file as blob
     });
     
     const blob = response.data as Blob;
-    
-    console.log('✅ Bill preview fetched:', {
-      size: `${(blob.size / 1024).toFixed(2)} KB`,
-      type: blob.type
-    });
     
     return blob;
   } catch (error: any) {

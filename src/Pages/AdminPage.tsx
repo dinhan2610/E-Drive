@@ -671,6 +671,22 @@ const AdminPage: React.FC = () => {
     }
   }, [activeTab]);
 
+  // Auto-reload orders every 10 seconds when on bookings tab
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      console.log('🔄 [Admin] Setting up auto-reload (10s interval) for bookings tab');
+      const intervalId = setInterval(() => {
+        console.log('⏰ [Admin] Auto-reloading orders...');
+        reloadOrders();
+      }, 10000); // 10 seconds
+
+      return () => {
+        console.log('🛑 [Admin] Clearing auto-reload interval');
+        clearInterval(intervalId);
+      };
+    }
+  }, [activeTab]);
+
   const [stats, setStats] = useState<AdminStats>({
     totalCars: 0,
     totalUsers: 0,
@@ -778,7 +794,17 @@ const AdminPage: React.FC = () => {
   // Function to reload orders from API
   const reloadOrders = async () => {
     try {
+      console.log('🔄 [Admin] Reloading orders from server...');
       const ordersData = await getOrders();
+      console.log(`📦 [Admin] Received ${ordersData.length} orders from API`);
+      
+      // Log each order's raw status from API
+      ordersData.forEach(order => {
+        console.log(`📋 [Admin] Order ${order.orderId} from API:`, {
+          orderStatus: order.orderStatus,
+          paymentStatus: order.paymentStatus
+        });
+      });
       
       // Map Order data to Booking interface
       const mappedBookings: Booking[] = ordersData.map((order: Order) => {
@@ -795,7 +821,7 @@ const AdminPage: React.FC = () => {
         else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG XỬ LÝ' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
         else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG GIAO' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
         else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ GIAO' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
-        else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ HỦY' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
+        else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper.includes('HỦY') || orderStatusUpper.includes('HUỶ')) bookingStatus = 'cancelled';
         
         // Map payment status (support both English and Vietnamese formats with underscores and spaces)
         let paymentSt: Booking['paymentStatus'] = 'pending';
@@ -803,7 +829,18 @@ const AdminPage: React.FC = () => {
         
         if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ THANH TOÁN' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
         else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ THANH TOÁN' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
-        else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ HỦY' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
+        else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper.includes('HỦY') || paymentStatusUpper.includes('HUỶ')) paymentSt = 'cancelled';
+        
+        // Log if order is cancelled
+        if (bookingStatus === 'cancelled' || paymentSt === 'cancelled') {
+          console.log(`🚫 [Admin] Order ${order.orderId} is CANCELLED - orderStatus: ${order.orderStatus}, paymentStatus: ${order.paymentStatus}`);
+        }
+        
+        // Log mapping result for debugging
+        console.log(`🔄 [Admin] Mapping order ${order.orderId}:`, {
+          input: { orderStatus: order.orderStatus, paymentStatus: order.paymentStatus },
+          output: { status: bookingStatus, paymentStatus: paymentSt }
+        });
         
         return {
           id: order.orderId,
@@ -822,7 +859,19 @@ const AdminPage: React.FC = () => {
         };
       });
       
+      console.log(`✅ [Admin] Mapped ${mappedBookings.length} bookings`);
+      const cancelledCount = mappedBookings.filter(b => b.status === 'cancelled').length;
+      if (cancelledCount > 0) {
+        console.log(`🚫 [Admin] Found ${cancelledCount} cancelled orders`);
+        // Log details of cancelled orders
+        mappedBookings.filter(b => b.status === 'cancelled').forEach(b => {
+          console.log(`   - Order ${b.id}: status=${b.status}, paymentStatus=${b.paymentStatus}`);
+        });
+      }
+      
+      console.log('💾 [Admin] Updating bookings state...');
       setBookings(mappedBookings);
+      console.log('✅ [Admin] Bookings state updated successfully');
 
       // Update stats
       setStats(prev => ({
@@ -964,7 +1013,7 @@ const AdminPage: React.FC = () => {
           else if (orderStatusUpper === 'PROCESSING' || orderStatusUpper === 'ĐANG XỬ LÝ' || orderStatusUpper === 'ĐANG_XỬ_LÝ') bookingStatus = 'processing';
           else if (orderStatusUpper === 'SHIPPED' || orderStatusUpper === 'ĐANG GIAO' || orderStatusUpper === 'ĐANG_GIAO') bookingStatus = 'shipped';
           else if (orderStatusUpper === 'DELIVERED' || orderStatusUpper === 'ĐÃ GIAO' || orderStatusUpper === 'ĐÃ_GIAO') bookingStatus = 'delivered';
-          else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'ĐÃ HỦY' || orderStatusUpper === 'ĐÃ_HỦY') bookingStatus = 'cancelled';
+          else if (orderStatusUpper === 'CANCELLED' || orderStatusUpper.includes('HỦY') || orderStatusUpper.includes('HUỶ')) bookingStatus = 'cancelled';
           
           // Map payment status (support both English and Vietnamese formats with underscores and spaces)
           let paymentSt: Booking['paymentStatus'] = 'pending';
@@ -974,7 +1023,7 @@ const AdminPage: React.FC = () => {
           
           if (paymentStatusUpper === 'PENDING' || paymentStatusUpper === 'CHỜ THANH TOÁN' || paymentStatusUpper === 'CHỜ_THANH_TOÁN') paymentSt = 'pending';
           else if (paymentStatusUpper === 'PAID' || paymentStatusUpper === 'ĐÃ THANH TOÁN' || paymentStatusUpper === 'ĐÃ_THANH_TOÁN') paymentSt = 'paid';
-          else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper === 'ĐÃ HỦY' || paymentStatusUpper === 'ĐÃ_HỦY') paymentSt = 'cancelled';
+          else if (paymentStatusUpper === 'CANCELLED' || paymentStatusUpper.includes('HỦY') || paymentStatusUpper.includes('HUỶ')) paymentSt = 'cancelled';
           
 
           
@@ -1102,16 +1151,22 @@ const AdminPage: React.FC = () => {
   // Handle contract action - smart: download if exists, create if not
   const handleContractAction = async (orderId: number | string) => {
     try {
-
+      // Kiểm tra xem đơn hàng có bị hủy không
+      const order = bookings.find(b => b.id === orderId);
+      if (order && order.status === 'cancelled') {
+        setNotification({
+          isVisible: true,
+          message: '❌ Không thể tạo hợp đồng cho đơn hàng đã hủy!',
+          type: 'error'
+        });
+        return;
+      }
 
       // Use optimized O(1) lookup to get contractId directly
       const contractId = getContractId(String(orderId));
 
-
-
       if (contractId) {
         // Contract exists -> Download PDF directly using contractId
-
 
         setNotification({
           isVisible: true,
@@ -1138,14 +1193,11 @@ const AdminPage: React.FC = () => {
           type: 'success'
         });
 
-
       } else {
         // Contract doesn't exist -> Navigate to create page
-
         window.location.href = `/admin/contracts/new?orderId=${orderId}`;
       }
     } catch (error: any) {
-
       setNotification({
         isVisible: true,
         message: `❌ ${error.message || 'Không thể xử lý hợp đồng'}`,
@@ -2954,6 +3006,37 @@ const AdminPage: React.FC = () => {
             <div className={styles.sectionHeader}>
               <h3>Quản lý đặt xe</h3>
               <div className={styles.filterButtons}>
+                <button 
+                  className={styles.refreshButton}
+                  onClick={reloadOrders}
+                  title="Làm mới danh sách đơn hàng"
+                  style={{
+                    marginRight: '1rem',
+                    padding: '0.8rem 1.5rem',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '1.4rem',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#059669';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#10b981';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <i className="fas fa-sync-alt"></i>
+                  Làm mới
+                </button>
                 <button className={`${styles.filterButton} ${styles.active}`}>
                   Tất cả ({bookings.length})
                 </button>
@@ -2965,6 +3048,9 @@ const AdminPage: React.FC = () => {
                 </button>
                 <button className={styles.filterButton}>
                   Đã giao hàng ({bookings.filter(b => b.status === 'delivered').length})
+                </button>
+                <button className={styles.filterButton}>
+                  Đã hủy ({bookings.filter(b => b.status === 'cancelled').length})
                 </button>
               </div>
             </div>
@@ -3013,18 +3099,20 @@ const AdminPage: React.FC = () => {
                           className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
                           value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
                           onChange={(e) => {
-
-
-
                             handleUpdatePaymentStatus(booking.id, e.target.value as any);
                           }}
+                          disabled={booking.status === 'cancelled' || booking.paymentStatus === 'cancelled'}
                           title={
-                            booking.paymentStatus === 'paid' 
-                              ? '✅ Đơn hàng đã thanh toán' 
-                              : booking.paymentStatus === 'cancelled'
-                              ? '❌ Đơn hàng đã hủy'
-                              : '⏳ Chờ thanh toán - Click để thay đổi'
+                            booking.status === 'cancelled' || booking.paymentStatus === 'cancelled'
+                              ? '🚫 Đơn hàng đã hủy - Không thể thay đổi trạng thái thanh toán'
+                              : booking.paymentStatus === 'paid' 
+                                ? '✅ Đơn hàng đã thanh toán' 
+                                : '⏳ Chờ thanh toán - Click để thay đổi'
                           }
+                          style={{
+                            cursor: booking.status === 'cancelled' || booking.paymentStatus === 'cancelled' ? 'not-allowed' : 'pointer',
+                            opacity: booking.status === 'cancelled' || booking.paymentStatus === 'cancelled' ? 0.6 : 1
+                          }}
                         >
                           <option value="PENDING">Chờ thanh toán</option>
                           <option value="PAID">Đã thanh toán</option>
@@ -3042,13 +3130,39 @@ const AdminPage: React.FC = () => {
                           </button>
                           <button 
                             className={styles.contractButton}
-                            title={hasContract(String(booking.id)) ? "📄 Tải PDF hợp đồng" : "📝 Tạo hợp đồng mới"}
+                            title={
+                              booking.status === 'cancelled'
+                                ? '🚫 Đơn hàng đã hủy - Không thể tạo hợp đồng'
+                                : hasContract(String(booking.id)) 
+                                  ? "📄 Tải PDF hợp đồng" 
+                                  : "📝 Tạo hợp đồng mới"
+                            }
                             onClick={() => handleContractAction(booking.id)}
+                            disabled={booking.status === 'cancelled'}
                             style={{
-                              backgroundColor: hasContract(String(booking.id)) ? '#10b981' : '#6366f1'
+                              backgroundColor: 
+                                booking.status === 'cancelled'
+                                  ? '#9ca3af'
+                                  : hasContract(String(booking.id)) 
+                                    ? '#10b981' 
+                                    : '#6366f1',
+                              opacity: 
+                                booking.status === 'cancelled'
+                                  ? 0.5
+                                  : 1,
+                              cursor: 
+                                booking.status === 'cancelled'
+                                  ? 'not-allowed'
+                                  : 'pointer'
                             }}
                           >
-                            <i className={hasContract(String(booking.id)) ? "fas fa-file-pdf" : "fas fa-file-contract"}></i>
+                            <i className={
+                              booking.status === 'cancelled'
+                                ? "fas fa-ban"
+                                : hasContract(String(booking.id)) 
+                                  ? "fas fa-file-pdf" 
+                                  : "fas fa-file-contract"
+                            }></i>
                           </button>
                           {hasContract(String(booking.id)) && getContractStatus(String(booking.id)) !== 'ACTIVE' && (
                             <button 
