@@ -97,7 +97,7 @@ async function mapApiOrderToOrderLite(order: Order): Promise<OrderLite> {
   
   return {
     id: order.orderId?.toString() || '',
-    code: `ORD-${order.orderId}`,
+    code: `${order.orderId}`,
     customer: {
       name: customerName,
       phone: customerPhone,

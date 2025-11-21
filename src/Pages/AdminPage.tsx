@@ -3004,55 +3004,7 @@ const AdminPage: React.FC = () => {
         {activeTab === 'bookings' && (
           <div className={styles.bookingsManagement}>
             <div className={styles.sectionHeader}>
-              <h3>Quản lý đặt xe</h3>
-              <div className={styles.filterButtons}>
-                <button 
-                  className={styles.refreshButton}
-                  onClick={reloadOrders}
-                  title="Làm mới danh sách đơn hàng"
-                  style={{
-                    marginRight: '1rem',
-                    padding: '0.8rem 1.5rem',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '1.4rem',
-                    fontWeight: '500',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#059669';
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#10b981';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                >
-                  <i className="fas fa-sync-alt"></i>
-                  Làm mới
-                </button>
-                <button className={`${styles.filterButton} ${styles.active}`}>
-                  Tất cả ({bookings.length})
-                </button>
-                <button className={styles.filterButton}>
-                  Chờ duyệt ({bookings.filter(b => b.status === 'pending').length})
-                </button>
-                <button className={styles.filterButton}>
-                  Đang xử lý ({bookings.filter(b => b.status === 'processing' || b.status === 'shipped').length})
-                </button>
-                <button className={styles.filterButton}>
-                  Đã giao hàng ({bookings.filter(b => b.status === 'delivered').length})
-                </button>
-                <button className={styles.filterButton}>
-                  Đã hủy ({bookings.filter(b => b.status === 'cancelled').length})
-                </button>
-              </div>
+              <h3>Quản lý đặt xe</h3>             
             </div>
 
             <div className={styles.bookingsTable}>
