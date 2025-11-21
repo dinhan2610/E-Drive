@@ -64,6 +64,9 @@ const OrderManagementPage: React.FC = () => {
   
   // Search and filter state
   const [filterStatus, setFilterStatus] = useState<'ALL' | string>('ALL');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   // Modal and UI state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -299,6 +302,25 @@ const OrderManagementPage: React.FC = () => {
     if (filterStatus !== 'ALL' && order.orderStatus !== filterStatus) {
       return false;
     }
+    
+    // Date range filter
+    if (dateFrom || dateTo) {
+      const orderDate = order.orderDate ? new Date(order.orderDate) : null;
+      if (!orderDate) return false;
+      
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (orderDate < fromDate) return false;
+      }
+      
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (orderDate > toDate) return false;
+      }
+    }
+    
     return true;
   });
 
@@ -340,43 +362,111 @@ const OrderManagementPage: React.FC = () => {
 
         {/* Filter Section */}
         <div className={styles.filterSection}>
-          <div className={styles.filterButtons}>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'ALL' ? styles.active : ''}`}
-              onClick={() => handleStatusFilter('ALL')}
-            >
-              Tất cả ({stats.total})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'PENDING' ? styles.active : ''}`}
-              onClick={() => handleStatusFilter('PENDING')}
-            >
-              Chờ xử lý ({stats.pending})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'CONFIRMED' ? styles.active : ''}`}
-              onClick={() => handleStatusFilter('CONFIRMED')}
-            >
-              Đã xác nhận ({stats.confirmed})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'PROCESSING' ? styles.active : ''}`}
-              onClick={() => handleStatusFilter('PROCESSING')}
-            >
-              Đang xử lý ({stats.processing})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'SHIPPED' ? styles.active : ''}`}
-              onClick={() => handleStatusFilter('SHIPPED')}
-            >
-              Đang giao ({stats.shipped})
-            </button>
-            <button 
-              className={`${styles.filterButton} ${filterStatus === 'DELIVERED' ? styles.active : ''}`}
-              onClick={() => handleStatusFilter('DELIVERED')}
-            >
-              Đã giao ({stats.delivered})
-            </button>
+          <div 
+            className={`${styles.filterHeader} ${isFilterOpen ? styles.active : ''}`}
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            title={isFilterOpen ? 'Ẩn bộ lọc' : 'Hiển thị bộ lọc'}
+          >
+            <div className={styles.filterTitle}>
+              <i className={`fas fa-filter ${isFilterOpen ? styles.iconActive : ''}`}></i>
+              {(dateFrom || dateTo || filterStatus !== 'ALL') && (
+                <span className={styles.activeFilterBadge}></span>
+              )}
+            </div>
+            <i className={`fas fa-chevron-${isFilterOpen ? 'up' : 'down'} ${styles.chevronIcon}`}></i>
+          </div>
+          
+          {isFilterOpen && (
+            <div className={styles.filterContent}>
+              <div className={styles.filterGroup}>
+            {/* Date Range Filter */}
+            <div className={styles.dateFilterGroup}>
+              <input
+                className={styles.dateInput}
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                max={dateTo || undefined}
+                placeholder="Từ ngày"
+              />
+              <input
+                className={styles.dateInput}
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                min={dateFrom || undefined}
+                placeholder="Đến ngày"
+              />
+              
+              {/* Quick Date Filters */}
+              <div className={styles.quickFilters}>
+                <button
+                  className={styles.quickFilterBtn}
+                  onClick={() => {
+                    const today = new Date();
+                    setDateFrom(today.toISOString().split('T')[0]);
+                    setDateTo(today.toISOString().split('T')[0]);
+                  }}
+                  title="Hôm nay"
+                >
+                  <i className="fas fa-calendar-day"></i>
+                  Hôm nay
+                </button>
+                <button
+                  className={styles.quickFilterBtn}
+                  onClick={() => {
+                    const today = new Date();
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+                    setDateFrom(weekAgo.toISOString().split('T')[0]);
+                    setDateTo(today.toISOString().split('T')[0]);
+                  }}
+                  title="7 ngày qua"
+                >
+                  <i className="fas fa-calendar-week"></i>
+                  7 ngày
+                </button>
+                <button
+                  className={styles.quickFilterBtn}
+                  onClick={() => {
+                    const today = new Date();
+                    const monthAgo = new Date(today);
+                    monthAgo.setDate(today.getDate() - 30);
+                    setDateFrom(monthAgo.toISOString().split('T')[0]);
+                    setDateTo(today.toISOString().split('T')[0]);
+                  }}
+                  title="30 ngày qua"
+                >
+                  <i className="fas fa-calendar-alt"></i>
+                  30 ngày
+                </button>
+                {(dateFrom || dateTo) && (
+                  <button
+                    className={`${styles.quickFilterBtn} ${styles.clearBtn}`}
+                    onClick={() => {
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                    title="Xóa lọc ngày"
+                  >
+                    <i className="fas fa-times"></i>
+                    Xóa
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            
+          </div>
+            </div>
+          )}
+          
+          {/* Filter Results Info - Always visible */}
+          <div className={styles.filterResults}>
+            <i className="fas fa-info-circle"></i>
+            <span>
+              Hiển thị <strong>{filteredOrders.length}</strong> / {orders.length} đơn hàng{(dateFrom || dateTo) && ` từ ${dateFrom ? new Date(dateFrom).toLocaleDateString('vi-VN') : '...'} đến ${dateTo ? new Date(dateTo).toLocaleDateString('vi-VN') : '...'}`}
+            </span>
           </div>
         </div>
 
