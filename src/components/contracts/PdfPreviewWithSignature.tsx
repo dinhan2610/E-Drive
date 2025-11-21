@@ -186,9 +186,13 @@ const PdfPreviewWithSignature = React.forwardRef<HTMLDivElement, PdfPreviewWithS
                 {payload.order?.orderItems && payload.order.orderItems.length > 0 ? (
                   <>
                     {payload.order.orderItems.map((item, index) => {
-                      const vehicleParts = item.vehicleName.split(' ');
+                      const vehicleName = item.vehicleName || '';
+                      const vehicleParts = vehicleName.split(' ');
                       const vehicleModel = vehicleParts.slice(0, 2).join(' ');
-                      const vehicleVersion = vehicleParts.slice(2).join(' ') || 'Standard';
+
+                      const vehicleVersion = item.vehicleVersion || (item as any).vehicleVariant || (item as any).variant ||
+                        payload.order?.vehicle?.variant || (vehicleParts.length > 2 ? vehicleParts.slice(2).join(' ') : '') ||
+                        'Standard';
                       
                       const priceAfterDiscount = item.itemSubtotal - item.itemDiscount;
                       const unitPriceWithVAT = (item.unitPrice - (item.itemDiscount / item.quantity)) * (1 + (payload.order?.money.taxPercent || 10) / 100);
