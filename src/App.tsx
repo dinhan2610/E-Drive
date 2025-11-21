@@ -10,6 +10,7 @@ import SelectCarPage from "./Pages/SelectCarPage";
 import ProfilePage from "./Pages/ProfilePage";
 import AdminPage from "./Pages/AdminPage";
 import CustomersPage from "./Pages/CustomersPage";
+import StaffPage from "./Pages/StaffPage";
 import TestDrivePage from "./Pages/TestDrivePage";
 import TestDriveManagementPage from "./Pages/TestDriveManagementPage";
 import OrderManagementPage from "./Pages/OrderManagementPage";
@@ -176,6 +177,11 @@ function App() {
         <Route path="/customers" element={
           <ProtectedRoute requiredRole="dealer">
             <CustomersPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/staff" element={
+          <ProtectedRoute requiredRole="dealer">
+            <StaffPage />
           </ProtectedRoute>
         } />
         

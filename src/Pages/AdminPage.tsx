@@ -3029,7 +3029,9 @@ const AdminPage: React.FC = () => {
         {activeTab === 'bookings' && (
           <div className={styles.bookingsManagement}>
             <div className={styles.sectionHeader}>
+
               <h3>Quản lý đặt xe</h3>             
+
             </div>
 
             <div className={styles.bookingsTable}>

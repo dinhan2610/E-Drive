@@ -118,6 +118,7 @@ const Navbar: React.FC = () => {
     // Build dropdown items based on permissions
     const dropdownItems: Array<{ to: string; label: string; icon: string }> = [
       { to: "/customers", label: "Khách hàng", icon: "fa-users" },
+      { to: "/staff", label: "Nhân viên", icon: "fa-users-cog" },
       { to: "/dealer-inventory", label: "Kho hàng", icon: "fa-warehouse" },
       { to: "/drive", label: "Quản lý lái thử", icon: "fa-car-side" },
       { to: "/quotes", label: "Quản lý báo giá", icon: "fa-file-invoice-dollar" }
