@@ -299,7 +299,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              <span>Ghi nhớ đăng nhập (7 ngày)</span>
+              <span>Ghi nhớ đăng nhập </span>
             </label>
             <a href="#" className="forgot-password" onClick={(e) => e.preventDefault()}>Quên mật khẩu?</a>
           </div>

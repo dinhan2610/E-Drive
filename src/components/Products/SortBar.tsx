@@ -116,23 +116,7 @@ const SortBar: React.FC<SortBarProps> = ({
       <div className={styles.resultsSection}>
        
         
-        <div className={styles.pageSizeSection}>
-          <label htmlFor="pagesize-select" className={styles.pageSizeLabel}>
-            Hiển thị theo:
-          </label>
-          <select
-            id="pagesize-select"
-            className={styles.pageSizeSelect}
-            value={pageSize}
-            onChange={handlePageSizeChange}
-            disabled={isLoading}
-          >
-            <option value={12}>12</option>
-            <option value={24}>24</option>
-            <option value={36}>36</option>
-            <option value={48}>48</option>
-          </select>
-        </div>
+        
       </div>
     </div>
   );
