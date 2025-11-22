@@ -2092,12 +2092,6 @@ const AdminPage: React.FC = () => {
                 <i className="fas fa-car"></i>
               </div>
             </div>
-            <div className={sidebarStyles.statFooter}>
-              <span className={`${sidebarStyles.trend} ${sidebarStyles.up}`}>
-                <i className="fas fa-arrow-up"></i> 12%
-              </span>
-              <span className={sidebarStyles.trendText}>so với tháng trước</span>
-            </div>
           </div>
 
           <div className={sidebarStyles.statCard}>
@@ -2109,12 +2103,6 @@ const AdminPage: React.FC = () => {
               <div className={`${sidebarStyles.statIcon} ${sidebarStyles.success}`}>
                 <i className="fas fa-store"></i>
               </div>
-            </div>
-            <div className={sidebarStyles.statFooter}>
-              <span className={`${sidebarStyles.trend} ${sidebarStyles.up}`}>
-                <i className="fas fa-arrow-up"></i> 15%
-              </span>
-              <span className={sidebarStyles.trendText}>so với tháng trước</span>
             </div>
           </div>
 
@@ -2128,12 +2116,6 @@ const AdminPage: React.FC = () => {
                 <i className="fas fa-dollar-sign"></i>
               </div>
             </div>
-            <div className={sidebarStyles.statFooter}>
-              <span className={`${sidebarStyles.trend} ${sidebarStyles.up}`}>
-                <i className="fas fa-arrow-up"></i> 8%
-              </span>
-              <span className={sidebarStyles.trendText}>so với tháng trước</span>
-            </div>
           </div>
 
           <div className={sidebarStyles.statCard}>
@@ -2145,12 +2127,6 @@ const AdminPage: React.FC = () => {
               <div className={`${sidebarStyles.statIcon} ${sidebarStyles.info}`}>
                 <i className="fas fa-calendar-alt"></i>
               </div>
-            </div>
-            <div className={sidebarStyles.statFooter}>
-              <span className={`${sidebarStyles.trend} ${sidebarStyles.up}`}>
-                <i className="fas fa-arrow-up"></i> 23%
-              </span>
-              <span className={sidebarStyles.trendText}>so với tháng trước</span>
             </div>
           </div>
         </div>
@@ -2168,7 +2144,6 @@ const AdminPage: React.FC = () => {
                 <div className={styles.statInfo}>
                   <h3>{stats.totalCars}</h3>
                   <p>Tổng số xe</p>
-                  <small className={styles.statChange}>+2 xe mới</small>
                 </div>
               </div>
 
@@ -2179,7 +2154,6 @@ const AdminPage: React.FC = () => {
                 <div className={styles.statInfo}>
                   <h3>{stats.totalUsers}</h3>
                   <p>Người dùng</p>
-                  <small className={styles.statChange}>+15% tháng này</small>
                 </div>
               </div>
 
@@ -2190,7 +2164,6 @@ const AdminPage: React.FC = () => {
                 <div className={styles.statInfo}>
                   <h3>{formatCurrency(stats.totalRevenue)}</h3>
                   <p>Doanh thu tháng</p>
-                  <small className={styles.statChange}>+8.2% so với tháng trước</small>
                 </div>
               </div>
 
@@ -2201,7 +2174,6 @@ const AdminPage: React.FC = () => {
                 <div className={styles.statInfo}>
                   <h3>{stats.monthlyBookings}</h3>
                   <p>Đặt xe tháng này</p>
-                  <small className={styles.statChange}>+{stats.activeBookings} đang hoạt động</small>
                 </div>
               </div>
 
@@ -2213,7 +2185,6 @@ const AdminPage: React.FC = () => {
                 <div className={styles.statInfo}>
                   <h3>{stats.totalBookings}</h3>
                   <p>Tổng đặt xe</p>
-                  <small className={styles.statChange}>Tất cả thời gian</small>
                 </div>
               </div>
 
