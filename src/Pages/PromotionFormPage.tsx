@@ -39,6 +39,19 @@ const PromotionFormPage: React.FC = () => {
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [dealerId, setDealerId] = useState<number>(0);
+  const [displayValue, setDisplayValue] = useState<string>(''); // For formatted display
+
+  // Format number as VND currency
+  const formatCurrency = (value: number): string => {
+    if (!value) return '';
+    return value.toLocaleString('vi-VN');
+  };
+
+  // Parse formatted currency string to number
+  const parseCurrency = (value: string): number => {
+    const cleaned = value.replace(/[^0-9]/g, '');
+    return cleaned ? parseInt(cleaned, 10) : 0;
+  };
 
   // Load dealer info
   useEffect(() => {
@@ -171,9 +184,11 @@ const PromotionFormPage: React.FC = () => {
       } else if (formData.discountValue > 100) {
         newErrors.discountValue = 'Phần trăm giảm giá không được quá 100%';
       }
-    } else if (formData.discountType === 'AMOUNT') {
+    } else if (formData.discountType === 'FIXED_AMOUNT') {
       if (formData.discountValue < 1000) {
-        newErrors.discountValue = 'Số tiền giảm giá phải ít nhất 1,000₫';
+        newErrors.discountValue = 'Số tiền giảm giá phải ít nhất 1.000₫';
+      } else if (formData.discountValue > 1000000000) {
+        newErrors.discountValue = 'Số tiền giảm giá không được quá 1 tỷ đồng';
       }
     }
 
@@ -361,44 +376,76 @@ const PromotionFormPage: React.FC = () => {
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
                 <label>
-                  <i className="fas fa-percentage"></i>
+                  <i className="fas fa-tags"></i>
                   Loại khuyến mãi <span className={styles.required}>*</span>
                 </label>
-                <select
-                  value={formData.discountType}
-                  onChange={(e) => handleChange('discountType', e.target.value as PromoType)}
-                >
-                  <option value="PERCENTAGE">Giảm theo %</option>
-                  <option value="AMOUNT">Giảm số tiền cố định</option>
-                </select>
+                <div className={styles.selectWrapper}>
+                  <select
+                    value={formData.discountType}
+                    onChange={(e) => {
+                      const newType = e.target.value as PromoType;
+                      handleChange('discountType', newType);
+                      handleChange('discountValue', 0);
+                      setDisplayValue('');
+                    }}
+                    className={styles.selectStyled}
+                  >
+                    <option value="PERCENTAGE">Giảm theo phần trăm</option>
+                    <option value="FIXED_AMOUNT">Giảm theo số tiền cố định</option>
+                  </select>
+                </div>
               </div>
 
               <div className={styles.formGroup}>
                 <label>
-                  <i className="fas fa-tag"></i>
-                  Giá trị <span className={styles.required}>*</span>
+                  <i className={formData.discountType === 'PERCENTAGE' ? 'fas fa-percent' : 'fas fa-money-bill-wave'}></i>
+                  Giá trị giảm <span className={styles.required}>*</span>
                 </label>
-                <input
-                  type="number"
-                  value={formData.discountValue || ''}
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value);
-                    if (!isNaN(value) && value >= 0) {
-                      handleChange('discountValue', value);
-                    }
-                  }}
-                  min="0"
-                  max={formData.discountType === 'PERCENTAGE' ? 100 : undefined}
-                  step={formData.discountType === 'PERCENTAGE' ? '1' : '1000'}
-                  placeholder={formData.discountType === 'PERCENTAGE' ? 'Nhập số % (1-100)' : 'Nhập số tiền (VNĐ)'}
-                  className={errors.discountValue ? styles.error : ''}
-                />
+                {formData.discountType === 'PERCENTAGE' ? (
+                  <input
+                    type="number"
+                    value={formData.discountValue || ''}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value) && value >= 0 && value <= 100) {
+                        handleChange('discountValue', value);
+                      } else if (e.target.value === '') {
+                        handleChange('discountValue', 0);
+                      }
+                    }}
+                    min="0"
+                    max="100"
+                    step="1"
+                    placeholder="VD: 15"
+                    className={errors.discountValue ? styles.error : ''}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={displayValue}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      const numericValue = parseCurrency(input);
+                      if (numericValue <= 1000000000) {
+                        handleChange('discountValue', numericValue);
+                        setDisplayValue(numericValue ? formatCurrency(numericValue) : '');
+                      }
+                    }}
+                    placeholder="VD: 5.000.000"
+                    className={errors.discountValue ? styles.error : ''}
+                  />
+                )}
                 {errors.discountValue && (
                   <span className={styles.errorText}>
                     <i className="fas fa-exclamation-circle"></i>
                     {errors.discountValue}
                   </span>
                 )}
+                <small className={styles.hint}>
+                  {formData.discountType === 'PERCENTAGE' 
+                    ? '💡 Nhập số từ 1-100 (%)' 
+                    : '💰 Số tiền từ 1.000₫ - 1.000.000.000₫'}
+                </small>
               </div>
             </div>
 

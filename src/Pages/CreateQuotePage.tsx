@@ -406,7 +406,7 @@ const CreateQuotePage: React.FC = () => {
       if (promo) {
         // Check if promotion applies to this vehicle
         if (promo.vehicleIds.length === 0 || promo.vehicleIds.includes(quote.vehicle.vehicleId)) {
-          if (promo.discountType === 'AMOUNT') {
+          if (promo.discountType === 'FIXED_AMOUNT') {
             promoDiscount = promo.discountValue;
           } else if (promo.discountType === 'PERCENTAGE') {
             promoDiscount = (listPrice * promo.discountValue) / 100;

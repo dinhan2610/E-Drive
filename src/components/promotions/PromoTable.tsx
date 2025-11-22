@@ -58,7 +58,7 @@ const PromoTable: React.FC<PromoTableProps> = ({ promotions, loading, dealerId, 
     switch (type) {
       case 'PERCENTAGE':
         return `-${value}%`;
-      case 'AMOUNT':
+      case 'FIXED_AMOUNT':
         return `-${value.toLocaleString('vi-VN')}₫`;
       default:
         return type;

@@ -1,6 +1,6 @@
 // src/types/promotion.ts
-export type PromoType = "PERCENTAGE" | "AMOUNT";
-export type ApplicableTo = "CUSTOMER" | "DEALER";
+export type PromoType = "PERCENTAGE" | "FIXED_AMOUNT";
+export type ApplicableTo = "CUSTOMER" | "DEALER" | "VEHICLE";
 
 // Computed status based on dates
 export type PromoStatus = "ACTIVE" | "INACTIVE" | "SCHEDULED" | "EXPIRED";

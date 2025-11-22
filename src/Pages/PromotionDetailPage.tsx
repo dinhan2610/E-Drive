@@ -96,7 +96,7 @@ const PromotionDetailPage: React.FC = () => {
     switch (promotion.discountType) {
       case 'PERCENTAGE':
         return `Giảm ${promotion.discountValue}%`;
-      case 'AMOUNT':
+      case 'FIXED_AMOUNT':
         return `Giảm ${promotion.discountValue.toLocaleString('vi-VN')}₫`;
       default:
         return promotion.discountType;

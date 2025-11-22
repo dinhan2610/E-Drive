@@ -44,6 +44,8 @@ export async function getPromotion(id: number) {
 
 export async function createPromotion(dealerId: number, body: Omit<Promotion, 'promoId' | 'dealerId'>) {
   try {
+    console.log('🔥 Creating promotion for dealer:', dealerId);
+    console.log('📦 Payload:', JSON.stringify(body, null, 2));
     const { data } = await api.post<Promotion>(`/api/promotions/dealer/${dealerId}`, body);
     return data;
   } catch (error: any) {
