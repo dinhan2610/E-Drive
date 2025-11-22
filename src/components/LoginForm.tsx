@@ -129,21 +129,16 @@ const LoginForm: React.FC<LoginFormProps> = ({
         setLoggedInUserName(user?.fullName || user?.name || formData.username);
         
         // Store user data for persistence (including role)
-        // Chuẩn hóa role: "ROLE_ADMIN" -> "admin", "ROLE_DEALER" -> "dealer"
+        // Backend roles: ADMIN, DEALER_MANAGER, DEALER_STAFF, EVM_STAFF
         let detectedRole = user?.role || 'dealer';
         
-        // Normalize role từ Spring Security format (ROLE_ADMIN -> admin)
+        // Normalize role from Spring Security format
+        // ROLE_ADMIN -> admin, ROLE_DEALER_MANAGER -> dealer_manager, etc.
         if (detectedRole && typeof detectedRole === 'string') {
           detectedRole = detectedRole.replace('ROLE_', '').toLowerCase();
         }
         
-        // Fallback: nếu vẫn không có role, detect từ username
-        if (!detectedRole || detectedRole === 'dealer') {
-          if (formData.username.toLowerCase().startsWith('admin')) {
-            detectedRole = 'admin';
-            console.log('⚠️ Role detected from username');
-          }
-        }
+        console.log('🔍 Normalized role from backend:', detectedRole);
         
         const userData = {
           ...user,
@@ -354,14 +349,16 @@ const LoginForm: React.FC<LoginFormProps> = ({
           setShowSuccessModal(false);
           onClose(); // Close login form
 
-          // Read stored role (ensure we consider EVM roles)
+          // Read stored role
           const storedRole = (rememberMe ? localStorage : sessionStorage).getItem('userRole') || userRole || '';
 
-          // If role is admin or contains 'evm', redirect to admin interface
-          if (storedRole.toLowerCase().includes('admin') || storedRole.toLowerCase().includes('evm')) {
+          // Redirect based on role:
+          // ADMIN, EVM_STAFF → /admin
+          // DEALER_MANAGER, DEALER_STAFF → /
+          if (storedRole === 'admin' || storedRole === 'evm_staff') {
             navigate('/admin');
           } else {
-            // Dealer stays on current page or home
+            // Dealer and staff stay on dealer interface
             navigate('/');
           }
 

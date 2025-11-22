@@ -214,8 +214,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
                 const displayName = user?.fullName || user?.username || 'Admin';
                 const displayRole =
                   role === 'admin' ? 'Administrator'
-                  : role === 'staff' ? 'EVM Staff'
-                  : role === 'dealer' ? 'Dealer'
+                  : role === 'evm_staff' ? 'EVM Staff'
+                  : role === 'dealer' ? 'Dealer Manager'
+                  : role === 'staff' ? 'Dealer Staff'
                   : (role || 'User');
                 return (
                   <>

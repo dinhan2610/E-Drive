@@ -1,18 +1,26 @@
 /**
  * Role-based utilities for E-Drive application
  * 
- * 3 ROLES ONLY:
- * - admin: Separate admin interface at /admin (AdminPage)
- * - dealer: Can create orders, full management access
- * - staff: Can only create quotes, no order creation
+ * Backend Roles (PredefinedRole.java):
+ * - ADMIN: System administrator
+ * - DEALER_MANAGER: Dealer manager - full dealer access
+ * - DEALER_STAFF: Dealer staff - limited access
+ * - EVM_STAFF: EVM staff - admin-like access
+ * 
+ * Frontend Normalized Roles:
+ * - admin: ADMIN role
+ * - dealer: DEALER_MANAGER role
+ * - staff: DEALER_STAFF role
+ * - evm_staff: EVM_STAFF role
  */
 
 import { getCurrentUser } from './authUtils';
 
-export type UserRole = 'admin' | 'dealer' | 'staff';
+export type UserRole = 'admin' | 'dealer' | 'staff' | 'evm_staff';
 
 /**
  * Get current user role from localStorage
+ * Maps backend roles to frontend normalized roles
  */
 export const getCurrentUserRole = (): UserRole => {
   try {
@@ -24,19 +32,23 @@ export const getCurrentUserRole = (): UserRole => {
     // Normalize role (remove ROLE_ prefix if exists)
     role = role.toLowerCase().replace('role_', '');
     
-    // Map backend roles to frontend roles
-    // ROLE_DEALER_MANAGER → dealer_manager → dealer
-    // ROLE_DEALER_STAFF → dealer_staff → staff
-    // ROLE_ADMIN → admin → admin
-    if (role === 'dealer_manager' || role === 'manager') {
-      role = 'dealer';
+    // Map backend roles to frontend roles (exact match with PredefinedRole.java)
+    // ADMIN → admin
+    // DEALER_MANAGER → dealer
+    // DEALER_STAFF → staff
+    // EVM_STAFF → evm_staff
+    if (role === 'admin') {
+      return 'admin';
+    } else if (role === 'dealer_manager') {
+      return 'dealer';
     } else if (role === 'dealer_staff') {
-      role = 'staff';
-    } else if (role === 'admin' || role === 'dealer_admin') {
-      role = 'admin';
+      return 'staff';
+    } else if (role === 'evm_staff') {
+      return 'evm_staff';
     }
     
-    return role as UserRole;
+    // Fallback for legacy roles
+    return 'dealer';
   } catch (error) {
     console.error('Error getting user role:', error);
     return 'dealer';
@@ -66,7 +78,8 @@ export const isAdmin = (): boolean => {
 
 /**
  * Check if user can create orders
- * Only Dealer can create orders (Admin has separate interface, Staff cannot)
+ * Only DEALER_MANAGER can create orders
+ * DEALER_STAFF, ADMIN, EVM_STAFF cannot
  */
 export const canCreateOrder = (): boolean => {
   return getCurrentUserRole() === 'dealer';
@@ -74,7 +87,8 @@ export const canCreateOrder = (): boolean => {
 
 /**
  * Check if user can manage promotions
- * Only Dealer can manage promotions (Admin has separate interface, Staff cannot)
+ * Only DEALER_MANAGER can manage promotions
+ * DEALER_STAFF, ADMIN, EVM_STAFF cannot
  */
 export const canManagePromotions = (): boolean => {
   return getCurrentUserRole() === 'dealer';
@@ -82,7 +96,8 @@ export const canManagePromotions = (): boolean => {
 
 /**
  * Check if user can edit quote status
- * Only Dealer/Manager can edit status (Staff can only view)
+ * Only DEALER_MANAGER can edit status
+ * DEALER_STAFF can only view
  */
 export const canEditQuoteStatus = (): boolean => {
   return getCurrentUserRole() === 'dealer';
@@ -105,32 +120,34 @@ export const getUserCapabilities = () => {
   const role = getCurrentUserRole();
   
   return {
-    canCreateOrder: canCreateOrder(),
-    canManagePromotions: canManagePromotions(),
-    canEditQuoteStatus: canEditQuoteStatus(),
-    shouldShowQuoteButton: shouldShowQuoteButton(),
-    canViewCustomers: true, // All roles can view customers
-    canManageTestDrive: true, // All roles can manage test drives
-    canViewQuotes: true, // All roles can view quotes
-    canCreateQuote: true, // All roles can create quotes
-    canManageFeedback: true, // All roles can manage feedback
-    canViewInstallment: true, // All roles can view installment
+    canCreateOrder: canCreateOrder(), // DEALER_MANAGER only
+    canManagePromotions: canManagePromotions(), // DEALER_MANAGER only
+    canEditQuoteStatus: canEditQuoteStatus(), // DEALER_MANAGER only
+    shouldShowQuoteButton: shouldShowQuoteButton(), // DEALER_STAFF sees quote button
+    canViewCustomers: role !== 'admin' && role !== 'evm_staff', // Dealer roles only
+    canManageTestDrive: role !== 'admin' && role !== 'evm_staff', // Dealer roles only
+    canViewQuotes: role !== 'admin' && role !== 'evm_staff', // Dealer roles only
+    canCreateQuote: role !== 'admin' && role !== 'evm_staff', // Dealer roles only
+    canManageFeedback: role !== 'admin' && role !== 'evm_staff', // Dealer roles only
+    canViewInstallment: role !== 'admin' && role !== 'evm_staff', // Dealer roles only
+    hasAdminAccess: hasAdminAccess(), // ADMIN or EVM_STAFF
     role
   };
 };
 
 /**
- * Check if current user is an EVM staff account (special admin-like staff)
- * We consider roles that include "evm" in their name to be EVM staff.
+ * Check if current user is EVM_STAFF
+ * EVM_STAFF has admin-like access but is not ADMIN
  */
 export const isEvmStaff = (): boolean => {
-  try {
-    const user = getCurrentUser();
-    if (!user) return false;
-    const roleStr = (user.role || '').toString().toLowerCase();
-    if (!roleStr) return false;
-    return roleStr.includes('evm');
-  } catch (error) {
-    return false;
-  }
+  return getCurrentUserRole() === 'evm_staff';
+};
+
+/**
+ * Check if user has admin-level access
+ * Both ADMIN and EVM_STAFF have admin-level access
+ */
+export const hasAdminAccess = (): boolean => {
+  const role = getCurrentUserRole();
+  return role === 'admin' || role === 'evm_staff';
 };

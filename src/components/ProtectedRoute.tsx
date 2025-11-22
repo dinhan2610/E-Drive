@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { getValidAuthData } from '../utils/authUtils';
-import { isEvmStaff, getCurrentUserRole, isAdmin as isAdminRoleUtil } from '../utils/roleUtils';
+import { getCurrentUserRole } from '../utils/roleUtils';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -26,21 +26,19 @@ export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) 
   // Check role-based access
   if (requiredRole) {
     if (requiredRole === 'admin') {
-      // Allow explicit admins or EVM staff (special admin-like accounts)
-      const isAdmin = userRole === 'admin' || isAdminRoleUtil();
-      if (!isAdmin && !isEvmStaff()) {
-        // Non-admin and not EVM staff trying to access admin routes
+      // Allow ADMIN or EVM_STAFF to access admin routes
+      if (userRole !== 'admin' && userRole !== 'evm_staff') {
         return <Navigate to="/" replace />;
       }
     }
 
     if (requiredRole === 'dealer') {
-      // Prevent admin and EVM staff from accessing dealer routes
-      if (userRole === 'admin' || isEvmStaff()) {
+      // Prevent ADMIN and EVM_STAFF from accessing dealer routes
+      if (userRole === 'admin' || userRole === 'evm_staff') {
         return <Navigate to="/admin" replace />;
       }
 
-      // Only 'dealer' and 'staff' front-end roles are allowed for dealer routes
+      // Only DEALER_MANAGER and DEALER_STAFF can access dealer routes
       if (userRole !== 'dealer' && userRole !== 'staff') {
         return <Navigate to="/" replace />;
       }
