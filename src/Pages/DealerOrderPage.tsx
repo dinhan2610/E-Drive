@@ -116,12 +116,10 @@ const DealerOrderPage: React.FC = () => {
   useEffect(() => {
     const loadDealerProfile = async () => {
       try {
-        console.log('🔄 Loading dealer profile...');
         const profile = await getProfile();
         
         // Store dealerId for order submission
         setCurrentDealerId(profile.dealerId || null);
-        console.log('✅ Profile loaded with dealer ID:', profile.dealerId);
         
         // Auto-fill dealer information from profile API
         // Profile API already contains all necessary dealer data
@@ -137,7 +135,7 @@ const DealerOrderPage: React.FC = () => {
           city: profile.city || '',
         }));
 
-        console.log('✅ Dealer profile populated successfully');
+        console.log('✅ Dealer profile loaded:', profile.fullName);
       } catch (error: any) {
         console.error('❌ Error loading profile:', error);
         

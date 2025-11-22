@@ -52,20 +52,16 @@ function normalizeProfileData(data: any): UserProfile {
  */
 export async function getProfile(): Promise<UserProfile> {
   try {
-    console.log('🔍 Fetching profile from API...');
     const response = await api.get<any>('/api/profile/me');
-    console.log('📦 Raw Profile API Response:', response.data);
     
     // Extract data from wrapper if exists
     const profileData = response.data.data || response.data;
-    console.log('📦 Profile data to normalize:', profileData);
     
     const normalized = normalizeProfileData(profileData);
-    console.log('✅ Normalized Profile Data:', normalized);
     
     return normalized;
   } catch (error: any) {
-    console.error('Failed to get profile:', error.response?.data || error.message);
+    console.error('❌ Failed to get profile:', error.response?.data || error.message);
     throw error;
   }
 }

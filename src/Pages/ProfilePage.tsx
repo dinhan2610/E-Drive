@@ -67,12 +67,8 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        console.log('🔄 Loading profile...');
         const apiProfile = await getProfile();
-        console.log('📊 Profile loaded:', apiProfile);
-        
         const currentRole = getCurrentUserRole();
-        console.log('👤 Current user role:', currentRole);
 
         // Use profile API data directly (no need to call dealer endpoint)
         // Profile API already contains all necessary dealer information
@@ -93,8 +89,6 @@ const ProfilePage: React.FC = () => {
           role: currentRole
         };
 
-        console.log('✅ UI Profile mapped:', uiProfile);
-
         setUser(uiProfile);
         setFormData({
           fullName: apiProfile.fullName,
@@ -106,7 +100,7 @@ const ProfilePage: React.FC = () => {
         });
         setAvatarPreview(uiProfile.avatar);
       } catch (error) {
-        console.error('Failed to load profile:', error);
+        console.error('❌ Failed to load profile:', error);
         // Fallback if API fails
         const parsedUser = getCurrentUser();
         if (parsedUser) {

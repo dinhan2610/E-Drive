@@ -7,7 +7,6 @@ interface Message {
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  isTyping?: boolean;
 }
 
 interface ChatBoxProps {
@@ -107,6 +106,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ isOpen = false, onToggle }) => {
     });
   };
 
+  // Helper function to safely format message text
+  const formatMessageText = (text: any): string => {
+    if (text === null || text === undefined) return '';
+    if (typeof text === 'string') return text;
+    if (typeof text === 'object') return JSON.stringify(text);
+    return String(text);
+  };
+
   const quickQuestions = [
     'Giá xe điện bao nhiêu?',
     'Đặt lịch lái thử',
@@ -183,10 +190,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ isOpen = false, onToggle }) => {
               )}
               <div className="message-content">
                 <div className="message-text">
-                  {message.text.split('\n').map((line, index) => (
+                  {formatMessageText(message.text).split('\n').map((line, index, array) => (
                     <React.Fragment key={index}>
                       {line}
-                      {index < message.text.split('\n').length - 1 && <br />}
+                      {index < array.length - 1 && <br />}
                     </React.Fragment>
                   ))}
                 </div>
