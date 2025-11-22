@@ -21,16 +21,19 @@ export const getCurrentUserRole = (): UserRole => {
     
     let role = user.role || 'dealer';
     
-    // Normalize role (remove ROLE_ and role_ prefix if exists)
-    role = role.toLowerCase().replace('role_', '').replace('dealer_', '');
+    // Normalize role (remove ROLE_ prefix if exists)
+    role = role.toLowerCase().replace('role_', '');
     
     // Map backend roles to frontend roles
-    // dealer_manager → dealer
-    // dealer_staff → staff
-    // dealer_admin → admin
-    // manager → dealer (legacy support)
-    if (role === 'manager') {
+    // ROLE_DEALER_MANAGER → dealer_manager → dealer
+    // ROLE_DEALER_STAFF → dealer_staff → staff
+    // ROLE_ADMIN → admin → admin
+    if (role === 'dealer_manager' || role === 'manager') {
       role = 'dealer';
+    } else if (role === 'dealer_staff') {
+      role = 'staff';
+    } else if (role === 'admin' || role === 'dealer_admin') {
+      role = 'admin';
     }
     
     return role as UserRole;

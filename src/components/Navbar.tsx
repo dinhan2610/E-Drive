@@ -211,10 +211,8 @@ const Navbar: React.FC = () => {
         <div className="navbar__actions">
           {isLoggedIn && userProfile ? (
             <>
-              {/* Notification Icon - Only for Manager/Admin */}
-              {!userProfile.role?.toLowerCase().includes('staff') && (
-                <NotificationDropdown />
-              )}
+              {/* Notification Icon - All roles (Admin, Manager, Staff) */}
+              <NotificationDropdown />
               
               <div className="user-profile">
               <div className="profile-avatar-container">
