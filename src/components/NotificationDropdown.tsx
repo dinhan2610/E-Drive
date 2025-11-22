@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchAdminNotifications, fetchDealerNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../services/notificationApi';
+import { 
+  fetchAllNotifications, 
+  fetchAdminNotifications, 
+  fetchDealerManagerNotifications, 
+  fetchDealerStaffNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead 
+} from '../services/notificationApi';
 import { getCurrentUserRole } from '../utils/roleUtils';
 import { getProfile } from '../services/profileApi';
 import type { Notification } from '../types/notification';
 import styles from '../styles/AdminStyles/NotificationDropdown.module.scss';
 
 interface NotificationDropdownProps {
-  direction?: 'up' | 'down'; // Hướng hiển thị dropdown
+  direction?: 'up' | 'down';
 }
 
 const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction = 'down' }) => {
@@ -16,12 +23,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction =
   const [error, setError] = useState<string | null>(null);
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Load dealerId once on mount
+  // Load dealerId once on mount for dealer/staff roles
   useEffect(() => {
     const loadDealerId = async () => {
       const userRole = getCurrentUserRole();
@@ -40,29 +46,36 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction =
 
   // Load notifications based on user role
   const loadNotifications = async (silent = false) => {
-    // Chỉ hiển thị loading khi chưa có dữ liệu (lần đầu tiên)
     if (!silent && notifications.length === 0) {
       setIsLoading(true);
     }
     setError(null);
+    
     try {
       const userRole = getCurrentUserRole();
-      
       let data: Notification[];
       
       if (userRole === 'admin') {
-        // Admin: fetch admin notifications
+        // Admin: fetch admin-specific notifications
         data = await fetchAdminNotifications();
-      } else {
-        // Manager/Dealer: fetch notifications cho dealer cụ thể
+      } else if (userRole === 'dealer') {
+        // Dealer Manager: fetch dealer manager notifications
         if (!currentDealerId) {
           throw new Error('Không tìm thấy dealer ID');
         }
-        
-        data = await fetchDealerNotifications(currentDealerId);
+        data = await fetchDealerManagerNotifications(currentDealerId);
+      } else if (userRole === 'staff') {
+        // Dealer Staff: fetch dealer staff notifications
+        if (!currentDealerId) {
+          throw new Error('Không tìm thấy dealer ID');
+        }
+        data = await fetchDealerStaffNotifications(currentDealerId);
+      } else {
+        // Fallback: use /all endpoint for any other case
+        data = await fetchAllNotifications();
       }
       
-      // Sắp xếp thông báo từ mới đến cũ (createdAt giảm dần)
+      // Sort notifications by createdAt descending (newest first)
       const sortedData = data.sort((a, b) => {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
