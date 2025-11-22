@@ -157,10 +157,17 @@ const PdfPreview = React.forwardRef<HTMLDivElement, PdfPreviewProps>(({ payload,
                 {payload.order?.orderItems && payload.order.orderItems.length > 0 ? (
                   <>
                     {payload.order.orderItems.map((item, index) => {
-                      // Parse vehicle name to extract model and version
-                      const vehicleParts = item.vehicleName.split(' ');
-                      const vehicleModel = vehicleParts.slice(0, 2).join(' '); // VF 8, VF 5, etc.
-                      const vehicleVersion = vehicleParts.slice(2).join(' ') || 'Standard';
+                      // Determine vehicle model and version. Prefer explicit properties if present.
+                      const vehicleName = item.vehicleName || '';
+                      const vehicleModelParts = vehicleName.split(' ');
+                      const vehicleModel = vehicleModelParts.slice(0, 2).join(' '); // VF 8, VF 5, etc.
+
+                      const vehicleVersion = item.vehicleVersion || (item as any).vehicleVariant || (item as any).variant ||
+                        // fallback to payload.vehicle if available
+                        payload.order?.vehicle?.variant ||
+                        // finally try to parse from vehicleName
+                        (vehicleModelParts.length > 2 ? vehicleModelParts.slice(2).join(' ') : '') ||
+                        'Standard';
                       
                       // Calculate price with VAT (item.itemTotal already includes discount deducted)
                       const priceAfterDiscount = item.itemSubtotal - item.itemDiscount;
