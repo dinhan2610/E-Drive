@@ -18,6 +18,9 @@ import styles from '../styles/AdminStyles/AdminPage.module.scss';
 import sidebarStyles from '../styles/AdminStyles/AdminSidebar.module.scss';
 import modalStyles from '../styles/AdminStyles/OrderDetailModal.module.scss';
 import AdminLayout from '../components/AdminLayout';
+import { isEvmStaff } from '../utils/roleUtils';
+import EvmStaffPage from './EvmStaffPage';
+import { listEvmStaff } from '../services/staffApi';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SuccessNotification from '../components/SuccessNotification';
 
@@ -398,7 +401,7 @@ interface CarWithStatus extends CarType {
 const AdminPage: React.FC = () => {
   const location = useLocation();
   const initialTab = (location.state as any)?.tab || 'dashboard';
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'colors' | 'inventory' | 'dealers' | 'discounts' | 'bookings' | 'analytics' | 'settings'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cars' | 'colors' | 'inventory' | 'dealers' | 'discounts' | 'bookings' | 'analytics' | 'settings' | 'staff'>(initialTab);
   const [cars, setCars] = useState<CarWithStatus[]>([]);
   const [colors, setColors] = useState<VehicleColor[]>([]);
   const [discounts, setDiscounts] = useState<DiscountPolicy[]>([]);
@@ -512,6 +515,7 @@ const AdminPage: React.FC = () => {
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [unverifiedAccounts, setUnverifiedAccounts] = useState<UnverifiedAccount[]>([]);
   const [inventorySummary, setInventorySummary] = useState<ManufacturerInventorySummary | null>(null);
+  const [evmStaffCount, setEvmStaffCount] = useState<number>(0);
   const [dealerViewMode, setDealerViewMode] = useState<'verified' | 'unverified'>('verified');
   const [showAddDealerModal, setShowAddDealerModal] = useState<boolean>(false);
   const [showViewDealerModal, setShowViewDealerModal] = useState<boolean>(false);
@@ -670,6 +674,28 @@ const AdminPage: React.FC = () => {
       reloadOrders();
     }
   }, [activeTab]);
+
+  const evmUser = isEvmStaff();
+
+  // Load EVM staff count for admin sidebar
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const list = await listEvmStaff();
+        if (mounted) setEvmStaffCount(list?.length || 0);
+      } catch (error) {
+        // ignore
+      }
+    };
+    load();
+    // Listen for external updates from EVM staff page (create/delete)
+    const handler = () => {
+      load();
+    };
+    window.addEventListener('evmStaffListChanged', handler);
+    return () => { mounted = false; window.removeEventListener('evmStaffListChanged', handler); };
+  }, []);
 
   // Auto-reload orders every 10 seconds when on bookings tab
   useEffect(() => {
@@ -1114,6 +1140,15 @@ const AdminPage: React.FC = () => {
         })();
       } else if (activeTab === 'inventory') {
         reloadInventory();
+      } else if (activeTab === 'staff') {
+        (async () => {
+          try {
+            const list = await listEvmStaff();
+            setEvmStaffCount(list?.length || 0);
+          } catch (error) {
+            // silent
+          }
+        })();
       } else if (activeTab === 'discounts') {
         reloadDiscounts();
       } else if (activeTab === 'bookings') {
@@ -2031,7 +2066,8 @@ const AdminPage: React.FC = () => {
         unverifiedDealers: unverifiedAccounts.length,
         inventory: inventorySummary?.totalQuantity || 0,
         bookings: bookings.length,
-        testDrives: 0
+        testDrives: 0,
+        staff: evmStaffCount
       }}
     >
       {/* Success Notification */}
@@ -3026,6 +3062,10 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'staff' && (
+          <EvmStaffPage />
+        )}
+
         {activeTab === 'bookings' && (
           <div className={styles.bookingsManagement}>
             <div className={styles.sectionHeader}>
@@ -3073,138 +3113,240 @@ const AdminPage: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        {booking.paymentStatus === 'paid' || booking.paymentStatus === 'cancelled' || booking.status === 'cancelled' ? (
+                        {evmUser ? (
                           <span className={`${styles.paymentBadge} ${styles[getPaymentStatusClass(booking.paymentStatus)]}`}>
                             {formatPaymentStatus(booking.paymentStatus)}
                           </span>
                         ) : (
-                          <select
-                            key={`payment-${booking.id}-${booking.paymentStatus}`}
-                            className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
-                            value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
-                            onChange={(e) => {
-                              handleUpdatePaymentStatus(booking.id, e.target.value as any);
-                            }}
-                            title="⏳ Chờ thanh toán - Click để thay đổi"
-                          >
-                            <option value="PENDING">Chờ thanh toán</option>
-                            <option value="PAID">Đã thanh toán</option>
-                            <option value="CANCELLED">Đã hủy</option>
-                          </select>
+                          booking.paymentStatus === 'paid' || booking.paymentStatus === 'cancelled' || booking.status === 'cancelled' ? (
+                            <span className={`${styles.paymentBadge} ${styles[getPaymentStatusClass(booking.paymentStatus)]}`}>
+                              {formatPaymentStatus(booking.paymentStatus)}
+                            </span>
+                          ) : (
+                            <select
+                              key={`payment-${booking.id}-${booking.paymentStatus}`}
+                              className={`${styles.paymentStatusDropdown} ${styles[booking.paymentStatus || 'pending']}`}
+                              value={booking.paymentStatus?.toUpperCase() || 'PENDING'}
+                              onChange={(e) => {
+                                handleUpdatePaymentStatus(booking.id, e.target.value as any);
+                              }}
+                              title="⏳ Chờ thanh toán - Click để thay đổi"
+                            >
+                              <option value="PENDING">Chờ thanh toán</option>
+                              <option value="PAID">Đã thanh toán</option>
+                              <option value="CANCELLED">Đã hủy</option>
+                            </select>
+                          )
                         )}
                       </td>
                       <td>
                         <div className={styles.tableActions}>
-                          <button 
-                            className={styles.viewButton} 
-                            title="Xem chi tiết"
-                            onClick={() => handleViewOrderDetail(booking.id)}
-                          >
-                            <i className="fas fa-eye"></i>
-                          </button>
-                          <button 
-                            className={styles.contractButton}
-                            title={
-                              booking.status === 'cancelled'
-                                ? '🚫 Đơn hàng đã hủy - Không thể tạo hợp đồng'
-                                : hasContract(String(booking.id)) 
-                                  ? "📄 Tải PDF hợp đồng" 
-                                  : "📝 Tạo hợp đồng mới"
-                            }
-                            onClick={() => handleContractAction(booking.id)}
-                            disabled={booking.status === 'cancelled'}
-                            style={{
-                              backgroundColor: 
-                                booking.status === 'cancelled'
-                                  ? '#9ca3af'
-                                  : hasContract(String(booking.id)) 
-                                    ? '#10b981' 
-                                    : '#6366f1',
-                              opacity: 
-                                booking.status === 'cancelled'
-                                  ? 0.5
-                                  : 1,
-                              cursor: 
-                                booking.status === 'cancelled'
-                                  ? 'not-allowed'
-                                  : 'pointer'
-                            }}
-                          >
-                            <i className={
-                              booking.status === 'cancelled'
-                                ? "fas fa-ban"
-                                : hasContract(String(booking.id)) 
-                                  ? "fas fa-file-pdf" 
-                                  : "fas fa-file-contract"
-                            }></i>
-                          </button>
-                          {hasContract(String(booking.id)) && getContractStatus(String(booking.id)) !== 'ACTIVE' && (
-                            <button 
-                              className={styles.signButton}
-                              title="✍️ Ký hợp đồng điện tử"
-                              onClick={() => {
-                                const contractId = getContractId(String(booking.id));
-                                window.location.href = `/admin/contracts/sign/${contractId}`;
-                              }}
-                              style={{
-                                backgroundColor: '#0ea5e9',
-                                color: 'white'
-                              }}
-                            >
-                              <i className="fas fa-signature"></i>
-                            </button>
-                          )}
-                          <button 
-                            className={styles.billButton}
-                            title="Xem hóa đơn"
-                            onClick={() => handleViewBill(booking.id)}
-                          >
-                            <i className="fas fa-file-invoice"></i>
-                          </button>
-                          {booking.status === 'confirmed' && (
-                            <button
-                              className={styles.billButton}
-                              title="Giao hàng"
-                              onClick={async () => {
-                                setConfirmDialog({
-                                  isOpen: true,
-                                  title: 'Xác nhận giao hàng',
-                                  message: `Xác nhận đơn hàng "#${booking.id} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
-                                  type: 'success',
-                                  onConfirm: async () => {
-                                    try {
-                                      setNotification({
-                                        isVisible: true,
-                                        message: '⏳ Đang xác nhận giao hàng...',
-                                        type: 'info'
-                                      });
-                                      await confirmDelivery(booking.id);
-                                      setBookings(prev => prev.map(b => 
-                                        b.id === booking.id 
-                                          ? { ...b, status: 'delivered' as const, orderStatus: 'DELIVERED' }
-                                          : b
-                                      ));
-                                      setNotification({
-                                        isVisible: true,
-                                        message: '✅ Đã xác nhận giao hàng thành công',
-                                        type: 'success'
-                                      });
-                                    } catch (error) {
-                                      setNotification({
-                                        isVisible: true,
-                                        message: `❌ Không thể xác nhận giao hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
-                                        type: 'error'
-                                      });
-                                    } finally {
-                                      setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                                    }
-                                  }
-                                });
-                              }}
-                              style={{ backgroundColor: '#f97316', color: 'white' }}
-                            >
-                              <i className="fas fa-truck"></i>
-                            </button>
+                          {/* For EVM staff: only allow contract creation/download and delivery confirmation */}
+                          {evmUser ? (
+                            <>
+                              <button 
+                                className={styles.viewButton} 
+                                title="Xem chi tiết"
+                                onClick={() => handleViewOrderDetail(booking.id)}
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button 
+                                className={styles.contractButton}
+                                title={
+                                  booking.status === 'cancelled'
+                                    ? '🚫 Đơn hàng đã hủy - Không thể tạo hợp đồng'
+                                    : hasContract(String(booking.id)) 
+                                      ? "📄 Tải PDF hợp đồng" 
+                                      : "📝 Tạo hợp đồng mới"
+                                }
+                                onClick={() => handleContractAction(booking.id)}
+                                disabled={booking.status === 'cancelled'}
+                                style={{
+                                  backgroundColor: 
+                                    booking.status === 'cancelled'
+                                      ? '#9ca3af'
+                                      : hasContract(String(booking.id)) 
+                                        ? '#10b981' 
+                                        : '#6366f1',
+                                  opacity: 
+                                    booking.status === 'cancelled'
+                                      ? 0.5
+                                      : 1,
+                                  cursor: 
+                                    booking.status === 'cancelled'
+                                      ? 'not-allowed'
+                                      : 'pointer'
+                                }}
+                              >
+                                <i className={
+                                  booking.status === 'cancelled'
+                                    ? "fas fa-ban"
+                                    : hasContract(String(booking.id)) 
+                                      ? "fas fa-file-pdf" 
+                                      : "fas fa-file-contract"
+                                }></i>
+                              </button>
+                              {booking.status === 'confirmed' && (
+                                <button
+                                  className={styles.billButton}
+                                  title="Giao hàng"
+                                  onClick={async () => {
+                                    setConfirmDialog({
+                                      isOpen: true,
+                                      title: 'Xác nhận giao hàng',
+                                      message: `Xác nhận đơn hàng "#${booking.id} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
+                                      type: 'success',
+                                      onConfirm: async () => {
+                                        try {
+                                          setNotification({
+                                            isVisible: true,
+                                            message: '⏳ Đang xác nhận giao hàng...',
+                                            type: 'info'
+                                          });
+                                          await confirmDelivery(booking.id);
+                                          setBookings(prev => prev.map(b => 
+                                            b.id === booking.id 
+                                              ? { ...b, status: 'delivered' as const, orderStatus: 'DELIVERED' }
+                                              : b
+                                          ));
+                                          setNotification({
+                                            isVisible: true,
+                                            message: '✅ Đã xác nhận giao hàng thành công',
+                                            type: 'success'
+                                          });
+                                        } catch (error) {
+                                          setNotification({
+                                            isVisible: true,
+                                            message: `❌ Không thể xác nhận giao hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+                                            type: 'error'
+                                          });
+                                        } finally {
+                                          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                                        }
+                                      }
+                                    });
+                                  }}
+                                  style={{ backgroundColor: '#f97316', color: 'white' }}
+                                >
+                                  <i className="fas fa-truck"></i>
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <button 
+                                className={styles.viewButton} 
+                                title="Xem chi tiết"
+                                onClick={() => handleViewOrderDetail(booking.id)}
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button 
+                                className={styles.contractButton}
+                                title={
+                                  booking.status === 'cancelled'
+                                    ? '🚫 Đơn hàng đã hủy - Không thể tạo hợp đồng'
+                                    : hasContract(String(booking.id)) 
+                                      ? "📄 Tải PDF hợp đồng" 
+                                      : "📝 Tạo hợp đồng mới"
+                                }
+                                onClick={() => handleContractAction(booking.id)}
+                                disabled={booking.status === 'cancelled'}
+                                style={{
+                                  backgroundColor: 
+                                    booking.status === 'cancelled'
+                                      ? '#9ca3af'
+                                      : hasContract(String(booking.id)) 
+                                        ? '#10b981' 
+                                        : '#6366f1',
+                                  opacity: 
+                                    booking.status === 'cancelled'
+                                      ? 0.5
+                                      : 1,
+                                  cursor: 
+                                    booking.status === 'cancelled'
+                                      ? 'not-allowed'
+                                      : 'pointer'
+                                }}
+                              >
+                                <i className={
+                                  booking.status === 'cancelled'
+                                    ? "fas fa-ban"
+                                    : hasContract(String(booking.id)) 
+                                      ? "fas fa-file-pdf" 
+                                      : "fas fa-file-contract"
+                                }></i>
+                              </button>
+                              {hasContract(String(booking.id)) && getContractStatus(String(booking.id)) !== 'ACTIVE' && (
+                                <button 
+                                  className={styles.signButton}
+                                  title="✍️ Ký hợp đồng điện tử"
+                                  onClick={() => {
+                                    const contractId = getContractId(String(booking.id));
+                                    window.location.href = `/admin/contracts/sign/${contractId}`;
+                                  }}
+                                  style={{
+                                    backgroundColor: '#0ea5e9',
+                                    color: 'white'
+                                  }}
+                                >
+                                  <i className="fas fa-signature"></i>
+                                </button>
+                              )}
+                              <button 
+                                className={styles.billButton}
+                                title="Xem hóa đơn"
+                                onClick={() => handleViewBill(booking.id)}
+                              >
+                                <i className="fas fa-file-invoice"></i>
+                              </button>
+                              {booking.status === 'confirmed' && (
+                                <button
+                                  className={styles.billButton}
+                                  title="Giao hàng"
+                                  onClick={async () => {
+                                    setConfirmDialog({
+                                      isOpen: true,
+                                      title: 'Xác nhận giao hàng',
+                                      message: `Xác nhận đơn hàng "#${booking.id} - ${booking.dealerName}" đã được giao thành công?\n\nTrạng thái đơn hàng sẽ chuyển sang "Đã giao".`,
+                                      type: 'success',
+                                      onConfirm: async () => {
+                                        try {
+                                          setNotification({
+                                            isVisible: true,
+                                            message: '⏳ Đang xác nhận giao hàng...',
+                                            type: 'info'
+                                          });
+                                          await confirmDelivery(booking.id);
+                                          setBookings(prev => prev.map(b => 
+                                            b.id === booking.id 
+                                              ? { ...b, status: 'delivered' as const, orderStatus: 'DELIVERED' }
+                                              : b
+                                          ));
+                                          setNotification({
+                                            isVisible: true,
+                                            message: '✅ Đã xác nhận giao hàng thành công',
+                                            type: 'success'
+                                          });
+                                        } catch (error) {
+                                          setNotification({
+                                            isVisible: true,
+                                            message: `❌ Không thể xác nhận giao hàng. ${error instanceof Error ? error.message : 'Vui lòng thử lại.'}`,
+                                            type: 'error'
+                                          });
+                                        } finally {
+                                          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                                        }
+                                      }
+                                    });
+                                  }}
+                                  style={{ backgroundColor: '#f97316', color: 'white' }}
+                                >
+                                  <i className="fas fa-truck"></i>
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>

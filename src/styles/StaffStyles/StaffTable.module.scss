@@ -215,50 +215,42 @@
 .actionButton {
   width: 32px;
   height: 32px;
-  border: 1px solid #e5e7eb;
-  background: white;
+  border: none;
+  background: transparent;
   border-radius: 6px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  color: #6b7280;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  color: #fff;
   font-size: 12px;
 
   &:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
   }
 
   &:active {
     transform: translateY(0);
   }
 
+  /* View (eye) - blue */
   &.viewButton {
-    &:hover {
-      background: #f0fdf4;
-      border-color: #10b981;
-      color: #10b981;
-    }
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
   }
 
+  /* Edit (pencil) - green */
   &.editButton {
-    &:hover {
-      background: #eff6ff;
-      border-color: #3b82f6;
-      color: #3b82f6;
-    }
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    color: #fff;
   }
 
+  /* Delete (trash) - red */
   &.deleteButton {
-    &:hover {
-      background: #fef2f2;
-      border-color: #dc2626;
-      color: #dc2626;
-    }
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff4d30 100%);
+    color: #fff;
   }
 }
 

@@ -40,7 +40,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loggedInUserName, setLoggedInUserName] = useState('');
-  const [userRole, setUserRole] = useState<'admin' | 'dealer'>('dealer');
+  const [userRole, setUserRole] = useState<string>('dealer');
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,7 +174,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
           localStorage.setItem('loginExpiry', expiryTime.toString());
         }
         
-        // Set role for redirect
+        // Set role for redirect (store raw role string)
         setUserRole(userData.role);
         setLoggedInUserName(userData.fullName);
         
@@ -350,21 +350,24 @@ const LoginForm: React.FC<LoginFormProps> = ({
         }}
         type="login"
         userName={loggedInUserName}
-        onContinue={() => {
+          onContinue={() => {
           setShowSuccessModal(false);
           onClose(); // Close login form
-          
-          // Redirect based on role
-          if (userRole === 'admin') {
+
+          // Read stored role (ensure we consider EVM roles)
+          const storedRole = (rememberMe ? localStorage : sessionStorage).getItem('userRole') || userRole || '';
+
+          // If role is admin or contains 'evm', redirect to admin interface
+          if (storedRole.toLowerCase().includes('admin') || storedRole.toLowerCase().includes('evm')) {
             navigate('/admin');
           } else {
             // Dealer stays on current page or home
             navigate('/');
           }
-          
+
           // Dispatch success event for other components
           window.dispatchEvent(new CustomEvent('loginSuccess', {
-            detail: { userName: loggedInUserName, role: userRole }
+            detail: { userName: loggedInUserName, role: storedRole }
           }));
         }}
       />

@@ -115,3 +115,19 @@ export const getUserCapabilities = () => {
     role
   };
 };
+
+/**
+ * Check if current user is an EVM staff account (special admin-like staff)
+ * We consider roles that include "evm" in their name to be EVM staff.
+ */
+export const isEvmStaff = (): boolean => {
+  try {
+    const user = getCurrentUser();
+    if (!user) return false;
+    const roleStr = (user.role || '').toString().toLowerCase();
+    if (!roleStr) return false;
+    return roleStr.includes('evm');
+  } catch (error) {
+    return false;
+  }
+};
