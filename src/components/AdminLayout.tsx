@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/authApi';
 import NotificationDropdown from './NotificationDropdown';
 import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
+import { isEvmStaff, getCurrentUserRole } from '../utils/roleUtils';
+import { getCurrentUser } from '../utils/authUtils';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -16,6 +18,7 @@ interface AdminLayoutProps {
     bookings: number;
     testDrives: number;
     inventory: number; // number of inventory records
+    staff: number; // number of EVM staff
   };
 }
 
@@ -59,6 +62,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'bookings': return 'Đặt xe';
       case 'analytics': return 'Thống kê';
       case 'settings': return 'Cài đặt';
+      case 'staff': return 'Nhân viên';
       default: return 'Dashboard';
     }
   };
@@ -74,6 +78,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
       case 'bookings': return 'fas fa-calendar-alt';
       case 'analytics': return 'fas fa-chart-bar';
       case 'settings': return 'fas fa-cog';
+      case 'staff': return 'fas fa-users-cog';
       default: return 'fas fa-chart-line';
     }
   };
@@ -93,101 +98,137 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
         </div>
 
         <nav className={styles.sidebarNav}>
-          <div className={styles.navSection}>
-            <div className={styles.sectionTitle}>Main</div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'dashboard' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('dashboard');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-chart-line"></i>
-              <span>Dashboard</span>
+          {isEvmStaff() ? (
+            <div className={styles.navSection}>
+              <div className={styles.sectionTitle}>Quản lý</div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'cars' ? styles.active : ''}`}
+                onClick={() => { onTabChange('cars'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-car"></i>
+                <span>Quản lý xe ({counters.cars})</span>
+              </div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'colors' ? styles.active : ''}`}
+                onClick={() => { onTabChange('colors'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-palette"></i>
+                <span>Quản lý màu xe ({counters.colors})</span>
+              </div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
+                onClick={() => { onTabChange('inventory'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-warehouse"></i>
+                <span>Kho Hàng ({counters.inventory})</span>
+              </div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}
+                onClick={() => { onTabChange('bookings'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-calendar-alt"></i>
+                <span>Đặt xe ({counters.bookings})</span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className={styles.navSection}>
+                <div className={styles.sectionTitle}>Main</div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'dashboard' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('dashboard'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-chart-line"></i>
+                  <span>Dashboard</span>
+                </div>
+              </div>
 
-          <div className={styles.navSection}>
-            <div className={styles.sectionTitle}>Quản lý</div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'cars' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('cars');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-car"></i>
-              <span>Quản lý xe ({counters.cars})</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'colors' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('colors');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-palette"></i>
-              <span>Quản lý màu xe ({counters.colors})</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('inventory');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-warehouse"></i>
-              <span>Kho Hàng ({counters.inventory})</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'dealers' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('dealers');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-store"></i>
-              <span>
-                Đại lý ({counters.dealers})
-                {counters.unverifiedDealers > 0 && (
-                  <span className={styles.pendingBadge}>{counters.unverifiedDealers}</span>
-                )}
-              </span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'discounts' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('discounts');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-tags"></i>
-              <span>Chính sách chiết khấu</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}
-              onClick={() => {
-                onTabChange('bookings');
-                setSidebarOpen(false);
-              }}
-            >
-              <i className="fas fa-calendar-alt"></i>
-              <span>Đặt xe ({counters.bookings})</span>
-            </div>
-          </div>
+              <div className={styles.navSection}>
+                <div className={styles.sectionTitle}>Quản lý</div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'cars' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('cars'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-car"></i>
+                  <span>Quản lý xe ({counters.cars})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'colors' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('colors'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-palette"></i>
+                  <span>Quản lý màu xe ({counters.colors})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('inventory'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-warehouse"></i>
+                  <span>Kho Hàng ({counters.inventory})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'dealers' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('dealers'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-store"></i>
+                  <span>
+                    Đại lý ({counters.dealers})
+                    {counters.unverifiedDealers > 0 && (
+                      <span className={styles.pendingBadge}>{counters.unverifiedDealers}</span>
+                    )}
+                  </span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'staff' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('staff'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-users-cog"></i>
+                  <span>Quản lý nhân viên ({counters.staff})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'discounts' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('discounts'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-tags"></i>
+                  <span>Chính sách chiết khấu</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('bookings'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-calendar-alt"></i>
+                  <span>Đặt xe ({counters.bookings})</span>
+                </div>
+              </div>
+            </>
+          )}
+        </nav>
 
           {/* 'Cài đặt' tab removed per request */}
-        </nav>
 
         <div className={styles.sidebarFooter}>
           <div className={styles.userInfo}>
-            <div className={styles.avatar}>
-              {localStorage.getItem('userName')?.charAt(0).toUpperCase() || 'A'}
-            </div>
-            <div className={styles.userDetails}>
-              <p className={styles.userName}>{localStorage.getItem('userName') || 'Admin'}</p>
-              <p className={styles.userRole}>{localStorage.getItem('role') || 'Administrator'}</p>
-            </div>
+              {(() => {
+                const user = getCurrentUser();
+                const role = getCurrentUserRole();
+                const displayName = user?.fullName || user?.username || 'Admin';
+                const displayRole =
+                  role === 'admin' ? 'Administrator'
+                  : role === 'staff' ? 'EVM Staff'
+                  : role === 'dealer' ? 'Dealer'
+                  : (role || 'User');
+                return (
+                  <>
+                    <div className={styles.avatar}>
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className={styles.userDetails}>
+                      <p className={styles.userName}>{displayName}</p>
+                      <p className={styles.userRole}>{displayRole}</p>
+                    </div>
+                  </>
+                );
+              })()}
             <button className={styles.logoutBtn} onClick={handleLogout}>
               <i className="fas fa-sign-out-alt"></i>
             </button>
