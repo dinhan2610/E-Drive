@@ -1,10 +1,20 @@
+// ===== Staff Page - Modern & Professional Design =====
+
+.staffPage {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
 // ===== Customers Page - Modern & Professional Design =====
 
 .customersPage {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: calc(100vh - 80px);
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding-bottom: 120px;
 }
 
 // ========== Hero Header Section ==========
@@ -319,12 +329,15 @@
 .mainContent {
   flex: 1;
   padding: 2.5rem;
+  padding-bottom: 4rem;
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
+  min-height: calc(100vh - 400px);
 
   @media (max-width: 768px) {
     padding: 1.5rem;
+    padding-bottom: 3rem;
   }
 }
 
@@ -617,6 +630,7 @@
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   border: 1px solid #e5e7eb;
+  margin-bottom: 3rem;
 }
 
 // ========== Pagination ==========

@@ -76,34 +76,12 @@ const StaffDetail: React.FC<StaffDetailProps> = ({
       >
         {/* Header */}
         <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <div className={styles.headerIcon}>
+          <div className={styles.headerContent}>
+            <h2 id="staff-detail-title" className={styles.modalTitle}>
               <i className="fas fa-user-circle" />
-            </div>
-            <div className={styles.headerInfo}>
-              <div className={styles.titleRow}>
-                <h2 id="staff-detail-title" className={styles.modalTitle}>
-                  Chi tiết nhân viên
-                </h2>
-                {onEdit && (
-                  <button
-                    type="button"
-                    className={styles.quickEditButton}
-                    onClick={handleEdit}
-                    title="Chỉnh sửa"
-                  >
-                    <i className="fas fa-edit" />
-                  </button>
-                )}
-              </div>
-              <div className={styles.headerMeta}>
-                <span className={styles.userId}>ID: #{staff.userId}</span>
-                <span className={`${styles.statusBadge} ${staff.active ? styles.active : styles.inactive}`}>
-                  <i className={staff.active ? "fas fa-check-circle" : "fas fa-times-circle"} />
-                  {staff.active ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                </span>
-              </div>
-            </div>
+              Chi tiết nhân viên
+            </h2>
+            <span className={styles.userId}>ID: #{staff.userId}</span>
           </div>
           <button
             type="button"
@@ -117,61 +95,71 @@ const StaffDetail: React.FC<StaffDetailProps> = ({
 
         {/* Content */}
         <div className={styles.content}>
-          <div className={styles.staffCard}>
-            <div className={styles.avatar}>
-              <span className={styles.avatarText}>{staff.fullName.charAt(0).toUpperCase()}</span>
-              <div className={styles.avatarBadge}>
-                <i className="fas fa-id-badge" />
-              </div>
-            </div>
-            <div className={styles.staffMainInfo}>
-              <h3 className={styles.staffName}>{staff.fullName}</h3>
-              <div className={styles.staffMeta}>
-                <span className={styles.usernameTag}>
-                  <i className="fas fa-at" />
-                  {staff.username}
-                </span>
-                <span className={`${styles.roleBadge} ${getRoleBadgeClass(staff.roles)}`}>
-                  <i className="fas fa-user-tag" />
-                  {getRoleDisplay(staff.roles)}
-                </span>
-              </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              <i className="fas fa-user" />
+              Tên đăng nhập
+            </label>
+            <div className={styles.staticValue}>{staff.username}</div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              <i className="fas fa-id-card" />
+              Họ và tên
+            </label>
+            <div className={styles.staticValue}>{staff.fullName}</div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              <i className="fas fa-user-tag" />
+              Vai trò
+            </label>
+            <div className={styles.staticValue}>
+              <span className={`${styles.roleBadge} ${getRoleBadgeClass(staff.roles)}`}>
+                {getRoleDisplay(staff.roles)}
+              </span>
             </div>
           </div>
 
-          <div className={styles.infoGrid}>
-            <div className={styles.infoCard}>
-              <div className={styles.infoIcon} style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-                <i className="fas fa-phone" />
-              </div>
-              <div className={styles.infoContent}>
-                <div className={styles.infoLabel}>Số điện thoại</div>
-                <div className={styles.infoValue}>
-                  <a href={`tel:${staff.phone}`} className={styles.link}>
-                    {formatPhoneNumber(staff.phone)}
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.infoCard}>
-              <div className={styles.infoIcon} style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-                <i className="fas fa-envelope" />
-              </div>
-              <div className={styles.infoContent}>
-                <div className={styles.infoLabel}>Email</div>
-                <div className={styles.infoValue}>
-                  {staff.email ? (
-                    <a href={`mailto:${staff.email}`} className={styles.link}>
-                      {staff.email}
-                    </a>
-                  ) : (
-                    <span className={styles.emptyValue}>Chưa có</span>
-                  )}
-                </div>
-              </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              <i className="fas fa-envelope" />
+              Email
+            </label>
+            <div className={styles.staticValue}>
+              {staff.email ? (
+                <a href={`mailto:${staff.email}`} className={styles.emailLink}>
+                  {staff.email}
+                </a>
+              ) : (
+                <span className={styles.emptyValue}>Chưa có</span>
+              )}
             </div>
           </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              <i className="fas fa-phone" />
+              Số điện thoại
+            </label>
+            <div className={styles.staticValue}>
+              <a href={`tel:${staff.phone}`} className={styles.phoneLink}>
+                {formatPhoneNumber(staff.phone)}
+              </a>
+            </div>
+          </div>
+
+          {staff.dealerName && (
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                <i className="fas fa-building" />
+                Đại lý
+              </label>
+              <div className={styles.staticValue}>{staff.dealerName}</div>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}
@@ -182,7 +170,7 @@ const StaffDetail: React.FC<StaffDetailProps> = ({
             onClick={onClose}
           >
             <i className="fas fa-times" />
-            <span>Đóng</span>
+            Đóng
           </button>
           {onEdit && (
             <button
@@ -191,7 +179,7 @@ const StaffDetail: React.FC<StaffDetailProps> = ({
               onClick={handleEdit}
             >
               <i className="fas fa-edit" />
-              <span>Chỉnh sửa</span>
+              Chỉnh sửa
             </button>
           )}
           {onDelete && (
@@ -201,7 +189,7 @@ const StaffDetail: React.FC<StaffDetailProps> = ({
               onClick={handleDelete}
             >
               <i className="fas fa-trash-alt" />
-              <span>Xóa</span>
+              Xóa
             </button>
           )}
         </div>

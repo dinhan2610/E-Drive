@@ -201,7 +201,7 @@ const StaffPage: React.FC = () => {
               <i className="fas fa-search" />
               <input
                 type="text"
-                placeholder="Tìm kiếm nhân viên (tên, email, số điện thoại)..."
+                placeholder="Tìm kiếm nhân viên "
                 value={searchInput}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className={styles.searchInput}

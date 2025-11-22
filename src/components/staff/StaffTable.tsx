@@ -112,7 +112,6 @@ const StaffTable: React.FC<StaffTableProps> = ({
               <th className={styles.headerCell}>Vai trò</th>
               <th className={styles.headerCell}>Email</th>
               <th className={styles.headerCell}>Số điện thoại</th>
-              <th className={styles.headerCell}>Trạng thái</th>
               <th className={styles.headerCell}>Thao tác</th>
             </tr>
           </thead>
@@ -149,11 +148,6 @@ const StaffTable: React.FC<StaffTableProps> = ({
                 </td>
                 <td className={styles.dataCell}>{staffMember.email}</td>
                 <td className={styles.dataCell}>{formatPhoneNumber(staffMember.phone)}</td>
-                <td className={styles.dataCell}>
-                  <span className={`${styles.statusBadge} ${staffMember.active ? styles.active : styles.inactive}`}>
-                    {staffMember.active ? 'Hoạt động' : 'Vô hiệu hóa'}
-                  </span>
-                </td>
                 <td className={styles.dataCell}>
                   <div className={styles.actions}>
                     {onView && (
