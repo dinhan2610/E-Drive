@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/authApi';
 import NotificationDropdown from './NotificationDropdown';
 import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
-import { isEvmStaff } from '../utils/roleUtils';
+import { isEvmStaff, getCurrentUserRole } from '../utils/roleUtils';
+import { getCurrentUser } from '../utils/authUtils';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -207,13 +208,27 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
 
         <div className={styles.sidebarFooter}>
           <div className={styles.userInfo}>
-            <div className={styles.avatar}>
-              {localStorage.getItem('userName')?.charAt(0).toUpperCase() || 'A'}
-            </div>
-            <div className={styles.userDetails}>
-              <p className={styles.userName}>{localStorage.getItem('userName') || 'Admin'}</p>
-              <p className={styles.userRole}>{localStorage.getItem('role') || 'Administrator'}</p>
-            </div>
+              {(() => {
+                const user = getCurrentUser();
+                const role = getCurrentUserRole();
+                const displayName = user?.fullName || user?.username || 'Admin';
+                const displayRole =
+                  role === 'admin' ? 'Administrator'
+                  : role === 'staff' ? 'EVM Staff'
+                  : role === 'dealer' ? 'Dealer'
+                  : (role || 'User');
+                return (
+                  <>
+                    <div className={styles.avatar}>
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className={styles.userDetails}>
+                      <p className={styles.userName}>{displayName}</p>
+                      <p className={styles.userRole}>{displayRole}</p>
+                    </div>
+                  </>
+                );
+              })()}
             <button className={styles.logoutBtn} onClick={handleLogout}>
               <i className="fas fa-sign-out-alt"></i>
             </button>
