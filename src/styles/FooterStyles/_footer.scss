@@ -1,0 +1,202 @@
+// Footer Section
+.footer-section {
+  background: #1e293b;
+  color: white;
+  padding: 80px 0 0;
+  position: relative;
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+}
+
+// Footer Content
+.footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 60px;
+  margin-bottom: 50px;
+
+  .footer-column {
+    .column-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 24px;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        width: 30px;
+        height: 2px;
+        background: #ff4d30;
+      }
+    }
+  }
+}
+
+// Company Info
+.company-info {
+  .logo {
+    margin-bottom: 24px;
+
+    h3 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #ff4d30;
+      margin-bottom: 8px;
+    }
+
+    .tagline {
+      font-size: 14px;
+      color: #94a3b8;
+      font-style: italic;
+    }
+  }
+
+  .company-description {
+    font-size: 16px;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin-bottom: 32px;
+  }
+
+  .contact-info {
+    margin-bottom: 32px;
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+
+      i {
+        color: #ff4d30;
+        font-size: 16px;
+        width: 20px;
+      }
+
+      a, span {
+        color: #e2e8f0;
+        text-decoration: none;
+        font-size: 15px;
+        transition: color 0.3s ease;
+      }
+
+      a:hover {
+        color: #ff4d30;
+      }
+    }
+  }
+
+  .social-links {
+    display: flex;
+    gap: 16px;
+
+    .social-link {
+      width: 40px;
+      height: 40px;
+      background: #334155;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #cbd5e1;
+      text-decoration: none;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #ff4d30;
+        color: white;
+        transform: translateY(-2px);
+      }
+
+      i {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+// Footer Links
+.footer-links {
+  list-style: none;
+  padding: 0;
+
+  li {
+    margin-bottom: 12px;
+
+    a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      display: inline-block;
+
+      &:hover {
+        color: #ff4d30;
+        transform: translateX(4px);
+      }
+    }
+  }
+}
+
+// Working Hours
+.working-hours {
+  .hours-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #334155;
+
+    .day {
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+
+    .time {
+      color: #ff4d30;
+      font-weight: 600;
+      font-size: 14px;
+    }
+  }
+}
+
+// Footer Bottom
+.footer-bottom {
+  border-top: 1px solid #334155;
+  padding: 30px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .copyright {
+    p {
+      color: #94a3b8;
+      font-size: 14px;
+      margin: 0;
+    }
+  }
+
+  .footer-legal {
+    display: flex;
+    gap: 24px;
+
+    a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: #ff4d30;
+      }
+    }
+  }
+}

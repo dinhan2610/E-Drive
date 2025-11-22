@@ -1,0 +1,558 @@
+.pageContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.loadingContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  gap: 20px;
+
+  i {
+    font-size: 48px;
+  }
+
+  p {
+    font-size: 18px;
+    margin: 0;
+  }
+
+  button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: white;
+    color: #667eea;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+.header {
+  max-width: 1200px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  .backButton {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateX(-5px);
+    }
+
+    i {
+      font-size: 16px; // Increased from 14px
+    }
+  }
+
+  h1 {
+    color: white;
+    font-size: 28px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    i {
+      font-size: 24px;
+    }
+  }
+}
+
+.contractWrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.contractDocument {
+  background: white;
+  border-radius: 12px;
+  padding: 40px 50px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  margin-bottom: 20px;
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1.6;
+}
+
+// Contract Header
+.contractHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #ddd;
+  padding-bottom: 20px;
+
+  .leftColumn {
+    flex: 1;
+    font-size: 15px; // Increased from 13px
+
+    .companyInfo {
+      margin-bottom: 20px;
+
+      h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        color: #1f2937;
+      }
+
+      p {
+        margin: 4px 0;
+        color: #374151;
+      }
+    }
+
+    .partyInfo {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f9fafb;
+      border-radius: 6px;
+
+      p {
+        margin: 4px 0;
+        color: #374151;
+      }
+    }
+  }
+
+  .rightColumn {
+    flex: 0 0 400px;
+    text-align: center;
+
+    .mainTitle {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1f2937;
+      margin: 0 0 10px;
+    }
+
+    .contractNo {
+      font-size: 15px; // Increased from 14px
+      margin: 5px 0;
+      color: #374151;
+    }
+
+    .contractDate {
+      font-size: 15px; // Increased from 13px
+      margin: 5px 0;
+      color: #6b7280;
+    }
+
+    .note {
+      font-size: 15px; // Increased from 13px
+      margin: 5px 0;
+      color: #6b7280;
+      font-style: italic;
+    }
+  }
+}
+
+// Articles
+.article {
+  margin-bottom: 25px;
+
+  h4 {
+    font-size: 15px;
+    font-weight: bold;
+    color: #1f2937;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  p {
+    margin: 8px 0;
+    font-size: 15px; // Increased from 14px
+    color: #374151;
+    text-align: justify;
+  }
+
+  ul {
+    margin: 10px 0;
+    padding-left: 20px;
+
+    li {
+      margin: 6px 0;
+      font-size: 15px; // Increased from 14px
+      color: #374151;
+    }
+  }
+
+  em {
+    font-style: italic;
+    color: #6b7280;
+  }
+}
+
+// Vehicle Table
+.vehicleTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  font-size: 15px; // Increased from 13px
+
+  thead {
+    background: #f3f4f6;
+
+    th {
+      padding: 10px 8px;
+      border: 1px solid #d1d5db;
+      font-weight: bold;
+      text-align: center;
+      color: #1f2937;
+    }
+  }
+
+  tbody {
+    td {
+      padding: 10px 8px;
+      border: 1px solid #d1d5db;
+      color: #374151;
+    }
+
+    .vehicleDesc {
+      text-align: left;
+
+      p {
+        margin: 4px 0;
+        font-size: 15px; // Increased from 13px
+      }
+
+      strong {
+        font-weight: bold;
+        color: #1f2937;
+      }
+    }
+
+    .centerText {
+      text-align: center;
+    }
+
+    .rightText {
+      text-align: right;
+    }
+
+    .totalRow {
+      background: #f9fafb;
+      font-weight: bold;
+
+      td {
+        padding: 12px 8px;
+        font-size: 15px; // Increased from 14px
+        color: #1f2937;
+      }
+    }
+  }
+}
+
+// Signatures
+.signatures {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.signatureBlock {
+  flex: 1;
+  text-align: center;
+
+  .signTitle {
+    font-size: 15px; // Increased from 14px
+    font-weight: bold;
+    color: #1f2937;
+    margin: 0 0 5px;
+    text-transform: uppercase;
+  }
+
+  .signSubtitle {
+    font-size: 13px; // Keep small for subtitle
+    color: #6b7280;
+    margin: 0 0 15px;
+    font-style: italic;
+  }
+
+  .signatureCanvas {
+    position: relative;
+    margin: 0 auto 15px;
+    width: 250px;
+    height: 120px;
+    border: none; // Removed border
+    border-radius: 4px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: #9ca3af;
+      pointer-events: none;
+      font-family: Arial, sans-serif;
+
+      i {
+        font-size: 28px; // Increased from 24px
+      }
+
+      p {
+        margin: 0;
+        font-size: 15px; // Increased from 13px
+      }
+    }
+  }
+
+  .signName {
+    font-size: 15px; // Increased from 13px
+    color: #374151;
+    margin: 10px 0 0;
+    font-weight: 500;
+  }
+
+  .buyerSignArea {
+    margin: 35px auto 15px;
+    width: 250px;
+    height: 120px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 10px;
+
+    .emptySignText {
+      font-size: 15px; // Increased from 14px
+      color: #9ca3af;
+      margin: 0;
+      letter-spacing: 2px;
+    }
+  }
+}
+
+// Action Bar
+.actionBar {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  button {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+
+    i {
+      font-size: 16px;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .clearButton {
+    background: #ef4444;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #dc2626;
+    }
+  }
+
+  .submitButton {
+    background: #10b981;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #059669;
+    }
+  }
+}
+
+// Loading Overlay
+.loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(5px);
+}
+
+.loadingBox {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+
+  i {
+    color: #10b981;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+  }
+
+  h3 {
+    margin: 0 0 20px;
+    font-size: 20px;
+    color: #1f2937;
+  }
+
+  .progressSteps {
+    text-align: left;
+    margin: 20px 0;
+    padding: 20px;
+    background: #f3f4f6;
+    border-radius: 8px;
+
+    p {
+      margin: 10px 0;
+      font-size: 15px; // Increased from 14px
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  }
+
+  .loadingNote {
+    margin: 15px 0 0;
+    font-size: 15px; // Increased from 13px
+    color: #6b7280;
+    font-style: italic;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+// Responsive
+@media (max-width: 1024px) {
+  .contractHeader {
+    flex-direction: column;
+
+    .rightColumn {
+      flex: 1;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 10px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+
+    h1 {
+      font-size: 20px;
+    }
+  }
+
+  .contractDocument {
+    padding: 20px 15px;
+  }
+
+  .signatures {
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .actionBar {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .vehicleTable {
+    font-size: 13px; // Increased from 11px for better readability
+
+    thead th,
+    tbody td {
+      padding: 6px 4px;
+    }
+  }
+}

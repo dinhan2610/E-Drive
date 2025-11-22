@@ -1,0 +1,560 @@
+// Admin Sidebar Layout
+.adminContainer {
+  display: flex;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+// Sidebar
+.sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 1000;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  transform: translateX(0); // Luôn hiển thị mặc định
+
+  @media (max-width: 1024px) {
+    transform: translateX(-280px); // Ẩn trên mobile
+    
+    &.show {
+      transform: translateX(0); // Hiện khi click menu
+    }
+  }
+}
+
+.sidebarHeader {
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: white;
+    
+    i {
+      font-size: 32px;
+      color: #ff4d30;
+    }
+    
+    h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+      background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    p {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 2px 0 0 0;
+    }
+  }
+}
+
+.sidebarNav {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: hidden; // Ẩn scrollbar
+
+  &::-webkit-scrollbar {
+    display: none; // Ẩn scrollbar hoàn toàn
+  }
+}
+
+.navSection {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  padding: 0 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  margin: 2px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+
+  i {
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+  }
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.3);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 24px;
+      background: white;
+      border-radius: 2px;
+    }
+  }
+}
+
+.pendingBadge {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.sidebarFooter {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.userDetails {
+  flex: 1;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+}
+
+.userRole {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  // Override notification styles for dark sidebar
+  :global(.notificationDropdown) {
+    :global(.notificationButton) {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #cbd5e1;
+      padding: 8px;
+      border-radius: 6px;
+      width: auto;
+      height: auto;
+
+      &:hover {
+        background: rgba(255, 77, 48, 0.15);
+        border-color: #ff4d30;
+        color: #ff4d30;
+      }
+
+      i {
+        font-size: 18px;
+      }
+    }
+
+    :global(.badge) {
+      top: 0;
+      right: 0;
+    }
+  }
+}
+
+.logoutBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ff4d30;
+  }
+}
+
+// Main Content
+.mainContent {
+  flex: 1;
+  margin-left: 280px;
+  transition: margin-left 0.3s ease;
+  
+  @media (max-width: 1024px) {
+    margin-left: 0;
+  }
+}
+
+.topBar {
+  display: flex; // Hiển thị lại topBar
+  background: white;
+  padding: 16px 32px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.topBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.menuToggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #475569;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  
+  &:hover {
+    background: #f1f5f9;
+  }
+  
+  @media (max-width: 1024px) {
+    display: block;
+  }
+}
+
+.pageTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  
+  i {
+    color: #ff4d30;
+    font-size: 22px;
+  }
+}
+
+.topBarRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  // Notification styles cho topBar
+  :global(.notificationDropdown) {
+    :global(.notificationButton) {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #64748b;
+      padding: 10px;
+      border-radius: 8px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 77, 48, 0.1);
+        border-color: #ff4d30;
+        color: #ff4d30;
+      }
+
+      i {
+        font-size: 18px;
+      }
+    }
+
+    :global(.badge) {
+      top: 2px;
+      right: 2px;
+    }
+  }
+}
+
+.searchBox {
+  display: none; // Ẩn search box
+  position: relative;
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
+  
+  input {
+    padding: 10px 16px 10px 40px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 300px;
+    font-size: 14px;
+    transition: all 0.2s;
+    
+    &:focus {
+      outline: none;
+      border-color: #ff4d30;
+      box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+    }
+  }
+  
+  i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+  }
+}
+
+.iconBtn {
+  position: relative;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 18px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: linear-gradient(135deg, #ff4d30, #ff6b47);
+    border-color: #ff4d30;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.25);
+  }
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: linear-gradient(135deg, #ff4d30, #ff6b47);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(255, 77, 48, 0.4);
+  border: 2px solid white;
+}
+
+.contentArea {
+  padding: 32px;
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+  }
+}
+
+// Overlay for mobile
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  
+  @media (max-width: 1024px) {
+    &.show {
+      display: block;
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+// Dashboard Stats (modernized)
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.statHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.statInfo {
+  flex: 1;
+}
+
+.statLabel {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.statIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  
+  &.primary {
+    background: linear-gradient(135deg, rgba(255, 77, 48, 0.1) 0%, rgba(255, 107, 71, 0.1) 100%);
+    color: #ff4d30;
+  }
+  
+  &.success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+    color: #10b981;
+  }
+  
+  &.warning {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+    color: #fbbf24;
+  }
+  
+  &.info {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+    color: #3b82f6;
+  }
+}
+
+.statFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  
+  &.up {
+    color: #10b981;
+  }
+  
+  &.down {
+    color: #ef4444;
+  }
+}
+
+.trendText {
+  color: #64748b;
+}

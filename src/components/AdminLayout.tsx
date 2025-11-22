@@ -1,0 +1,278 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authApi } from '../services/authApi';
+import NotificationDropdown from './NotificationDropdown';
+import styles from '../styles/AdminStyles/AdminSidebar.module.scss';
+import { isEvmStaff, getCurrentUserRole } from '../utils/roleUtils';
+import { getCurrentUser } from '../utils/authUtils';
+
+interface AdminLayoutProps {
+  children: React.ReactNode;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  counters: {
+    cars: number;
+    colors: number;
+    dealers: number;
+    unverifiedDealers: number;
+    bookings: number;
+    testDrives: number;
+    inventory: number; // number of inventory records
+    staff: number; // number of EVM staff
+  };
+}
+
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabChange, counters }) => {
+  // Khởi tạo sidebar mở cho desktop, đóng cho mobile
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
+  const navigate = useNavigate();
+
+  // Xử lý resize window
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      navigate('/');
+    } catch (error) {
+      localStorage.clear();
+      navigate('/');
+    }
+  };
+
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case 'dashboard': return 'Dashboard';
+      case 'inventory': return 'Kho Hàng';
+      case 'cars': return 'Quản lý xe';
+      case 'colors': return 'Quản lý màu xe';
+      case 'dealers': return 'Đại lý';
+      case 'discounts': return 'Chính sách chiết khấu';
+      case 'bookings': return 'Đặt xe';
+      case 'analytics': return 'Thống kê';
+      case 'settings': return 'Cài đặt';
+      case 'staff': return 'Nhân viên';
+      default: return 'Dashboard';
+    }
+  };
+
+  const getPageIcon = () => {
+    switch (activeTab) {
+      case 'dashboard': return 'fas fa-chart-line';
+      case 'inventory': return 'fas fa-warehouse';
+      case 'cars': return 'fas fa-car';
+      case 'colors': return 'fas fa-palette';
+      case 'dealers': return 'fas fa-store';
+      case 'discounts': return 'fas fa-tags';
+      case 'bookings': return 'fas fa-calendar-alt';
+      case 'analytics': return 'fas fa-chart-bar';
+      case 'settings': return 'fas fa-cog';
+      case 'staff': return 'fas fa-users-cog';
+      default: return 'fas fa-chart-line';
+    }
+  };
+
+  return (
+    <div className={styles.adminContainer}>
+      {/* Sidebar */}
+      <div className={`${styles.sidebar} ${sidebarOpen ? styles.show : ''}`}>
+        <div className={styles.sidebarHeader}>
+          <a href="/" className={styles.logo}>
+            <i className="fas fa-bolt"></i>
+            <div>
+              <h2>E-Drive</h2>
+              <p>Admin Panel</p>
+            </div>
+          </a>
+        </div>
+
+        <nav className={styles.sidebarNav}>
+          {isEvmStaff() ? (
+            <div className={styles.navSection}>
+              <div className={styles.sectionTitle}>Quản lý</div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'cars' ? styles.active : ''}`}
+                onClick={() => { onTabChange('cars'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-car"></i>
+                <span>Quản lý xe ({counters.cars})</span>
+              </div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'colors' ? styles.active : ''}`}
+                onClick={() => { onTabChange('colors'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-palette"></i>
+                <span>Quản lý màu xe ({counters.colors})</span>
+              </div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
+                onClick={() => { onTabChange('inventory'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-warehouse"></i>
+                <span>Kho Hàng ({counters.inventory})</span>
+              </div>
+              <div
+                className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}
+                onClick={() => { onTabChange('bookings'); setSidebarOpen(false); }}
+              >
+                <i className="fas fa-calendar-alt"></i>
+                <span>Đặt xe ({counters.bookings})</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className={styles.navSection}>
+                <div className={styles.sectionTitle}>Main</div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'dashboard' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('dashboard'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-chart-line"></i>
+                  <span>Dashboard</span>
+                </div>
+              </div>
+
+              <div className={styles.navSection}>
+                <div className={styles.sectionTitle}>Quản lý</div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'cars' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('cars'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-car"></i>
+                  <span>Quản lý xe ({counters.cars})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'colors' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('colors'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-palette"></i>
+                  <span>Quản lý màu xe ({counters.colors})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('inventory'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-warehouse"></i>
+                  <span>Kho Hàng ({counters.inventory})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'dealers' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('dealers'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-store"></i>
+                  <span>
+                    Đại lý ({counters.dealers})
+                    {counters.unverifiedDealers > 0 && (
+                      <span className={styles.pendingBadge}>{counters.unverifiedDealers}</span>
+                    )}
+                  </span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'staff' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('staff'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-users-cog"></i>
+                  <span>Quản lý nhân viên ({counters.staff})</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'discounts' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('discounts'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-tags"></i>
+                  <span>Chính sách chiết khấu</span>
+                </div>
+                <div
+                  className={`${styles.navItem} ${activeTab === 'bookings' ? styles.active : ''}`}
+                  onClick={() => { onTabChange('bookings'); setSidebarOpen(false); }}
+                >
+                  <i className="fas fa-calendar-alt"></i>
+                  <span>Đặt xe ({counters.bookings})</span>
+                </div>
+              </div>
+            </>
+          )}
+        </nav>
+
+          {/* 'Cài đặt' tab removed per request */}
+
+        <div className={styles.sidebarFooter}>
+          <div className={styles.userInfo}>
+              {(() => {
+                const user = getCurrentUser();
+                const role = getCurrentUserRole();
+                const displayName = user?.fullName || user?.username || 'Admin';
+                const displayRole =
+                  role === 'admin' ? 'Administrator'
+                  : role === 'evm_staff' ? 'EVM Staff'
+                  : role === 'dealer' ? 'Dealer Manager'
+                  : role === 'staff' ? 'Dealer Staff'
+                  : (role || 'User');
+                return (
+                  <>
+                    <div className={styles.avatar}>
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className={styles.userDetails}>
+                      <p className={styles.userName}>{displayName}</p>
+                      <p className={styles.userRole}>{displayRole}</p>
+                    </div>
+                  </>
+                );
+              })()}
+            <button className={styles.logoutBtn} onClick={handleLogout}>
+              <i className="fas fa-sign-out-alt"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Overlay for mobile */}
+      <div 
+        className={`${styles.overlay} ${sidebarOpen ? styles.show : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      ></div>
+
+      {/* Main Content */}
+      <div className={styles.mainContent}>
+        {/* Top Bar */}
+        <div className={styles.topBar}>
+          <div className={styles.topBarLeft}>
+            <button className={styles.menuToggle} onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <i className="fas fa-bars"></i>
+            </button>
+            <h1 className={styles.pageTitle}>
+              <i className={getPageIcon()}></i>
+              {getPageTitle()}
+            </h1>
+          </div>
+
+          <div className={styles.topBarRight}>
+            <NotificationDropdown />
+            <div className={styles.searchBox}>
+              <i className="fas fa-search"></i>
+              <input type="text" placeholder="Tìm kiếm..." />
+            </div>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className={styles.contentArea}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLayout;

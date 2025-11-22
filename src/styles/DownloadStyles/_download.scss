@@ -1,0 +1,243 @@
+@use "../global/colors" as *;
+@use "../global/boilerplate" as *;
+@use "../global/typhography" as *;
+
+.download-section {
+  background-image: url("../../images/banners/bg02.png");
+  background-color: #f8f9fa;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100%;
+  min-height: 700px;
+  padding: 10rem 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(0,0,0,0.7), rgba(0,0,0,0.4));
+    z-index: 1;
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+  }
+
+}
+
+.download-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 500px;
+}
+
+.download-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  color: white;
+
+  .section-header {
+    margin-bottom: 2rem;
+
+    h4 {
+      font-size: 2.8rem;
+      font-weight: 500;
+      color: $text-orange;
+      margin-bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 900;
+      font-family: Roboto, sans-serif;
+    }
+
+    h2 {
+      font-size: 4.5rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(45deg, #fff, #e0e0e0);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+    }
+
+    .header-divider {
+      width: 80px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, $text-orange, transparent);
+      margin: 0 auto;
+      border-radius: 2px;
+    }
+  }
+
+  p {
+    font-size: 1.6rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 2.5rem;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    font-weight: 400;
+  }
+
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin: 3rem 0;
+
+
+    .benefit-item {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 2rem 1.5rem;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255,255,255,0.15);
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(250,66,38,0.2);
+      }
+
+      i {
+        font-size: 3rem;
+        color: $text-orange;
+        margin-bottom: 1rem;
+        display: block;
+      }
+
+      h5 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 0.5rem;
+      }
+
+      span {
+        font-size: 1.2rem;
+        color: rgba(255,255,255,0.8);
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+.download-buttons {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 3rem;
+  flex-wrap: wrap;
+
+}
+
+.download-btn {
+  padding: 1.6rem 3rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+ 
+  min-width: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  position: relative;
+  overflow: hidden;
+  border: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s ease;
+  }
+
+  &:hover::before {
+    left: 100%;
+  }
+
+  i {
+    font-size: 1.4rem;
+    transition: transform 0.3s ease;
+  }
+
+  span {
+    font-weight: 600;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    
+    i {
+      transform: scale(1.1);
+    }
+  }
+
+  &:active {
+    transform: translateY(-1px);
+  }
+
+  &.primary {
+    background: #fa4226;
+    color: white;
+
+    &:hover {
+      background: linear-gradient(135deg, #ff6b4d, #fa4226);
+      box-shadow: 0 8px 25px rgba(250,66,38,0.4);
+    }
+  }
+
+  &.secondary {
+    background: linear-gradient(135deg, #1976d2, #2196f3);
+    color: white;
+
+    &:hover {
+      background: linear-gradient(135deg, #2196f3, #1976d2);
+      box-shadow: 0 8px 25px rgba(33,150,243,0.4);
+    }
+  }
+
+  &.outline {
+    background: transparent;
+    color: white;
+    border: 2px solid rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+
+    &:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: $text-orange;
+      color: $text-orange;
+      box-shadow: 0 8px 25px rgba(255,255,255,0.2);
+    }
+  }
+}
+
+
+

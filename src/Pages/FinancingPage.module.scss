@@ -1,0 +1,573 @@
+.financingPage {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+
+  .hero {
+    background: white;
+    padding: 8rem 2rem 6rem;
+    margin-top: 8rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+    .heroContent {
+      max-width: 1400px;
+      margin: 0 auto;
+
+      .heroText {
+        text-align: center;
+
+        .heroTitle {
+          margin: 0 0 1.5rem;
+          font-size: 4.2rem;
+          font-weight: 800;
+          background: linear-gradient(135deg, #212529 0%, #ff4d30 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 1.5rem;
+          line-height: 1.2;
+
+          i {
+            font-size: 3.6rem;
+            background: linear-gradient(135deg, #ff4d30, #fa4226);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+        }
+
+        .heroSubtitle {
+          margin: 0 0 3rem;
+          color: #6c757d;
+          font-size: 1.8rem;
+          max-width: 700px;
+          margin-left: auto;
+          margin-right: auto;
+          line-height: 1.6;
+        }
+
+        .heroFeatures {
+          display: flex;
+          justify-content: center;
+          gap: 2.5rem;
+          flex-wrap: wrap;
+
+          .feature {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #212529;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 1.2rem 2.4rem;
+            background: linear-gradient(135deg, rgba(255,77,48,0.08) 0%, rgba(255,77,48,0.04) 100%);
+            border-radius: 50px;
+            border: 2px solid rgba(255, 77, 48, 0.2);
+            transition: all 0.3s ease;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(255, 77, 48, 0.15);
+              border-color: #ff4d30;
+            }
+
+            i {
+              font-size: 1.6rem;
+              color: #ff4d30;
+            }
+          }
+        }
+
+        .disclaimer {
+          margin-top: 3rem;
+          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+          border-left: 4px solid #ff9800;
+          border-radius: 12px;
+          padding: 2rem 2.5rem;
+          display: flex;
+          gap: 1.5rem;
+          align-items: flex-start;
+          text-align: left;
+          max-width: 900px;
+          margin-left: auto;
+          margin-right: auto;
+          box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);
+
+          .disclaimerIcon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+          }
+
+          .disclaimerContent {
+            flex: 1;
+
+            .disclaimerTitle {
+              margin: 0 0 0.8rem;
+              font-size: 1.5rem;
+              color: #e65100;
+
+              strong {
+                font-weight: 800;
+              }
+            }
+
+            .disclaimerText {
+              margin: 0;
+              font-size: 1.3rem;
+              line-height: 1.7;
+              color: #5d4037;
+
+              strong {
+                color: #e65100;
+                font-weight: 700;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 6rem 3rem;
+
+    .grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 4rem;
+      align-items: start;
+
+      @media (max-width: 1024px) {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+
+      .formColumn {
+        .card {
+          background: white;
+          border-radius: 20px;
+          padding: 3.5rem;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e9ecef;
+          position: sticky;
+          top: 10rem;
+
+          .cardTitle {
+            margin: 0 0 3rem;
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #212529 0%, #ff4d30 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+
+            i {
+              font-size: 2.2rem;
+              background: linear-gradient(135deg, #ff4d30, #fa4226);
+              -webkit-background-clip: text;
+              background-clip: text;
+              -webkit-text-fill-color: transparent;
+            }
+          }
+
+          .priceNotice {
+            margin-bottom: 2.5rem;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #2196f3;
+
+            .noticeHeader {
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              padding: 1.5rem;
+              background: linear-gradient(135deg, #2196f3, #1976d2);
+              color: white;
+              font-size: 1.5rem;
+              font-weight: 700;
+
+              i {
+                font-size: 1.8rem;
+              }
+            }
+
+            .noticeBody {
+              padding: 1.5rem;
+
+              .priceRow {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+                font-size: 1.4rem;
+
+                span {
+                  color: #424242;
+                }
+
+                strong {
+                  color: #1565c0;
+                  font-size: 1.6rem;
+                }
+              }
+
+              .noticeFooter {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.8rem;
+                padding-top: 1rem;
+                border-top: 1px solid rgba(33, 150, 243, 0.2);
+
+                i {
+                  color: #ff9800;
+                  font-size: 1.4rem;
+                  margin-top: 0.2rem;
+                  flex-shrink: 0;
+                }
+
+                small {
+                  color: #616161;
+                  font-size: 1.2rem;
+                  line-height: 1.6;
+                }
+              }
+            }
+          }
+
+          .calculationNote {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            border-left: 4px solid #9c27b0;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+
+            i {
+              color: #9c27b0;
+              font-size: 2rem;
+              flex-shrink: 0;
+              margin-top: 0.2rem;
+            }
+
+            p {
+              margin: 0;
+              color: #4a148c;
+              font-size: 1.3rem;
+              line-height: 1.6;
+            }
+          }
+
+          .calculateButton {
+            width: 100%;
+            padding: 2rem;
+            border: none;
+            background: linear-gradient(135deg, #ff4d30 0%, #fa4226 100%);
+            color: white;
+            border-radius: 14px;
+            font-size: 1.7rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.2rem;
+            box-shadow: 0 6px 20px rgba(255, 77, 48, 0.35);
+            margin-top: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+
+            i {
+              font-size: 2rem;
+            }
+
+            &:hover:not(:disabled) {
+              transform: translateY(-3px);
+              box-shadow: 0 10px 30px rgba(255, 77, 48, 0.45);
+            }
+
+            &:active:not(:disabled) {
+              transform: translateY(-1px);
+            }
+
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+              transform: none;
+              box-shadow: 0 4px 12px rgba(255, 77, 48, 0.2);
+            }
+          }
+        }
+      }
+
+      .resultColumn {
+        min-height: 400px;
+
+        .importantNotice {
+          margin-top: 3rem;
+          background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+          border-radius: 16px;
+          padding: 2.5rem;
+          display: flex;
+          gap: 2rem;
+          align-items: flex-start;
+          box-shadow: 0 4px 16px rgba(255, 193, 7, 0.2);
+          border: 2px solid #ffc107;
+
+          .noticeIcon {
+            flex-shrink: 0;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ffc107, #ffa000);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.4rem;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+          }
+
+          .noticeContent {
+            flex: 1;
+
+            h4 {
+              margin: 0 0 1.5rem;
+              font-size: 1.8rem;
+              font-weight: 800;
+              color: #f57f17;
+            }
+
+            ul {
+              list-style: none;
+              padding: 0;
+              margin: 0;
+              display: flex;
+              flex-direction: column;
+              gap: 1rem;
+
+              li {
+                display: flex;
+                align-items: flex-start;
+                gap: 1rem;
+                font-size: 1.3rem;
+                line-height: 1.7;
+                color: #6d4c41;
+
+                i {
+                  color: #43a047;
+                  font-size: 1.4rem;
+                  margin-top: 0.3rem;
+                  flex-shrink: 0;
+                }
+
+                strong {
+                  color: #e65100;
+                  font-weight: 700;
+                }
+              }
+            }
+          }
+        }
+
+        .emptyState {
+          background: white;
+          border-radius: 20px;
+          padding: 6rem 4rem;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+          border: 2px dashed #e9ecef;
+          text-align: center;
+
+          .emptyIcon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 2.5rem;
+            background: linear-gradient(135deg, rgba(255,77,48,0.12) 0%, rgba(255,77,48,0.06) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid rgba(255, 77, 48, 0.2);
+
+            i {
+              font-size: 5.5rem;
+              background: linear-gradient(135deg, #ff4d30, #fa4226);
+              -webkit-background-clip: text;
+              background-clip: text;
+              -webkit-text-fill-color: transparent;
+            }
+          }
+
+          h3 {
+            margin: 0 0 1.5rem;
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: #212529;
+          }
+
+          p {
+            margin: 0 0 4rem;
+            color: #6c757d;
+            font-size: 1.6rem;
+            line-height: 1.6;
+          }
+
+          .emptySteps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+
+            .step {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 1rem;
+
+              .stepNumber {
+                width: 50px;
+                height: 50px;
+                background: linear-gradient(135deg, #ff4d30 0%, #fa4226 100%);
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 800;
+                font-size: 2rem;
+                box-shadow: 0 6px 18px rgba(255, 77, 48, 0.35);
+              }
+
+              span {
+                font-size: 1.4rem;
+                color: #495057;
+                font-weight: 600;
+              }
+            }
+
+            .stepArrow {
+              color: #dee2e6;
+              font-size: 2.2rem;
+              margin: 0 0.5rem;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .financingPage {
+    .hero {
+      padding: 5rem 2rem 4rem;
+      margin-top: 7rem;
+
+      .heroContent {
+        .heroText {
+          .heroTitle {
+            font-size: 2.8rem;
+            gap: 1rem;
+
+            i {
+              font-size: 2.4rem;
+            }
+          }
+
+          .heroSubtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+          }
+
+          .heroFeatures {
+            gap: 1.5rem;
+
+            .feature {
+              font-size: 1.3rem;
+              padding: 1rem 1.8rem;
+
+              i {
+                font-size: 1.3rem;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .container {
+      padding: 4rem 2rem;
+
+      .grid {
+        gap: 2.5rem;
+
+        .formColumn .card {
+          padding: 2.5rem;
+
+          .cardTitle {
+            font-size: 2rem;
+          }
+
+          .calculateButton {
+            padding: 1.6rem;
+            font-size: 1.5rem;
+          }
+        }
+
+        .resultColumn .emptyState {
+          padding: 4rem 2.5rem;
+
+          .emptyIcon {
+            width: 90px;
+            height: 90px;
+
+            i {
+              font-size: 4rem;
+            }
+          }
+
+          h3 {
+            font-size: 2rem;
+          }
+
+          p {
+            font-size: 1.4rem;
+          }
+
+          .emptySteps {
+            .step {
+              .stepNumber {
+                width: 40px;
+                height: 40px;
+                font-size: 1.6rem;
+              }
+
+              span {
+                font-size: 1.2rem;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

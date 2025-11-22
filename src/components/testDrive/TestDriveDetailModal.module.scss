@@ -1,0 +1,313 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modalContent {
+  background: white;
+  border-radius: 16px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px;
+  border-bottom: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, #ff4d30 0%, #fa4226 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+
+  .headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    i {
+      font-size: 32px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .testDriveId {
+      margin: 4px 0 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+  }
+
+  .closeButton {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: white;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(90deg);
+    }
+  }
+}
+
+.statusSection {
+  padding: 20px 28px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: center;
+
+  .statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 24px;
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+    i {
+      font-size: 18px;
+    }
+  }
+}
+
+.modalBody {
+  padding: 24px 28px;
+}
+
+.infoSection {
+  margin-bottom: 28px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e0e0e0;
+
+    i {
+      font-size: 20px;
+      color: #ff4d30;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+
+  .infoGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 24px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+
+  .infoItem {
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      i {
+        color: #ff4d30;
+        font-size: 15px;
+      }
+    }
+
+    p {
+      margin: 0 0 4px 0;
+      font-size: 17px;
+      color: #222;
+      font-weight: 600;
+    }
+
+    .subtext {
+      display: block;
+      font-size: 14px;
+      color: #999;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+  }
+
+  .cancelReason {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 16px;
+
+    p {
+      margin: 0;
+      color: #856404;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  }
+}
+
+.modalFooter {
+  padding: 20px 28px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #fafafa;
+  border-radius: 0 0 16px 16px;
+
+  button {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    i {
+      font-size: 14px;
+    }
+  }
+
+  .editButton {
+    background: #ff4d30;
+    color: white;
+
+    &:hover {
+      background: #e6441a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 77, 48, 0.4);
+    }
+  }
+
+  .closeFooterButton {
+    background: #e0e0e0;
+    color: #555;
+
+    &:hover {
+      background: #d0d0d0;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .modalContent {
+    margin: 20px;
+    max-height: 80vh;
+  }
+
+  .modalHeader {
+    padding: 20px;
+
+    .headerLeft {
+      i {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      .testDriveId {
+        font-size: 13px;
+      }
+    }
+  }
+
+  .modalBody {
+    padding: 20px;
+  }
+
+  .infoSection {
+    .infoGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .modalFooter {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}

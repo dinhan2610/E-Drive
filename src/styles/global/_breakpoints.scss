@@ -1,0 +1,121 @@
+// Responsive Breakpoints
+$breakpoints: (
+  'xs': 0,           // Extra small devices (portrait phones)
+  'sm': 576px,       // Small devices (landscape phones)
+  'md': 768px,       // Medium devices (tablets)
+  'lg': 992px,       // Large devices (desktops)
+  'xl': 1200px,      // Extra large devices (large desktops)
+  'xxl': 1400px,     // Extra extra large devices (larger desktops)
+  'xxxl': 1600px     // Ultra wide screens
+);
+
+// Container max-widths for each breakpoint
+$container-max-widths: (
+  'sm': 540px,
+  'md': 720px,
+  'lg': 960px,
+  'xl': 1140px,
+  'xxl': 1320px,
+  'xxxl': 1520px
+);
+
+// Padding for containers at different breakpoints
+$container-paddings: (
+  'xs': 1.5rem,      // 15px
+  'sm': 2rem,        // 20px
+  'md': 2.5rem,      // 25px
+  'lg': 3rem,        // 30px
+  'xl': 3rem,        // 30px
+  'xxl': 3rem        // 30px
+);
+
+// Media query mixins
+@mixin respond-to-min($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $value: map-get($breakpoints, $breakpoint);
+    @media (min-width: $value) {
+      @content;
+    }
+  } @else {
+    @error "Unknown breakpoint: #{$breakpoint}. Available breakpoints are: #{map-keys($breakpoints)}";
+  }
+}
+
+@mixin respond-to-max($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $value: map-get($breakpoints, $breakpoint);
+    $max: calc($value - 0.02px);
+    @media (max-width: $max) {
+      @content;
+    }
+  } @else {
+    @error "Unknown breakpoint: #{$breakpoint}. Available breakpoints are: #{map-keys($breakpoints)}";
+  }
+}
+
+@mixin respond-between($lower, $upper) {
+  @if map-has-key($breakpoints, $lower) and map-has-key($breakpoints, $upper) {
+    $min: map-get($breakpoints, $lower);
+    $max: calc(#{map-get($breakpoints, $upper)} - 0.02px);
+    @media (min-width: $min) and (max-width: $max) {
+      @content;
+    }
+  } @else {
+    @error "Unknown breakpoint: #{$lower} or #{$upper}. Available breakpoints are: #{map-keys($breakpoints)}";
+  }
+}
+
+// Mixin for media queries
+@mixin respond-to($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $breakpoint-value: map-get($breakpoints, $breakpoint);
+    
+    @if $breakpoint-value == 0 {
+      @content;
+    } @else {
+      @media (min-width: $breakpoint-value) {
+        @content;
+      }
+    }
+  } @else {
+    @warn "Invalid breakpoint: #{$breakpoint}.";
+  }
+}
+
+// Mixin for max-width media queries
+@mixin respond-to-max($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $breakpoint-value: map-get($breakpoints, $breakpoint);
+    
+    @media (max-width: calc($breakpoint-value - 1px)) {
+      @content;
+    }
+  } @else {
+    @warn "Invalid breakpoint: #{$breakpoint}.";
+  }
+}
+
+// Mixin for between breakpoints
+@mixin respond-between($lower, $upper) {
+  @if map-has-key($breakpoints, $lower) and map-has-key($breakpoints, $upper) {
+    $lower-value: map-get($breakpoints, $lower);
+    $upper-value: map-get($breakpoints, $upper);
+    
+    @media (min-width: $lower-value) and (max-width: calc($upper-value - 1px)) {
+      @content;
+    }
+  } @else {
+    @warn "Invalid breakpoints: #{$lower}, #{$upper}.";
+  }
+}
+
+// Export for use in other files
+:export {
+  xs: map-get($breakpoints, 'xs');
+  sm: map-get($breakpoints, 'sm');
+  md: map-get($breakpoints, 'md');
+  lg: map-get($breakpoints, 'lg');
+  xl: map-get($breakpoints, 'xl');
+  xxl: map-get($breakpoints, 'xxl');
+  xxxl: map-get($breakpoints, 'xxxl');
+}

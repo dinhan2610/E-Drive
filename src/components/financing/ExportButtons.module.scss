@@ -1,0 +1,59 @@
+.exportButtons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+
+  .button {
+    flex: 1;
+    padding: 16px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    i {
+      font-size: 16px;
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    &.pdf {
+      background: linear-gradient(135deg, #ff4d30 0%, #ff6b4d 100%);
+      color: white;
+
+      &:hover:not(:disabled) {
+        box-shadow: 0 6px 20px rgba(255, 77, 48, 0.4);
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .exportButtons {
+    flex-direction: column;
+
+    .button {
+      width: 100%;
+    }
+  }
+}

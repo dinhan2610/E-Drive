@@ -1,0 +1,615 @@
+// Payment Page Styles
+@import '../../styles/global/colors';
+@import '../../styles/global/breakpoints';
+
+.wrap {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+  padding: 24px 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+// Loading State
+.loading {
+  text-align: center;
+  padding: 80px 20px;
+  
+  i {
+    font-size: 48px;
+    color: #ff4d30;
+    margin-bottom: 20px;
+  }
+  
+  p {
+    font-size: 18px;
+    color: #666;
+  }
+}
+
+// Error State
+.error {
+  text-align: center;
+  padding: 80px 20px;
+  
+  i {
+    font-size: 64px;
+    color: #ff4444;
+    margin-bottom: 20px;
+  }
+  
+  h2 {
+    font-size: 28px;
+    margin-bottom: 12px;
+    color: #333;
+  }
+  
+  p {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 24px;
+  }
+}
+
+// Header
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+  }
+  
+  .orderCode {
+    font-size: 14px;
+    color: #666;
+    margin: 4px 0 0 0;
+    
+    strong {
+      color: #ff4d30;
+    }
+  }
+}
+
+.btnBack {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  
+  i {
+    font-size: 16px;
+    color: #333;
+  }
+  
+  &:hover {
+    background: #f8f9fa;
+    border-color: #ff4d30;
+    
+    i {
+      color: #ff4d30;
+    }
+  }
+}
+
+// Layout
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  align-items: start;
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Payment Methods Section
+.methods {
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #1a1a1a;
+  }
+}
+
+// Alert
+.alert {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  
+  i {
+    color: #ffc107;
+    font-size: 20px;
+  }
+  
+  span {
+    flex: 1;
+    color: #856404;
+  }
+  
+  .alertClose {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #856404;
+    padding: 4px;
+    
+    &:hover {
+      color: #533f03;
+    }
+  }
+}
+
+// Success Banner
+.successBanner {
+  background: linear-gradient(135deg, #00C851 0%, #007E33 100%);
+  color: white;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 200, 81, 0.3);
+  
+  i {
+    font-size: 48px;
+  }
+  
+  strong {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  
+  p {
+    font-size: 14px;
+    opacity: 0.9;
+    margin: 0;
+  }
+}
+
+// Method Cards
+.methodCards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.methodCard {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  
+  &:hover {
+    border-color: #ff4d30;
+    box-shadow: 0 4px 12px rgba(255, 77, 48, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  &.active {
+    border-color: #ff4d30;
+    background: linear-gradient(135deg, #fff5f3 0%, #ffffff 100%);
+    box-shadow: 0 4px 16px rgba(255, 77, 48, 0.15);
+  }
+}
+
+.methodIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  i {
+    font-size: 24px;
+    color: white;
+  }
+}
+
+.methodInfo {
+  flex: 1;
+  
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: #1a1a1a;
+  }
+  
+  p {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+// Payment Form
+.paymentForm {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.vnpayInfo {
+  background: #e7f3ff;
+  border: 1px solid #2196F3;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  
+  i {
+    color: #2196F3;
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  
+  p {
+    font-size: 14px;
+    color: #1565C0;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+.formGroup {
+  margin-bottom: 20px;
+  
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+  }
+  
+  input, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    transition: border-color 0.3s;
+    
+    &:focus {
+      outline: none;
+      border-color: #ff4d30;
+    }
+    
+    &:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+  }
+  
+  small {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-top: 6px;
+  }
+}
+
+// Buttons
+.btnPrimary {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #ff4d30 0%, #ff6b47 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s;
+  
+  i {
+    font-size: 18px;
+  }
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 77, 48, 0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btnSecondary {
+  padding: 12px 24px;
+  background: white;
+  color: #333;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  
+  &:hover {
+    border-color: #ff4d30;
+    color: #ff4d30;
+    background: #fff5f3;
+  }
+}
+
+// Cash Result
+.cashResult {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    color: #0c4a6e;
+    margin: 0 0 16px 0;
+    
+    i {
+      color: #00C851;
+    }
+  }
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  
+  > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    
+    span {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    strong {
+      font-size: 16px;
+      color: #1a1a1a;
+      
+      &.success {
+        color: #00C851;
+      }
+    }
+  }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fullPaidNote {
+  margin-top: 16px;
+  padding: 12px;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 600;
+  color: #065f46;
+}
+
+// Summary Card
+.summary {
+  @media (min-width: 1024px) {
+    position: sticky;
+    top: 24px;
+  }
+}
+
+.summaryCard {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    color: #1a1a1a;
+  }
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  
+  span {
+    font-size: 15px;
+    color: #666;
+  }
+  
+  strong {
+    font-size: 16px;
+    color: #1a1a1a;
+    
+    &.total {
+      font-size: 24px;
+      color: #ff4d30;
+    }
+  }
+}
+
+.divider {
+  height: 1px;
+  background: #e9ecef;
+  margin: 12px 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  
+  &.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+  
+  &.paid {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  &.confirmed {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+}
+
+// Payment Return Page
+.returnContainer {
+  max-width: 600px;
+  margin: 80px auto;
+  padding: 0 24px;
+}
+
+.resultCard {
+  background: white;
+  border-radius: 20px;
+  padding: 48px 32px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  text-align: center;
+}
+
+.resultIcon {
+  font-size: 80px;
+  margin-bottom: 24px;
+  
+  i {
+    animation: scaleIn 0.5s ease-out;
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.resultCard h2 {
+  font-size: 28px;
+  margin: 0 0 12px 0;
+  color: #1a1a1a;
+}
+
+.resultCard > p {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 32px 0;
+}
+
+.errorMessage {
+  color: #ff4444 !important;
+  font-weight: 500;
+}
+
+.transactionDetails {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 32px;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  span {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  strong {
+    font-size: 15px;
+    color: #1a1a1a;
+  }
+}
+
+.resultActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  
+  button {
+    min-width: 140px;
+  }
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    
+    button {
+      width: 100%;
+    }
+  }
+}

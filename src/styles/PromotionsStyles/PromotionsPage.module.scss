@@ -1,0 +1,254 @@
+// src/styles/PromotionsStyles/PromotionsPage.module.scss
+.pageWrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 12rem 0 8rem;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+
+.header {
+  background: white;
+  border-radius: 20px;
+  padding: 3rem;
+  margin-bottom: 2.4rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    margin: 0 0 0.8rem 0;
+    color: #212529;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+
+    i {
+      color: #ff4d30;
+    }
+  }
+
+  p {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+}
+
+.dealerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #ff4d30 0%, #fa4226 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-left: 1rem;
+  box-shadow: 0 2px 8px rgba(255, 77, 48, 0.25);
+
+  i {
+    font-size: 1.2rem;
+  }
+}
+
+.createBtn {
+  background: linear-gradient(135deg, #ff4d30, #fa4226);
+  color: white;
+  border: none;
+  padding: 1.4rem 2.8rem;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 15px rgba(255, 77, 48, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #e6441a, #e03820);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 77, 48, 0.4);
+  }
+
+  i {
+    font-size: 1.6rem;
+  }
+}
+
+.toolbar {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  margin-bottom: 2.4rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  flex: 1;
+  min-width: 280px;
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  > i {
+    position: absolute;
+    left: 1.8rem;
+    color: #6c757d;
+    font-size: 1.7rem;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  input {
+    width: 100%;
+    padding: 1.2rem 5.5rem 1.2rem 5.2rem;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    font-size: 1.4rem;
+    transition: all 0.3s ease;
+    background: white;
+    height: 4.8rem;
+
+    &:focus {
+      outline: none;
+      border-color: #ff4d30;
+      box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+    }
+
+    &::placeholder {
+      color: #adb5bd;
+    }
+  }
+
+  .searchLoading {
+    position: absolute;
+    right: 5.5rem;
+    color: #ff4d30;
+    pointer-events: none;
+    z-index: 2;
+
+    i {
+      font-size: 1.4rem;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  .clearBtn {
+    position: absolute;
+    right: 1.2rem;
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.6rem;
+    border-radius: 6px;
+    width: 3.2rem;
+    height: 3.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 2;
+
+    &:hover {
+      background: rgba(255, 77, 48, 0.1);
+      color: #ff4d30;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    i {
+      font-size: 1.4rem;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.filterSelect,
+.sortSelect {
+  padding: 1.2rem 1.6rem;
+  border: 2px solid #dee2e6;
+  border-radius: 10px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+  transition: all 0.3s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #ff4d30;
+    box-shadow: 0 0 0 3px rgba(255, 77, 48, 0.1);
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin-top: 3rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+
+  button {
+    padding: 1rem 2rem;
+    border: 2px solid #dee2e6;
+    background: white;
+    border-radius: 8px;
+    font-size: 1.4rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      border-color: #ff4d30;
+      color: #ff4d30;
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  span {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #495057;
+  }
+}

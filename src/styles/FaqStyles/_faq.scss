@@ -1,0 +1,145 @@
+// FAQ Section
+.faq-section {
+  padding: 100px 0;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #fafbfc;
+  position: relative;
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 2;
+  }
+}
+
+// Hero Section
+.faq-hero {
+  text-align: center;
+  margin-bottom: 60px;
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    color: #ff4d30;
+    padding: 8px 20px;
+    border-radius: 25px;
+    border: 1px solid #fee7e2;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 24px;
+
+    i {
+      font-size: 16px;
+    }
+  }
+
+  .hero-title {
+    font-size: 42px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 20px;
+    line-height: 1.2;
+    font-family: "Anton", sans-serif;
+
+    .highlight {
+      color: #ff4d30;
+    }
+  }
+
+  .hero-description {
+    font-size: 18px;
+    color: #64748b;
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+// FAQ Content
+.faq-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .faq-item {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+      border-color: #ff4d30;
+    }
+
+    &.active {
+      border-color: #ff4d30;
+      box-shadow: 0 8px 25px rgba(255, 77, 48, 0.15);
+
+      .faq-question {
+        background: #ff4d30;
+        color: white;
+
+        i {
+          transform: rotate(180deg);
+          color: white;
+        }
+      }
+
+      .faq-answer {
+        max-height: 200px;
+        padding: 20px 24px;
+      }
+    }
+
+    .faq-question {
+      width: 100%;
+      background: white;
+      border: none;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:focus {
+        outline: none;
+      }
+
+      .question-text {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+        text-align: left;
+        line-height: 1.4;
+      }
+
+      i {
+        font-size: 18px;
+        color: #64748b;
+        transition: all 0.3s ease;
+      }
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.4s ease;
+      padding: 0 24px;
+
+      .answer-content {
+        font-size: 16px;
+        color: #374151;
+        line-height: 1.6;
+      }
+    }
+  }
+}

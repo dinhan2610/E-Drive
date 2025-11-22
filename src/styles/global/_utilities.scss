@@ -1,0 +1,189 @@
+@use "./breakpoints" as *;
+
+// Responsive Utilities
+
+// Display utilities
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-flex { display: flex !important; }
+.d-inline { display: inline !important; }
+.d-inline-block { display: inline-block !important; }
+.d-grid { display: grid !important; }
+
+// Responsive display utilities
+@each $breakpoint in ('sm', 'md', 'lg', 'xl', 'xxl') {
+  @include respond-to($breakpoint) {
+    .d-#{$breakpoint}-none { display: none !important; }
+    .d-#{$breakpoint}-block { display: block !important; }
+    .d-#{$breakpoint}-flex { display: flex !important; }
+    .d-#{$breakpoint}-inline { display: inline !important; }
+    .d-#{$breakpoint}-inline-block { display: inline-block !important; }
+    .d-#{$breakpoint}-grid { display: grid !important; }
+  }
+}
+
+// Text alignment
+.text-left { text-align: left !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+
+@each $breakpoint in ('sm', 'md', 'lg', 'xl', 'xxl') {
+  @include respond-to($breakpoint) {
+    .text-#{$breakpoint}-left { text-align: left !important; }
+    .text-#{$breakpoint}-center { text-align: center !important; }
+    .text-#{$breakpoint}-right { text-align: right !important; }
+  }
+}
+
+// Margin utilities
+$spacing-values: (
+  0: 0,
+  1: 0.5rem,
+  2: 1rem,
+  3: 1.5rem,
+  4: 2rem,
+  5: 2.5rem,
+  6: 3rem,
+  7: 4rem,
+  8: 5rem,
+  auto: auto
+);
+
+@each $key, $value in $spacing-values {
+  .m-#{$key} { margin: $value !important; }
+  .mt-#{$key} { margin-top: $value !important; }
+  .mb-#{$key} { margin-bottom: $value !important; }
+  .ml-#{$key} { margin-left: $value !important; }
+  .mr-#{$key} { margin-right: $value !important; }
+  .mx-#{$key} { 
+    margin-left: $value !important; 
+    margin-right: $value !important; 
+  }
+  .my-#{$key} { 
+    margin-top: $value !important; 
+    margin-bottom: $value !important; 
+  }
+}
+
+// Padding utilities
+@each $key, $value in $spacing-values {
+  @if $key != auto {
+    .p-#{$key} { padding: $value !important; }
+    .pt-#{$key} { padding-top: $value !important; }
+    .pb-#{$key} { padding-bottom: $value !important; }
+    .pl-#{$key} { padding-left: $value !important; }
+    .pr-#{$key} { padding-right: $value !important; }
+    .px-#{$key} { 
+      padding-left: $value !important; 
+      padding-right: $value !important; 
+    }
+    .py-#{$key} { 
+      padding-top: $value !important; 
+      padding-bottom: $value !important; 
+    }
+  }
+}
+
+// Responsive margin utilities
+@each $breakpoint in ('sm', 'md', 'lg', 'xl', 'xxl') {
+  @include respond-to($breakpoint) {
+    @each $key, $value in $spacing-values {
+      .m-#{$breakpoint}-#{$key} { margin: $value !important; }
+      .mt-#{$breakpoint}-#{$key} { margin-top: $value !important; }
+      .mb-#{$breakpoint}-#{$key} { margin-bottom: $value !important; }
+      .ml-#{$breakpoint}-#{$key} { margin-left: $value !important; }
+      .mr-#{$breakpoint}-#{$key} { margin-right: $value !important; }
+      .mx-#{$breakpoint}-#{$key} { 
+        margin-left: $value !important; 
+        margin-right: $value !important; 
+      }
+      .my-#{$breakpoint}-#{$key} { 
+        margin-top: $value !important; 
+        margin-bottom: $value !important; 
+      }
+    }
+  }
+}
+
+// Responsive padding utilities
+@each $breakpoint in ('sm', 'md', 'lg', 'xl', 'xxl') {
+  @include respond-to($breakpoint) {
+    @each $key, $value in $spacing-values {
+      @if $key != auto {
+        .p-#{$breakpoint}-#{$key} { padding: $value !important; }
+        .pt-#{$breakpoint}-#{$key} { padding-top: $value !important; }
+        .pb-#{$breakpoint}-#{$key} { padding-bottom: $value !important; }
+        .pl-#{$breakpoint}-#{$key} { padding-left: $value !important; }
+        .pr-#{$breakpoint}-#{$key} { padding-right: $value !important; }
+        .px-#{$breakpoint}-#{$key} { 
+          padding-left: $value !important; 
+          padding-right: $value !important; 
+        }
+        .py-#{$breakpoint}-#{$key} { 
+          padding-top: $value !important; 
+          padding-bottom: $value !important; 
+        }
+      }
+    }
+  }
+}
+
+// Flexbox utilities
+.flex-row { flex-direction: row !important; }
+.flex-column { flex-direction: column !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.flex-nowrap { flex-wrap: nowrap !important; }
+
+.justify-start { justify-content: flex-start !important; }
+.justify-center { justify-content: center !important; }
+.justify-end { justify-content: flex-end !important; }
+.justify-between { justify-content: space-between !important; }
+.justify-around { justify-content: space-around !important; }
+.justify-evenly { justify-content: space-evenly !important; }
+
+.align-start { align-items: flex-start !important; }
+.align-center { align-items: center !important; }
+.align-end { align-items: flex-end !important; }
+.align-stretch { align-items: stretch !important; }
+.align-baseline { align-items: baseline !important; }
+
+// Gap utilities
+.gap-0 { gap: 0 !important; }
+.gap-1 { gap: 0.5rem !important; }
+.gap-2 { gap: 1rem !important; }
+.gap-3 { gap: 1.5rem !important; }
+.gap-4 { gap: 2rem !important; }
+.gap-5 { gap: 2.5rem !important; }
+.gap-6 { gap: 3rem !important; }
+
+// Width utilities
+.w-25 { width: 25% !important; }
+.w-50 { width: 50% !important; }
+.w-75 { width: 75% !important; }
+.w-100 { width: 100% !important; }
+.w-auto { width: auto !important; }
+
+// Height utilities
+.h-25 { height: 25% !important; }
+.h-50 { height: 50% !important; }
+.h-75 { height: 75% !important; }
+.h-100 { height: 100% !important; }
+.h-auto { height: auto !important; }
+
+// Position utilities
+.position-static { position: static !important; }
+.position-relative { position: relative !important; }
+.position-absolute { position: absolute !important; }
+.position-fixed { position: fixed !important; }
+.position-sticky { position: sticky !important; }
+
+// Overflow utilities
+.overflow-auto { overflow: auto !important; }
+.overflow-hidden { overflow: hidden !important; }
+.overflow-visible { overflow: visible !important; }
+.overflow-scroll { overflow: scroll !important; }
+
+.overflow-x-auto { overflow-x: auto !important; }
+.overflow-x-hidden { overflow-x: hidden !important; }
+.overflow-y-auto { overflow-y: auto !important; }
+.overflow-y-hidden { overflow-y: hidden !important; }

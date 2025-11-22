@@ -1,0 +1,31 @@
+import type { FC } from 'react';
+import HeroPages from "../components/HeroPages";
+import Testimonials from "../components/feedback";
+
+interface TestimonialsPageProps {}
+
+const TestimonialsPage: FC<TestimonialsPageProps> = () => {
+  return (
+    <>
+      <section className="testimonial-page">
+        <HeroPages name="Testimonials" />
+        <Testimonials />
+        <div className="book-banner">
+          <div className="book-banner__overlay"></div>
+          <div className="container">
+            <div className="text-content">
+              <h2>Gọi ngay hôm nay để bắt đầu hành trình xanh cùng E-Drive</h2>
+              <span>
+                <i className="fa-solid fa-phone"></i>
+                <h3>(123) 456-7869</h3>
+              </span>
+            </div>
+          </div>
+        </div>
+        
+      </section>
+    </>
+  );
+}
+
+export default TestimonialsPage;

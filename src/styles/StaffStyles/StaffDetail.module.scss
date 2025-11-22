@@ -1,0 +1,290 @@
+// ===== Staff Detail Modal - Simple & Clean Design =====
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+  padding: 2rem;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  background: white;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    max-height: 95vh;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+// ========== Header ==========
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem 2.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+}
+
+.headerContent {
+  flex: 1;
+}
+
+.modalTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  i {
+    color: #ff4d30;
+    font-size: 1.8rem;
+  }
+}
+
+.userId {
+  font-size: 1.125rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.closeButton {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  font-size: 1.1rem;
+
+  &:hover {
+    background: #f3f4f6;
+    border-color: #ff4d30;
+    color: #ff4d30;
+    transform: rotate(90deg);
+  }
+}
+
+// ========== Content ==========
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 2.5rem;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+
+  i {
+    color: #ff4d30;
+    font-size: 1.0625rem;
+  }
+}
+
+.staticValue {
+  padding: 0.95rem 1.2rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1.1875rem;
+  color: #1f2937;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+}
+
+.emailLink,
+.phoneLink {
+  color: #3b82f6;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+}
+
+.emptyValue {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 6px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  
+  &.manager {
+    background: linear-gradient(135deg, #ff4d30, #ff6b50);
+    color: white;
+  }
+  
+  &.staff {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: white;
+  }
+  
+  &.other {
+    background: linear-gradient(135deg, #6b7280, #9ca3af);
+    color: white;
+  }
+}
+
+// ========== Footer ==========
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem 2.5rem;
+  border-top: 2px solid #f3f4f6;
+  background: #f9fafb;
+
+  @media (max-width: 768px) {
+    padding: 1rem 1.5rem;
+    flex-wrap: wrap;
+  }
+}
+
+.btnClose,
+.btnEdit,
+.btnDelete {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.75rem;
+  border: 2px solid;
+  border-radius: 10px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  i {
+    font-size: 1.0625rem;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+.btnClose {
+  background: white;
+  border-color: #e5e7eb;
+  color: #6b7280;
+
+  &:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+  }
+}
+
+.btnEdit {
+  background: white;
+  border-color: #3b82f6;
+  color: #3b82f6;
+
+  &:hover {
+    background: #3b82f6;
+    color: white;
+  }
+}
+
+.btnDelete {
+  background: white;
+  border-color: #dc2626;
+  color: #dc2626;
+
+  &:hover {
+    background: #dc2626;
+    color: white;
+  }
+}

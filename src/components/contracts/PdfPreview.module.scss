@@ -1,0 +1,401 @@
+@use "../../styles/global/typhography" as *;
+
+.preview {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 16rem);
+}
+
+.previewArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  background: #f8f9fa;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #e9ecef;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 10px;
+
+    &:hover {
+      background: #6c757d;
+    }
+  }
+}
+
+.printArea {
+  background: white;
+  padding: 25mm 20mm 20mm 20mm; // Standard document margins: top 25mm, sides 20mm, bottom 20mm
+  width: 21cm;
+  min-height: 29.7cm;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: $text-font;
+  font-size: 12pt; // Standard readable font size
+  line-height: 1.5; // Standard line spacing for documents
+  color: #000;
+  box-sizing: border-box;
+}
+
+.contractHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.2rem; // Standard spacing
+  padding-bottom: 1rem; // Standard padding
+  border-bottom: 2px solid #333;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  page-break-after: avoid;
+  break-after: avoid;
+  
+  .leftColumn {
+    flex: 0 0 48%;
+    font-size: 10.5pt; // Standard readable size
+    
+    .companyInfo {
+      margin-bottom: 1rem; // Standard margin
+      
+      h3 {
+        font-size: 12pt;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+      }
+      
+      p {
+        margin: 0.2rem 0;
+        line-height: 1.4;
+        
+        strong {
+          font-weight: 600;
+        }
+      }
+    }
+    
+    .partyInfo {
+      margin-bottom: 0.8rem; // Standard margin
+      padding: 0.7rem; // Standard padding
+      background: #f8f9fa;
+      border-left: 3px solid #333;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      
+      p {
+        margin: 0.25rem 0; // Standard margin
+        font-size: 10pt; // Readable font
+        line-height: 1.4; // Standard line height
+        line-height: 1.2;
+        
+        strong {
+          font-weight: 600;
+        }
+      }
+    }
+  }
+  
+  .rightColumn {
+    flex: 0 0 48%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    
+    .mainTitle {
+      font-size: 18pt;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .contractNo {
+      font-size: 12pt;
+      margin-bottom: 0.4rem;
+      
+      strong {
+        font-weight: 700;
+      }
+    }
+    
+    .contractDate {
+      font-size: 11pt;
+      margin-bottom: 0.4rem;
+    }
+    
+    .note {
+      font-size: 10pt;
+      font-style: italic;
+      color: #666;
+    }
+  }
+}
+
+.article {
+  margin-bottom: 1.2rem; // Standard spacing between sections
+  page-break-inside: auto;
+  break-inside: auto;
+  
+  h4 {
+    font-size: 12pt; // Standard heading size
+    font-weight: 700;
+    margin-bottom: 0.7rem; // Standard margin
+    text-transform: uppercase;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  
+  p {
+    margin-bottom: 0.7rem; // Standard paragraph spacing
+    text-align: justify;
+    line-height: 1.5; // Standard line spacing
+    orphans: 3;
+    widows: 3;
+    
+    &.note {
+      font-style: italic;
+      color: #555;
+      margin-top: 0.4rem;
+    }
+  }
+  
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0.8rem 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    
+    li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.6rem;
+      line-height: 1.5;
+      text-align: justify;
+      
+      &:before {
+        content: '•';
+        position: absolute;
+        left: 0.3rem;
+        font-weight: 700;
+        font-size: 12pt;
+      }
+    }
+  }
+}
+
+.vehicleTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0; // Standard margin
+  font-size: 10.5pt; // Readable font size
+  page-break-inside: auto;
+  break-inside: auto;
+  
+  thead {
+    display: table-header-group;
+    
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      page-break-after: auto;
+      break-after: auto;
+      
+      th {
+        border: 1px solid #333;
+        padding: 0.5rem 0.4rem; // Standard padding
+        text-align: center;
+        font-weight: 700;
+        background: #f0f0f0;
+        font-size: 10.5pt; // Readable font
+        line-height: 1.3; // Standard line height
+        font-size: 9.5pt;
+        line-height: 1.2;
+      }
+    }
+  }
+  
+  tbody {
+    display: table-row-group;
+    
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      page-break-after: auto;
+      break-after: auto;
+      
+      td {
+        border: 1px solid #333;
+        padding: 0.5rem 0.4rem; // Standard padding
+        vertical-align: top;
+        
+        &.centerText {
+          text-align: center;
+        }
+        
+        &.rightText {
+          text-align: right;
+        }
+        
+        .vehicleDesc {
+          p {
+            margin: 0.2rem 0;
+            line-height: 1.4;
+            
+            strong {
+              font-weight: 700;
+            }
+          }
+        }
+      }
+      
+      &.totalRow {
+        background: #f8f9fa;
+        font-weight: 700;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        page-break-before: auto;
+        
+        td {
+          padding: 0.6rem;
+          font-weight: 700;
+        }
+      }
+    }
+  }
+}
+
+.signatures {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2.5rem; // Standard margin for signatures section
+  page-break-inside: avoid;
+  break-inside: avoid;
+  page-break-before: auto;
+  break-before: auto;
+  
+  .signatureBlock {
+    flex: 0 0 45%;
+    text-align: center;
+    
+    .signTitle {
+      font-size: 12pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+    
+    .signStamp {
+      font-size: 10pt;
+      font-style: italic;
+      margin-bottom: 0.8rem;
+    }
+    
+    .stampArea {
+      min-height: 6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      margin-top: 0.8rem;
+      
+      .stampText {
+        font-size: 11pt;
+        font-weight: 600;
+        color: #666;
+      }
+    }
+    
+    .signArea {
+      min-height: 8rem;
+      margin-top: 2rem;
+    }
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .preview {
+    height: auto;
+  }
+  
+  .previewArea {
+    padding: 0;
+    background: white;
+    overflow: visible;
+  }
+  
+  .printArea {
+    box-shadow: none;
+    width: 21cm;
+    min-height: 29.7cm;
+    padding: 25mm 20mm 20mm 20mm; // Match screen version - standard document margins
+    margin: 0;
+    page-break-after: auto;
+  }
+  
+  .contractHeader {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+  }
+  
+  .signatures {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-before: auto;
+  }
+  
+  .article {
+    page-break-inside: auto;
+    break-inside: auto;
+    
+    h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+  }
+  
+  .vehicleTable {
+    page-break-inside: auto;
+    break-inside: auto;
+    
+    thead {
+      display: table-header-group;
+    }
+    
+    tbody tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      page-break-after: auto;
+      break-after: auto;
+    }
+    
+    tbody tr.totalRow {
+      page-break-before: auto;
+    }
+  }
+  
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+}
