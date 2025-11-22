@@ -4396,6 +4396,7 @@ const AdminPage: React.FC = () => {
                                 background: imageData.imagePreview ? 'transparent' : '#f8fafc'
                               }}>
                                 <input
+                                  id={`colorImageFile_${colorId}`}
                                   type="file"
                                   accept="image/*"
                                   style={{
@@ -4415,16 +4416,13 @@ const AdminPage: React.FC = () => {
                                         alert('❌ Vui lòng chọn file ảnh (JPG, PNG, etc.)');
                                         return;
                                       }
-                                      
+
                                       // Validate file size (max 5MB before compression)
                                       if (file.size > 5 * 1024 * 1024) {
                                         alert('❌ File ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB.');
                                         return;
                                       }
-                                      
-                                      // Show loading
 
-                                      
                                       // Compress image
                                       compressImage(file)
                                         .then((compressedBase64) => {
@@ -4438,9 +4436,17 @@ const AdminPage: React.FC = () => {
 
                                         })
                                         .catch((error) => {
-
                                           alert(`❌ ${error.message}`);
                                         });
+                                    } else {
+                                      // If user cleared the selection, remove preview
+                                      setColorImages(prev => ({
+                                        ...prev,
+                                        [colorId]: {
+                                          imageUrl: prev[colorId]?.imageUrl || '',
+                                          imagePreview: ''
+                                        }
+                                      }));
                                     }
                                   }}
                                 />
@@ -4465,6 +4471,14 @@ const AdminPage: React.FC = () => {
                                           delete newImages[colorId];
                                           return newImages;
                                         });
+
+                                        // Also clear the underlying file input value so it can be re-used
+                                        try {
+                                          const fileInput = document.getElementById(`colorImageFile_${colorId}`) as HTMLInputElement;
+                                          if (fileInput) fileInput.value = '';
+                                        } catch (err) {
+                                          // ignore
+                                        }
                                       }}
                                       style={{
                                         position: 'absolute',
@@ -4576,11 +4590,19 @@ const AdminPage: React.FC = () => {
                           // Priority: URL nhập tay > base64 upload > empty string
                           let imageUrl = imageData?.imageUrl?.trim() || imageData?.imagePreview || '';
                           
-                          // Validate image URL length (max 1024 chars for database)
-                          if (imageUrl.length > 1024) {
-
-                            // Truncate or show error
-                            throw new Error(`Hình ảnh cho màu ID ${colorId} quá lớn (${(imageUrl.length / 1024).toFixed(2)} KB). Vui lòng chọn ảnh nhỏ hơn.`);
+                          // Validate image URL length.
+                          // - If it's a data URI (base64 from file upload), allow up to the same limit used in `compressImage` (~900KB).
+                          // - If it's a normal URL string, keep a conservative DB-friendly limit (1KB).
+                          if (imageUrl.startsWith('data:')) {
+                            const maxBase64Length = 900000; // matches compressImage check
+                            if (imageUrl.length > maxBase64Length) {
+                              throw new Error(`Hình ảnh cho màu ID ${colorId} quá lớn (${(imageUrl.length / 1024).toFixed(2)} KB). Vui lòng chọn ảnh nhỏ hơn.`);
+                            }
+                          } else {
+                            const maxUrlLength = 1024;
+                            if (imageUrl.length > maxUrlLength) {
+                              throw new Error(`Link hình ảnh cho màu ID ${colorId} quá dài. Vui lòng dùng link ngắn hoặc upload file.`);
+                            }
                           }
 
                           return {
