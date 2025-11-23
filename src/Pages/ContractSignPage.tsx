@@ -99,32 +99,43 @@ const ContractSignPage: React.FC = () => {
         }
       }
       
-      // Load dealer details to get representative/contactPerson
+      // Load dealer details to get representative/contactPerson and contact info
       let dealerRepresentative = contractData.dealer?.representative || '';
-      if (!dealerRepresentative && (contractData.dealer?.id || loadedOrder?.dealer?.id)) {
+      // Prefer contractData.dealer, then loadedOrder.customer (mapApiOrderToOrderLite may place dealer contact in customer), then loadedOrder.dealer
+      let dealerPhone = contractData.dealer?.phone || loadedOrder?.customer?.phone || loadedOrder?.dealer?.phone || '';
+      let dealerEmail = contractData.dealer?.email || loadedOrder?.customer?.email || loadedOrder?.dealer?.email || '';
+      let dealerAddress = contractData.dealer?.address || loadedOrder?.customer?.address || loadedOrder?.dealer?.address || '';
+
+      if ((!dealerRepresentative || !dealerPhone || !dealerEmail || !dealerAddress) && (contractData.dealer?.id || loadedOrder?.dealer?.id)) {
         try {
           const dealerId = contractData.dealer?.id || loadedOrder?.dealer?.id;
           const { getDealerById } = await import('../services/dealerApi');
           const dealerDetails = await getDealerById(Number(dealerId));
           if (dealerDetails) {
-            dealerRepresentative = dealerDetails.contactPerson || '';
+            dealerRepresentative = dealerRepresentative || dealerDetails.contactPerson || '';
+            dealerPhone = dealerPhone || dealerDetails.phone || dealerDetails.contactPhone || '';
+            dealerEmail = dealerEmail || dealerDetails.email || dealerDetails.dealerEmail || '';
+            // dealerApi normalizes fullAddress from parts into `fullAddress`
+            dealerAddress = dealerAddress || dealerDetails.fullAddress || (
+              [dealerDetails.houseNumberAndStreet, dealerDetails.wardOrCommune, dealerDetails.district, dealerDetails.provinceOrCity].filter(Boolean).join(', ')
+            ) || '';
           }
         } catch (dealerError) {
           console.warn('⚠️ Could not load dealer details:', dealerError);
         }
       }
-      
+
       // Convert Contract to ContractPayload for PdfPreview component
-      
+
       const convertedPayload: ContractPayload = {
         orderId: contractData.orderId || '',
         buyer: contractData.buyer || { name: '' },
         dealer: {
           id: contractData.dealer?.id || '',
           name: contractData.dealer?.name || loadedOrder?.dealer?.name || '',
-          phone: contractData.dealer?.phone || '',
-          email: contractData.dealer?.email || '',
-          address: contractData.dealer?.address || '',
+          phone: dealerPhone,
+          email: dealerEmail,
+          address: dealerAddress,
           taxCode: contractData.dealer?.taxCode || '',
           representative: dealerRepresentative,
         },
