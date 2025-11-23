@@ -103,6 +103,7 @@ export const isUserLoggedIn = (): boolean => {
 export const getCurrentUser = (): any | null => {
   const authData = getValidAuthData();
   return authData ? authData.user : null;
+
 };
 
 /**
