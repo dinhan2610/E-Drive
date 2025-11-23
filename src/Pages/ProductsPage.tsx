@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../utils/authUtils';
+import { getCurrentUserRole } from '../utils/roleUtils';
 import type { Product, ProductFilters } from '../types/product';
 import { fetchVehiclesFromApi, groupVehiclesByModel } from '../services/vehicleApi';
 import ProductCard from '../components/Products/ProductCard';
@@ -142,23 +143,14 @@ const ProductsPage: React.FC = () => {
 
   const handleContactDealer = (product: Product) => {
     // Check user role to determine navigation
-    const user = getCurrentUser();
-    let userRole = 'dealer'; // Default
+    const userRole = getCurrentUserRole(); // 'staff', 'dealer', 'admin', 'evm_staff'
     
-    if (user) {
-      userRole = user.role ? user.role.toLowerCase().replace('role_', '') : 'dealer';
-    }
-    
-    // Staff → Navigate to quote creation (Báo giá)
-    // Dealer → Navigate to dealer order (Đặt hàng)
-    // Admin → Should not reach here (has separate interface at /admin)
+    // Staff (DEALER_STAFF) → Navigate to quote creation (Báo giá)
+    // Dealer (DEALER_MANAGER) → Navigate to dealer order (Đặt hàng)
     if (userRole === 'staff') {
       navigate('/quotes/create', { state: { product } });
-    } else if (userRole === 'dealer') {
-      navigate('/dealer-order', { state: { product } });
     } else {
-      // Admin fallback (shouldn't happen normally)
-      console.warn('Admin should use /admin interface');
+      // Dealer, admin, evm_staff → Navigate to order page
       navigate('/dealer-order', { state: { product } });
     }
   };
