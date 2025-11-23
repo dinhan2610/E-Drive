@@ -6,6 +6,8 @@ import { createTestDrive, TestDriveApiError } from "../services/testDriveApi";
 import { listCustomers } from "../services/customersApi";
 import { listStaff } from "../services/staffApi";
 import { getProfile } from "../services/profileApi";
+import { getCurrentUserRole } from "../utils/roleUtils";
+import { getCurrentUser } from "../utils/authUtils";
 import type { VehicleApiResponse } from "../types/product";
 import type { Customer } from "../types/customer";
 import type { Staff } from "../types/staff";
@@ -67,6 +69,11 @@ const TestDrivePage: React.FC = () => {
   // Current logged-in dealer ID and name
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
   const [currentDealerName, setCurrentDealerName] = useState<string>('');
+  
+  // User role and ID
+  const currentUserRole = getCurrentUserRole();
+  const currentUser = getCurrentUser();
+  const isStaffRole = currentUserRole === 'staff';
   
   // Fetch vehicles and dealers on mount
   useEffect(() => {
@@ -149,8 +156,13 @@ const TestDrivePage: React.FC = () => {
     }
   }, [currentDealerId]);
 
-  // Load staff for assignment
+  // Load staff for assignment (only for manager role)
   useEffect(() => {
+    if (isStaffRole) {
+      // Staff role tự động có userId, không cần load danh sách
+      return;
+    }
+    
     const loadStaff = async () => {
       setLoadingStaff(true);
       setStaffError(null);
@@ -165,14 +177,14 @@ const TestDrivePage: React.FC = () => {
       }
     };
     loadStaff();
-  }, []);
+  }, [isStaffRole]);
   
   const [selectedHour, setSelectedHour] = useState<number>(9);
   const [selectedMinute, setSelectedMinute] = useState<number>(0);
 
   const [formData, setFormData] = useState<BookingFormData>({
     customerId: "",
-    staffId: "",
+    staffId: isStaffRole ? (currentUser?.userId || "") : "",
     model: "",
     variant: "",
     date: "",
@@ -379,7 +391,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
       // Reset form
       setFormData({
         customerId: "",
-        staffId: "",
+        staffId: isStaffRole ? (currentUser?.userId || "") : "",
         model: "",
         variant: "",
         date: "",
@@ -621,7 +633,8 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
                 </div>
               </div>
 
-              {/* Staff Assignment */}
+              {/* Staff Assignment - Only show for manager role */}
+              {!isStaffRole && (
               <div className={styles.formGroup}>
                 <h3 className={styles.sectionTitle}>
                   <i className="fas fa-user-tie"></i>
@@ -704,6 +717,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
                   ) : null;
                 })()}
               </div>
+              )}
 
               {/* Vehicle Selection */}
               <div className={styles.formGroup}>
