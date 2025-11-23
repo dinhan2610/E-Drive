@@ -501,6 +501,49 @@
   }
 }
 
+// ========== Staff Field Wrapper - Chiều rộng tùy chỉnh ==========
+.staffFieldWrapper {
+  display: flex;
+  margin-bottom: 2rem;
+
+  .formField {
+    flex: 0 0 100%;
+    max-width: 100%;
+
+    @include respond-to('sm') {
+      flex: 0 0 75%;
+      max-width: 75%;
+    }
+
+    @include respond-to('md') {
+      flex: 0 0 60%;
+      max-width: 60%;
+    }
+
+    @include respond-to('lg') {
+      flex: 0 0 50%;
+      max-width: 50%;
+    }
+  }
+
+  .staffSelect {
+    width: 200%;
+    font-size: 1.1875rem;
+    font-weight: 500;
+    color: #1e293b;
+
+    &:focus {
+      border-color: $text-orange;
+      box-shadow: 0 0 0 3px rgba($text-orange, 0.12);
+    }
+
+    option {
+      padding: 0.75rem;
+      font-size: 1.125rem;
+    }
+  }
+}
+
 // ========== Error Text - Đồng bộ với Login ==========
 .errorText {
   display: block;

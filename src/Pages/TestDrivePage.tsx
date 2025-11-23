@@ -4,9 +4,11 @@ import { SuccessModal } from "../components/SuccessModal";
 import { fetchVehiclesFromApi } from "../services/vehicleApi";
 import { createTestDrive, TestDriveApiError } from "../services/testDriveApi";
 import { listCustomers } from "../services/customersApi";
+import { listStaff } from "../services/staffApi";
 import { getProfile } from "../services/profileApi";
 import type { VehicleApiResponse } from "../types/product";
 import type { Customer } from "../types/customer";
+import type { Staff } from "../types/staff";
 import styles from "../styles/TestDriveStyles/TestDrivePage.module.scss";
 
 interface GroupedModel {
@@ -22,6 +24,7 @@ interface GroupedModel {
 
 interface BookingFormData {
   customerId: string; // ID của khách hàng được chọn từ dropdown
+  staffId: string; // ID của staff được chọn (optional - có thể để manager tự chọn)
   model: string; // modelName + version
   variant: string; // vehicleId của màu được chọn
   date: string;
@@ -55,6 +58,11 @@ const TestDrivePage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customersError, setCustomersError] = useState<string | null>(null);
+  
+  // Staff data from API
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [staffError, setStaffError] = useState<string | null>(null);
   
   // Current logged-in dealer ID and name
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
@@ -140,12 +148,31 @@ const TestDrivePage: React.FC = () => {
       loadCustomers();
     }
   }, [currentDealerId]);
+
+  // Load staff for assignment
+  useEffect(() => {
+    const loadStaff = async () => {
+      setLoadingStaff(true);
+      setStaffError(null);
+      try {
+        const staffData = await listStaff();
+        setStaffList(staffData || []);
+      } catch (error) {
+        console.error('Error loading staff:', error);
+        setStaffError('Không thể tải danh sách nhân viên.');
+      } finally {
+        setLoadingStaff(false);
+      }
+    };
+    loadStaff();
+  }, []);
   
   const [selectedHour, setSelectedHour] = useState<number>(9);
   const [selectedMinute, setSelectedMinute] = useState<number>(0);
 
   const [formData, setFormData] = useState<BookingFormData>({
     customerId: "",
+    staffId: "",
     model: "",
     variant: "",
     date: "",
@@ -338,7 +365,8 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
         vehicleId: vehicleId,
         scheduleDatetime,
         status: 'PENDING' as const,
-        note: customerNote
+        note: customerNote,
+        ...(formData.staffId && { staffUserId: formData.staffId })
       };
       
       await createTestDrive(testDrivePayload);
@@ -351,6 +379,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
       // Reset form
       setFormData({
         customerId: "",
+        staffId: "",
         model: "",
         variant: "",
         date: "",
@@ -590,6 +619,90 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
                     })()}
                   </div>
                 </div>
+              </div>
+
+              {/* Staff Assignment */}
+              <div className={styles.formGroup}>
+                <h3 className={styles.sectionTitle}>
+                  <i className="fas fa-user-tie"></i>
+                  Phân công nhân viên
+                </h3>
+
+                {staffError && (
+                  <div className={styles.warningBanner}>
+                    <i className="fas fa-exclamation-triangle"></i>
+                    <span>{staffError}</span>
+                  </div>
+                )}
+
+                <div className={styles.staffFieldWrapper}>
+                  <div className={styles.formField}>
+                    <label htmlFor="staffId">
+                      Nhân viên phụ trách
+                    </label>
+                    <select
+                      id="staffId"
+                      name="staffId"
+                      value={formData.staffId}
+                      onChange={handleChange}
+                      disabled={loadingStaff}
+                      className={styles.staffSelect}
+                    >
+                      <option value="">
+                        {loadingStaff ? 'Đang tải...' : 'Chọn nhân viên (tùy chọn)'}
+                      </option>
+                      {staffList.map((staff) => (
+                        <option key={staff.userId} value={staff.userId}>
+                          {staff.fullName} - {staff.phone}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Preview staff info */}
+                {formData.staffId && (() => {
+                  const selected = staffList.find(s => s.userId === formData.staffId);
+                  return selected ? (
+                    <div className={styles.customerPreview}>
+                      <div className={styles.previewCard}>
+                        <div className={styles.previewHeader}>
+                          <i className="fas fa-user-tie"></i>
+                          <span>Thông tin nhân viên</span>
+                        </div>
+                        <div className={styles.previewBody}>
+                          <div className={styles.infoRow}>
+                            <div className={styles.infoItem}>
+                              <i className="fas fa-user"></i>
+                              <div className={styles.infoContent}>
+                                <span className={styles.infoLabel}>Họ tên:</span>
+                                <span className={styles.infoValue}>{selected.fullName}</span>
+                              </div>
+                            </div>
+                            <div className={styles.infoItem}>
+                              <i className="fas fa-phone"></i>
+                              <div className={styles.infoContent}>
+                                <span className={styles.infoLabel}>SĐT:</span>
+                                <span className={styles.infoValue}>{selected.phone}</span>
+                              </div>
+                            </div>
+                          </div>
+                          {selected.email && (
+                            <div className={styles.infoRow}>
+                              <div className={styles.infoItem}>
+                                <i className="fas fa-envelope"></i>
+                                <div className={styles.infoContent}>
+                                  <span className={styles.infoLabel}>Email:</span>
+                                  <span className={styles.infoValue}>{selected.email}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               {/* Vehicle Selection */}
