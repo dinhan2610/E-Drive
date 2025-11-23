@@ -28,16 +28,12 @@ const TicketEditModal: React.FC<TicketEditModalProps> = ({
     setLoading(true);
 
     try {
-      console.log('📝 Updating ticket #' + ticket.code);
-      
       const updated = await updateTicket(ticket.id, {
         status: formData.status,
         priority: formData.priority,
         assigneeName: formData.assigneeName || undefined,
       });
 
-      console.log('✅ Update successful:', updated);
-      
       onSuccess(updated);
       onClose();
       

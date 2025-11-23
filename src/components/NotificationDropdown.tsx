@@ -22,26 +22,28 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction =
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentDealerId, setCurrentDealerId] = useState<number | null>(null);
+  const [currentStaffId, setCurrentStaffId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Load dealerId once on mount for dealer/staff roles
+  // Load dealerId and staffId once on mount for dealer/staff roles
   useEffect(() => {
-    const loadDealerId = async () => {
+    const loadUserInfo = async () => {
       const userRole = getCurrentUserRole();
       if (userRole !== 'admin') {
         try {
           const profile = await getProfile();
           setCurrentDealerId(profile.dealerId);
+          setCurrentStaffId(profile.profileId); // profileId is staffId
         } catch (err) {
-          console.error('Failed to load dealerId:', err);
+          console.error('Failed to load user info:', err);
         }
       }
     };
     
-    loadDealerId();
+    loadUserInfo();
   }, []);
 
   // Load notifications based on user role
@@ -65,11 +67,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction =
         }
         data = await fetchDealerManagerNotifications(currentDealerId);
       } else if (userRole === 'staff') {
-        // Dealer Staff: fetch dealer staff notifications
-        if (!currentDealerId) {
-          throw new Error('Không tìm thấy dealer ID');
+        // Dealer Staff: fetch dealer staff notifications using staffId (profileId)
+        if (!currentStaffId) {
+          throw new Error('Không tìm thấy staff ID');
         }
-        data = await fetchDealerStaffNotifications(currentDealerId);
+        data = await fetchDealerStaffNotifications(currentStaffId);
       } else {
         // Fallback: use /all endpoint for any other case
         data = await fetchAllNotifications();
@@ -97,9 +99,16 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction =
 
   // Initial load and polling every 5 seconds for real-time updates
   useEffect(() => {
-    // Chỉ load notifications khi đã có dealerId (cho manager) hoặc là admin
     const userRole = getCurrentUserRole();
-    if (userRole === 'admin' || currentDealerId !== null) {
+    // Load notifications when:
+    // - Admin (no need dealerId/staffId)
+    // - Manager (has dealerId)
+    // - Staff (has staffId)
+    const canLoad = userRole === 'admin' || 
+                    (userRole === 'dealer' && currentDealerId !== null) ||
+                    (userRole === 'staff' && currentStaffId !== null);
+    
+    if (canLoad) {
       loadNotifications(); // Lần đầu tiên hiển thị loading
       
       // Polling mỗi 5 giây để cập nhật thông báo mới (silent mode)
@@ -121,7 +130,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ direction =
         window.removeEventListener('orderCreated', handleReloadNotifications);
       };
     }
-  }, [currentDealerId]); // Chạy lại khi currentDealerId thay đổi
+  }, [currentDealerId, currentStaffId]); // Chạy lại khi dealerId hoặc staffId thay đổi
 
   // Close dropdown when clicking outside
   useEffect(() => {

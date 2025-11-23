@@ -71,13 +71,9 @@ export async function getProfile(): Promise<UserProfile> {
  */
 export async function getDealerProfile(dealerId: number): Promise<UserProfile> {
   try {
-    console.log('🔍 Fetching dealer profile from /api/dealers/' + dealerId);
     const response = await api.get<any>(`/api/dealers/${dealerId}`);
-    console.log('📦 Raw Dealer API Response:', response.data);
     
-    // Map dealer response to UserProfile format
     const dealerData = response.data.data || response.data;
-    console.log('📦 Dealer data to map:', dealerData);
     
     // Check if dealerData is valid
     if (!dealerData || typeof dealerData !== 'object') {
@@ -105,7 +101,6 @@ export async function getDealerProfile(dealerId: number): Promise<UserProfile> {
       contactPhone: dealerData.contactPhone || dealerData.phone || dealerData.phoneNumber || ''
     };
     
-    console.log('✅ Normalized Dealer Profile:', normalized);
     return normalized;
   } catch (error: any) {
     // Only log error if it's not a 403 (permission denied is expected for some users)
@@ -121,15 +116,9 @@ export async function getDealerProfile(dealerId: number): Promise<UserProfile> {
  */
 export async function updateProfile(data: UpdateProfilePayload): Promise<UserProfile> {
   try {
-    console.log('📝 Updating profile...');
-    
-    // First get current profile to get dealerId
     const currentProfile = await getProfile();
     
     if (currentProfile.dealerId) {
-      // Update via dealer API for consistency with admin updates
-      console.log('🔄 Updating via dealer API (dealerId:', currentProfile.dealerId, ')');
-      
       const dealerUpdateData = {
         dealerName: data.agencyName,
         email: data.email,
@@ -144,13 +133,9 @@ export async function updateProfile(data: UpdateProfilePayload): Promise<UserPro
       };
       
       await api.put<any>(`/api/dealers/${currentProfile.dealerId}`, dealerUpdateData);
-      console.log('✅ Dealer updated successfully');
       
-      // Return updated dealer profile
       return getDealerProfile(currentProfile.dealerId);
     } else {
-      // Fallback to profile API if no dealerId
-      console.log('⚠️ No dealerId found, using profile API');
       const requestData = {
         ...data,
         email: data.email,

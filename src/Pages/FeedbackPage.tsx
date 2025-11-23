@@ -67,10 +67,7 @@ const FeedbackPage: React.FC = () => {
 
   const loadDealerProfile = async () => {
     try {
-      console.log('🔍 Loading dealer profile...');
       const profile = await getProfile();
-      console.log('✅ Profile data:', profile);
-      console.log('🏢 Dealer ID:', profile.dealerId);
       
       setDealerId(profile.dealerId);
       setDealerName(profile.agencyName || profile.fullName);
@@ -82,13 +79,11 @@ const FeedbackPage: React.FC = () => {
 
   const loadFeedbacks = async () => {
     if (dealerId === null) {
-      console.log('⏳ Waiting for dealer ID...');
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log(`📋 Loading feedbacks for dealer ${dealerId}...`);
       
       const response = await listFeedbacks({
         page: currentPage,
@@ -97,7 +92,6 @@ const FeedbackPage: React.FC = () => {
         dealerId: dealerId
       });
       
-      console.log(`✅ Loaded ${response.content?.length || 0} feedbacks for dealer ${dealerId}`);
       
       // Sắp xếp theo ID giảm dần (mới nhất trước) để đảm bảo thứ tự cố định
       const sortedFeedbacks = [...response.content].sort((a, b) => b.feedbackId - a.feedbackId);

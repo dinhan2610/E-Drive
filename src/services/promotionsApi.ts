@@ -2,25 +2,18 @@ import api from "../lib/apiClient";
 import type { Promotion, ListParams } from "../types/promotion";
 
 export async function listPromotions(dealerId: number, params?: ListParams) {
-  console.log('🎯 promotionsApi.listPromotions called with dealerId:', dealerId, 'params:', params);
   
   try {
     const endpoint = `/api/promotions/dealer/${dealerId}`;
-    console.log('📡 Calling API endpoint:', endpoint);
     
     const { data } = await api.get<any>(endpoint, { params });
     
-    console.log('✅ API Success - Raw response:', data);
-    console.log('✅ Response type:', typeof data);
-    console.log('✅ Response keys:', Object.keys(data || {}));
     
     if (data && data.data && Array.isArray(data.data)) {
-      console.log('✅ Format 1: data.data array with', data.data.length, 'items');
       return { items: data.data, total: data.data.length };
     }
     
     if (Array.isArray(data)) {
-      console.log('✅ Format 2: direct array with', data.length, 'items');
       return { items: data, total: data.length };
     }
     
@@ -44,8 +37,6 @@ export async function getPromotion(id: number) {
 
 export async function createPromotion(dealerId: number, body: Omit<Promotion, 'promoId' | 'dealerId'>) {
   try {
-    console.log('🔥 Creating promotion for dealer:', dealerId);
-    console.log('📦 Payload:', JSON.stringify(body, null, 2));
     const { data } = await api.post<Promotion>(`/api/promotions/dealer/${dealerId}`, body);
     return data;
   } catch (error: any) {

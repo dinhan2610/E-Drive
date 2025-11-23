@@ -133,12 +133,10 @@ const CreateQuotePage: React.FC = () => {
           return;
         }
         
-        console.log('👤 Current user:', user.username, '- Role:', user.role);
         
         // Fetch dealer profile from API
         try {
           const profile = await getProfile();
-          console.log('✅ Dealer profile loaded:', profile);
           setDealerInfo(profile);
           setDealerId(profile.dealerId);
           return;
@@ -151,7 +149,6 @@ const CreateQuotePage: React.FC = () => {
         const usernameMatch = user.username?.match(/^d(\d+)_/);
         if (usernameMatch) {
           const extractedDealerId = parseInt(usernameMatch[1]);
-          console.log('✅ Dealer ID extracted from username:', extractedDealerId);
           setDealerId(extractedDealerId);
           return;
         }
@@ -172,7 +169,6 @@ const CreateQuotePage: React.FC = () => {
             || null;
           
           if (matchedDealer) {
-            console.log('✅ Dealer matched from API:', matchedDealer.dealerId, '-', matchedDealer.dealerName);
             setDealerId(matchedDealer.dealerId);
           } else {
             console.warn('⚠️ No dealer found for user:', user.username);
@@ -180,7 +176,6 @@ const CreateQuotePage: React.FC = () => {
         } catch (apiError: any) {
           // API call failed (likely 400/403) - use username extraction as fallback
           console.warn('⚠️ Dealers API failed (expected for staff/dealer roles):', apiError.message);
-          console.log('💡 Using username pattern extraction as fallback');
         }
       } catch (err: any) {
         console.error('❌ Error fetching dealerId:', err.message);
@@ -199,13 +194,11 @@ const CreateQuotePage: React.FC = () => {
 
         // Fetch vehicles from API
         const vehiclesData = await fetchVehiclesFromApi({ status: 'AVAILABLE' });
-        console.log('📦 Fetched vehicles:', vehiclesData.vehicles.length);
 
         // Group vehicles by model+version to create products
         const groupedProducts = groupVehiclesByModel(vehiclesData.vehicles);
         setProducts(groupedProducts);
 
-        console.log('✅ Data loaded successfully');
       } catch (err) {
         console.error('❌ Error fetching data:', err);
         setError('Không thể tải dữ liệu xe. Vui lòng thử lại.');
@@ -237,7 +230,6 @@ const CreateQuotePage: React.FC = () => {
         }));
         
         setAddonServices(formattedServices);
-        console.log('✅ Loaded active addon services:', formattedServices.length);
       } catch (error: any) {
         console.error('❌ Failed to load addon services:', error);
         setAddonServices([]);
@@ -253,19 +245,16 @@ const CreateQuotePage: React.FC = () => {
   useEffect(() => {
     const loadCustomers = async () => {
       if (!dealerId) {
-        console.log('⏳ Waiting for dealerId to load customers...');
         return;
       }
       
       try {
         setIsLoadingCustomers(true);
         const response = await listCustomers(dealerId, {});
-        console.log('👥 Raw API response:', response);
         
         // Handle different response formats
         const customerData = response.data || response || [];
         setCustomers(Array.isArray(customerData) ? customerData : []);
-        console.log('👥 Fetched customers for dealer', dealerId, ':', customerData.length);
       } catch (err) {
         console.error('❌ Error fetching customers:', err);
         setCustomers([]); // Set empty array on error
@@ -281,7 +270,6 @@ const CreateQuotePage: React.FC = () => {
   useEffect(() => {
     if (!preSelectedProduct || products.length === 0) return;
     
-    console.log('🎯 Auto-selecting product from navigation:', preSelectedProduct.name);
     
     // Find matching product in loaded products
     const matchedProduct = products.find(p => p.id === preSelectedProduct.id);
@@ -314,13 +302,6 @@ const CreateQuotePage: React.FC = () => {
         },
       }));
       
-      console.log('✅ Vehicle auto-selected:', {
-        model: matchedProduct.name,
-        color: selectedColorVariant.color,
-        price: selectedColorVariant.finalPrice || selectedColorVariant.priceRetail
-      });
-      
-      // Show success notification
       setSuccessMessage(`🚗 Đã chọn xe: ${matchedProduct.name} - Màu ${selectedColorVariant.color}`);
       setTimeout(() => setSuccessMessage(''), 3000);
     }
@@ -329,31 +310,23 @@ const CreateQuotePage: React.FC = () => {
   // Fetch promotions based on dealerId (fetched from dealers API)
   useEffect(() => {
     if (!dealerId) {
-      console.log('⏳ Waiting for dealerId...');
       return;
     }
     
-    console.log('🚀 useEffect: Starting promotions fetch...');
-    console.log('🔑 Current dealerId:', dealerId);
     
     // Log current user info for debugging
     const user = getCurrentUser();
     if (user) {
-      console.log('👤 Fetching promotions as:', user.username, '- Role:', user.role);
     }
     
     const fetchPromotionsData = async () => {
       try {
         setLoadingPromotions(true);
         
-        console.log('🎁 Fetching promotions for dealer:', dealerId);
         const response = await listPromotions(dealerId);
-        console.log('📦 Raw API Response:', response);
         
         // listPromotions returns { items: [], total: 0 }
         const items = response?.items || [];
-        console.log('📋 Extracted items:', items);
-        console.log('📋 Total promotions from API:', items?.length || 0);
         
         if (!items || !Array.isArray(items)) {
           console.error('❌ API response is not an array:', typeof items);
@@ -362,7 +335,6 @@ const CreateQuotePage: React.FC = () => {
         }
         
         if (items.length > 0) {
-          console.log('🔍 Sample promotion:', items[0]);
         } else {
           console.warn('⚠️ No promotions found for dealer:', dealerId);
         }
@@ -380,7 +352,6 @@ const CreateQuotePage: React.FC = () => {
         });
 
         setPromotions(activePromotions);
-        console.log('✅ Loaded', activePromotions.length, 'active promotions for dealer', dealerId);
       } catch (err: any) {
         console.error('❌ Error fetching promotions:', err);
         console.error('❌ Error message:', err?.message);
@@ -388,7 +359,6 @@ const CreateQuotePage: React.FC = () => {
         setPromotions([]);
       } finally {
         setLoadingPromotions(false);
-        console.log('🏁 Promotions fetch completed');
       }
     };
 
@@ -492,12 +462,6 @@ const CreateQuotePage: React.FC = () => {
 
   const handleColorSelect = useCallback((colorVariant: ColorVariant) => {
     if (selectedProduct) {
-      console.log('🎨 Color selected:', {
-        color: colorVariant.color,
-        vehicleId: colorVariant.vehicleId,
-        price: colorVariant.finalPrice || colorVariant.priceRetail
-      });
-      
       setQuote(prev => ({
         ...prev,
         vehicle: {
@@ -611,19 +575,8 @@ const CreateQuotePage: React.FC = () => {
         selectedPromotionIds,
       };
       
-      console.log('📝 Creating quotation with:', request);
-      console.log('✅ Vehicle details:', {
-        vehicleId: quote.vehicle.vehicleId,
-        model: quote.vehicle.model,
-        variant: quote.vehicle.variant,
-        color: quote.vehicle.color,
-        basePrice: quote.vehicle.basePrice
-      });
-      
-      // Call the API
       const response = await createQuotation(request);
       
-      console.log('✅ Quotation created:', response);
       
       // Lưu quotationId để có thể tạo PDF
       setCreatedQuotationId(response.quotationId);
@@ -649,7 +602,6 @@ const CreateQuotePage: React.FC = () => {
     }
 
     try {
-      console.log('📥 Downloading PDF from backend for quotation:', createdQuotationId);
       
       // Call backend API to export PDF
       const pdfBlob = await exportQuotationPDF(createdQuotationId);
@@ -666,7 +618,6 @@ const CreateQuotePage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      console.log('✅ PDF downloaded successfully');
     } catch (error) {
       console.error('❌ Error downloading PDF:', error);
       alert('Không thể tải PDF. Vui lòng thử lại!');

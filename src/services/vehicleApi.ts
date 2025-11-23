@@ -58,7 +58,6 @@ export function groupVehiclesByModel(vehicles: VehicleApiResponse[]): Product[] 
     grouped.get(key)!.push(vehicle);
   });
 
-  console.log('🎨 Grouped vehicles by model+version:', grouped.size, 'groups');
 
   // Convert mỗi group thành 1 Product với color variants
   const products: Product[] = [];
@@ -98,7 +97,6 @@ export function groupVehiclesByModel(vehicles: VehicleApiResponse[]): Product[] 
     // Cập nhật tags để include tất cả màu
     product.tags = vehicleGroup.map(v => v.color.toLowerCase());
 
-    console.log(`✨ Created product: ${product.name} with ${colorVariants.length} colors`);
 
     products.push(product);
   });
@@ -121,7 +119,6 @@ export async function fetchVehiclesFromApi(params: ApiParams = {}): Promise<{ ve
   if (params.status) queryParams.append('status', params.status);
 
   const url = `${API_BASE_URL}/vehicles?${queryParams.toString()}`;
-  console.log('🌐 Fetching from API:', url);
 
   try {
     const response = await fetch(url);
@@ -131,7 +128,6 @@ export async function fetchVehiclesFromApi(params: ApiParams = {}): Promise<{ ve
     }
 
     const data: ApiListResponse = await response.json();
-    console.log('✅ API Response:', data);
 
     // Kiểm tra response structure
     if (data.statusCode !== 200) {
@@ -227,8 +223,6 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
     throw new Error('Vui lòng đăng nhập để tạo xe mới');
   }
   
-  console.log('🚗 Creating vehicle at:', url);
-  console.log('📤 Request body:', JSON.stringify(cleanedData, null, 2));
 
   try {
     const response = await fetch(url, {
@@ -243,7 +237,6 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
 
     // Xử lý response text trước khi parse JSON
     const responseText = await response.text();
-    console.log('📥 Raw API Response:', responseText);
 
     if (!response.ok) {
       // Thử parse error response
@@ -275,14 +268,12 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
       throw new Error('Invalid JSON response from server');
     }
 
-    console.log('✅ Vehicle Created Response:', data);
 
     // Xử lý các format response khác nhau
 
     // Format 1: Response với statusCode + data array (như trong hình API - ưu tiên cao nhất)
     // { statusCode: 201, message: "Vehicles created", data: [...] }
     if ((data.statusCode === 200 || data.statusCode === 201) && data.data && Array.isArray(data.data)) {
-      console.log('✅ Format 1: Response với statusCode + data array (nhiều xe)');
       return {
         statusCode: data.statusCode,
         message: data.message || 'Vehicles created',
@@ -291,17 +282,14 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
     }
     // Format 2: ApiCreateResponse với data object (single vehicle)
     else if ((data.statusCode === 200 || data.statusCode === 201) && data.data && typeof data.data === 'object' && !Array.isArray(data.data) && 'vehicleId' in data.data) {
-      console.log('✅ Format 2: Response với statusCode + data object (single vehicle)');
       return data.data as VehicleApiResponse;
     }
     // Format 3: Direct VehicleApiResponse
     else if ('vehicleId' in data && 'modelName' in data) {
-      console.log('✅ Format 3: Direct VehicleApiResponse');
       return data as unknown as VehicleApiResponse;
     }
     // Format 4: Response với message thành công nhưng không có data chi tiết
     else if (data.statusCode === 200 || data.statusCode === 201) {
-      console.log('🔄 API trả về thành công nhưng không có data...');
       throw new Error('API created vehicle successfully but did not return vehicle data');
     }
     
@@ -322,7 +310,6 @@ export async function createVehicle(vehicleData: CreateVehicleRequest): Promise<
 // Get vehicle by ID for detail view
 export async function getVehicleById(vehicleId: number): Promise<VehicleApiResponse> {
   const url = `${API_BASE_URL}/vehicles/${vehicleId}`;
-  console.log('🔍 Getting vehicle by ID:', url);
 
   try {
     const response = await fetch(url);
@@ -332,7 +319,6 @@ export async function getVehicleById(vehicleId: number): Promise<VehicleApiRespo
     }
 
     const data = await response.json();
-    console.log('✅ Vehicle Detail Response:', data);
 
     // Xử lý response format từ API
     let vehicleData: VehicleApiResponse | null = null;
@@ -351,7 +337,6 @@ export async function getVehicleById(vehicleId: number): Promise<VehicleApiRespo
     }
 
     if (vehicleData) {
-      console.log('✅ Found vehicle data:', vehicleData);
       return vehicleData;
     }
     
@@ -380,8 +365,6 @@ export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicl
     throw new Error('Vui lòng đăng nhập để cập nhật xe');
   }
 
-  console.log('✏️ Updating vehicle at:', url);
-  console.log('📤 Update request body:', JSON.stringify(cleanedData, null, 2));
 
   try {
     const response = await fetch(url, {
@@ -395,7 +378,6 @@ export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicl
     });
 
     const responseText = await response.text();
-    console.log('📥 Raw update response:', responseText);
 
     if (!response.ok) {
       const errorText = responseText;
@@ -411,7 +393,6 @@ export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicl
       throw new Error('Invalid JSON response from server');
     }
 
-    console.log('✅ Vehicle Updated Response:', data);
 
     // Handle different response formats
     let updatedVehicle: VehicleApiResponse | null = null;
@@ -420,23 +401,19 @@ export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicl
     if ((data.statusCode === 200 || data.statusCode === 0) && data.data && typeof data.data === 'object') {
       if ('vehicleId' in data.data) {
         updatedVehicle = data.data;
-        console.log('✅ Format: Response with statusCode + data object');
       }
     }
     // Format 2: Direct VehicleApiResponse
     else if (data.vehicleId && data.modelName) {
       updatedVehicle = data;
-      console.log('✅ Format: Direct VehicleApiResponse');
     }
     // Format 3: Success message without detailed data
     else if (data.statusCode === 200 || data.statusCode === 0) {
-      console.log('🔄 API returned success without vehicle data, refetching...');
       // Refetch the vehicle to get updated data
       return await getVehicleById(vehicleId);
     }
 
     if (updatedVehicle) {
-      console.log('✅ Found updated vehicle data:', updatedVehicle);
       return updatedVehicle;
     }
     
@@ -451,7 +428,6 @@ export async function updateVehicle(vehicleId: number, vehicleData: UpdateVehicl
 // Delete vehicle by ID
 export async function deleteVehicle(vehicleId: number): Promise<void> {
   const url = `${API_BASE_URL}/vehicles/${vehicleId}`;
-  console.log('🗑️ Deleting vehicle:', url);
 
   // Get authentication token
   const accessToken = localStorage.getItem('accessToken');
@@ -506,7 +482,6 @@ export async function deleteVehicle(vehicleId: number): Promise<void> {
       }
     }
 
-    console.log('✅ Vehicle deleted successfully');
   } catch (error) {
     console.error('❌ Delete Vehicle Error:', error);
     throw error;
@@ -522,7 +497,6 @@ export async function getProductsFromApi(
   maxPrice?: number,
   status?: string
 ): Promise<{ products: Product[], total: number, totalPages: number }> {
-  console.log('🔄 Getting products from API:', { page, pageSize, search, minPrice, maxPrice, status });
 
   try {
     const { vehicles, total } = await fetchVehiclesFromApi({
@@ -539,12 +513,6 @@ export async function getProductsFromApi(
     
     // Calculate total pages (API might provide this in future)
     const totalPages = Math.ceil(total / pageSize);
-
-    console.log('✅ API Success - Converted to products:', { 
-      productsCount: products.length, 
-      total, 
-      totalPages 
-    });
 
     return {
       products,

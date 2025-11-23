@@ -45,7 +45,6 @@ export const getValidAuthData = (): AuthData | null => {
     const expiry = parseInt(loginExpiry, 10);
     
     if (now > expiry) {
-      console.log('🔴 Login expired, clearing data...');
       clearAuthData();
       return null;
     }

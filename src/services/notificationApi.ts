@@ -33,11 +33,19 @@ export const fetchDealerManagerNotifications = async (dealerId: number): Promise
 
 /**
  * Fetch notifications for dealer staff
- * GET /api/notifications/dealer/staff/{dealerId}
+ * GET /api/notifications/dealer/staff/{staffId}
+ * @param staffId - The staff's profileId (not dealerId!)
  */
-export const fetchDealerStaffNotifications = async (dealerId: number): Promise<Notification[]> => {
-  const response = await api.get<Notification[]>(`${API_BASE_URL}/dealer/staff/${dealerId}`);
-  return response.data;
+export const fetchDealerStaffNotifications = async (staffId: number): Promise<Notification[]> => {
+  try {
+    const response = await api.get<Notification[]>(`${API_BASE_URL}/dealer/staff/${staffId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Error fetching staff notifications:', error);
+    console.error('Response status:', error.response?.status);
+    console.error('Response data:', error.response?.data);
+    throw error;
+  }
 };
 
 /**

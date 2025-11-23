@@ -14,12 +14,10 @@ import type {
  */
 export async function startVnPay(orderId: number | string): Promise<VnPayInitResponse> {
   try {
-    console.log('🔄 Starting VNPay payment for orderId:', orderId);
     
     // Some backends expect an empty object body for POST requests
     const { data } = await api.post<any>(`/api/payments/vnpay/${orderId}`, {});
     
-    console.log('📦 Raw VNPay response:', data);
     
     // Backend response format: { statusCode, message, data: { vnpayUrl } }
     if (data.data && data.data.vnpayUrl) {
@@ -72,11 +70,9 @@ export async function payCash(body: CashRequest): Promise<CashResponse> {
  */
 export async function handleVnPayReturn(query: URLSearchParams): Promise<VnPayReturnPayload> {
   const qs = query.toString();
-  console.log('🔄 Calling VNPay return API with query:', qs);
   
   try {
     const { data } = await api.get<any>(`/api/payments/vnpay-return?${qs}`);
-    console.log('📦 VNPay return response:', data);
     
     // Extract VNPay params from query string directly
     const vnpParams: VnPayReturnPayload = {};
@@ -84,7 +80,6 @@ export async function handleVnPayReturn(query: URLSearchParams): Promise<VnPayRe
       vnpParams[key] = value;
     });
     
-    console.log('📦 VNPay params from URL:', vnpParams);
     
     // Return the VNPay params from URL, not from backend response
     // Backend may have issues but VNPay params in URL are the source of truth
@@ -99,7 +94,6 @@ export async function handleVnPayReturn(query: URLSearchParams): Promise<VnPayRe
       vnpParams[key] = value;
     });
     
-    console.log('⚠️ Using VNPay params from URL despite API error:', vnpParams);
     
     // Return VNPay params from URL
     return vnpParams;

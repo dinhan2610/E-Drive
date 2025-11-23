@@ -61,7 +61,6 @@ const PromoForm: React.FC<PromoFormProps> = ({ promotion, dealerId, onClose, onS
   const loadVehicles = async () => {
     setLoadingVehicles(true);
     try {
-      console.log('🚗 Loading vehicles...');
       const result = await fetchVehiclesFromApi({ size: 1000 });
       
       // Group vehicles theo modelName + version
@@ -90,7 +89,6 @@ const PromoForm: React.FC<PromoFormProps> = ({ promotion, dealerId, onClose, onS
       });
       
       setGroupedModels(models);
-      console.log('✅ Grouped models:', models.length, 'models');
     } catch (error) {
       console.error('❌ Failed to load vehicles:', error);
     } finally {

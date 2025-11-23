@@ -39,9 +39,7 @@ const TicketsPage: React.FC = () => {
 
   const loadDealerProfile = async () => {
     try {
-      console.log('🔍 [Tickets] Loading dealer profile...');
       const profile = await getProfile();
-      console.log('✅ [Tickets] Dealer ID:', profile.dealerId);
       setDealerId(profile.dealerId);
     } catch (error) {
       console.error('❌ [Tickets] Error loading dealer profile:', error);
@@ -50,13 +48,11 @@ const TicketsPage: React.FC = () => {
 
   const loadFeedbacks = async () => {
     if (dealerId === null) {
-      console.log('⏳ [Tickets] Waiting for dealer ID...');
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log(`📋 [Tickets] Loading feedbacks for dealer ${dealerId}...`);
       
       const data = await listFeedbacks({ 
         page: 0, 
@@ -64,7 +60,6 @@ const TicketsPage: React.FC = () => {
         dealerId: dealerId
       });
       
-      console.log(`✅ [Tickets] Loaded ${data.content?.length || 0} feedbacks`);
       setFeedbacks(data.content);
     } catch (error) {
       console.error('❌ [Tickets] Error loading feedbacks:', error);

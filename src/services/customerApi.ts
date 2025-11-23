@@ -20,7 +20,6 @@ export interface CustomerApiResponse {
 // Fetch all customers
 export async function fetchCustomers(): Promise<Customer[]> {
   const url = `${API_BASE_URL}/customer`;
-  console.log('👥 Fetching customers from:', url);
 
   try {
     // Get token from localStorage
@@ -47,7 +46,6 @@ export async function fetchCustomers(): Promise<Customer[]> {
     }
 
     const data: CustomerApiResponse = await response.json();
-    console.log('✅ Customers Response:', data);
 
     if (data.statusCode === 200 && data.data) {
       return data.data;
@@ -63,7 +61,6 @@ export async function fetchCustomers(): Promise<Customer[]> {
 // Get customer by ID
 export async function getCustomerById(customerId: number): Promise<Customer> {
   const url = `${API_BASE_URL}/customer/${customerId}`;
-  console.log('🔍 Getting customer by ID:', url);
 
   try {
     const token = localStorage.getItem('accessToken');
@@ -86,7 +83,6 @@ export async function getCustomerById(customerId: number): Promise<Customer> {
     }
 
     const data = await response.json();
-    console.log('✅ Customer Detail Response:', data);
 
     if (data.statusCode === 200 && data.data) {
       return data.data;

@@ -119,17 +119,10 @@ const LoginForm: React.FC<LoginFormProps> = ({
       });
       
       if (result.success && result.data) {
-        const { user, token, refreshToken } = result.data;
+        const { user } = result.data;
         
-        // Debug: Log user data from API
-        console.log('🔍 User data from API:', user);
-        console.log('🔍 User role from API:', user?.role);
-        
-        // Set user name for success modal
         setLoggedInUserName(user?.fullName || user?.name || formData.username);
         
-        // Store user data for persistence (including role)
-        // Backend roles: ADMIN, DEALER_MANAGER, DEALER_STAFF, EVM_STAFF
         let detectedRole = user?.role || 'dealer';
         
         // Normalize role from Spring Security format
@@ -137,8 +130,6 @@ const LoginForm: React.FC<LoginFormProps> = ({
         if (detectedRole && typeof detectedRole === 'string') {
           detectedRole = detectedRole.replace('ROLE_', '').toLowerCase();
         }
-        
-        console.log('🔍 Normalized role from backend:', detectedRole);
         
         const userData = {
           ...user,
@@ -148,11 +139,6 @@ const LoginForm: React.FC<LoginFormProps> = ({
           role: detectedRole
         };
         
-        console.log('💾 User data to be stored:', userData);
-        console.log('👤 Final normalized role:', userData.role);
-        console.log('🔐 Remember Me:', rememberMe);
-        
-        // Use sessionStorage by default, localStorage only if Remember Me is checked
         const storage = rememberMe ? localStorage : sessionStorage;
         
         storage.setItem('e-drive-user', JSON.stringify(userData));
@@ -169,23 +155,9 @@ const LoginForm: React.FC<LoginFormProps> = ({
           localStorage.setItem('loginExpiry', expiryTime.toString());
         }
         
-        // Set role for redirect (store raw role string)
         setUserRole(userData.role);
         setLoggedInUserName(userData.fullName);
         
-        // Verify tokens are stored
-        const storedAccessToken = localStorage.getItem('accessToken');
-        const storedRefreshToken = localStorage.getItem('refreshToken');
-        
-        console.log('💾 Đã lưu thông tin user:', userData);
-        console.log('🔑 Token check:', {
-          tokenFromAPI: token ? `${token.substring(0, 30)}...` : 'NULL',
-          storedAccessToken: storedAccessToken ? `${storedAccessToken.substring(0, 30)}...` : 'NULL',
-          refreshTokenFromAPI: refreshToken ? 'EXISTS' : 'NULL',
-          storedRefreshToken: storedRefreshToken ? 'EXISTS' : 'NULL'
-        });
-        
-        // Dispatch login success event
         window.dispatchEvent(new Event('loginSuccess'));
         
         // Reset form

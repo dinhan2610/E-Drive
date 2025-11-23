@@ -123,8 +123,6 @@ const OrderPage: React.FC = () => {
         deliveryAddress: fullAddress
       });
 
-      console.log('Order created successfully:', order);
-      console.log('Order ID:', order.orderId);
       setShowSuccess(true);
       
     } catch (error) {

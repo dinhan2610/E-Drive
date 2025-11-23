@@ -40,28 +40,19 @@ const ContractSignPage: React.FC = () => {
 
   // Debug: Log when signerType changes
   useEffect(() => {
-    console.log('🔄 SignerType changed to:', signerType);
   }, [signerType]);
 
   const loadContract = async (id: string) => {
     try {
       setLoading(true);
-      console.log('📄 Loading contract:', id);
       
       const contractData = await getContract(id);
-      console.log('📄 Contract data:', contractData);
-      console.log('📄 Full contract object:', JSON.stringify(contractData, null, 2));
       
       // Check both nested and flat structure for manufacturer signature
       const mfrSigNested = contractData.manufacturer?.signatureData;
       const mfrSigFlat = contractData.manufacturerSignatureData;
       const hasMfrSignature = !!(mfrSigNested || mfrSigFlat);
       
-      console.log('🔍 Manufacturer object:', contractData.manufacturer);
-      console.log('🔍 Manufacturer signature (nested):', mfrSigNested ? 'EXISTS' : 'MISSING');
-      console.log('🔍 Manufacturer signature (flat):', mfrSigFlat ? 'EXISTS' : 'MISSING');
-      console.log('🔍 Has manufacturer signature:', hasMfrSignature);
-      console.log('🔍 Dealer signature:', contractData.dealer?.signatureData || contractData.dealerSignatureData ? 'EXISTS' : 'MISSING');
       setContract(contractData);
       
       // Determine signer type based on contract status and user role
@@ -71,10 +62,6 @@ const ContractSignPage: React.FC = () => {
       // Check if user is dealer (includes dealer, dealer_manager, etc.)
       let isDealer = userRole?.includes('dealer') || false;
       
-      console.log('👤 Current user role:', userRole);
-      console.log('👤 Is dealer:', isDealer);
-      console.log('📋 Contract status:', contractData.status);
-      console.log('📋 Has manufacturer signature (already logged above):', hasMfrSignature);
       
       // Logic: Dealer ký khi status = SIGNING
       // Admin/Manufacturer ký khi status = DRAFT hoặc SIGNING (nếu chưa có chữ ký hãng)
@@ -93,21 +80,16 @@ const ContractSignPage: React.FC = () => {
           return;
         }
         setSignerType('dealer');
-        console.log('✅ Signer type: DEALER - Will show manufacturer signature (read-only) + dealer canvas (editable)');
       } else {
         // Admin/Manufacturer mode
         setSignerType('manufacturer');
-        console.log('✅ Signer type: MANUFACTURER - Will show manufacturer canvas (editable) + dealer placeholder');
       }
       
       // Load order data if orderId exists
       let loadedOrder: OrderLite | null = null;
       if (contractData.orderId) {
-        console.log('📦 Loading order:', contractData.orderId);
         try {
           loadedOrder = await getOrderById(contractData.orderId);
-          console.log('📦 Order data:', loadedOrder);
-          console.log('📦 Order items count:', loadedOrder?.orderItems?.length);
           
           // Merge order data into contract for display
           contractData.order = loadedOrder;
@@ -122,12 +104,10 @@ const ContractSignPage: React.FC = () => {
       if (!dealerRepresentative && (contractData.dealer?.id || loadedOrder?.dealer?.id)) {
         try {
           const dealerId = contractData.dealer?.id || loadedOrder?.dealer?.id;
-          console.log('📞 Loading dealer details for ID:', dealerId);
           const { getDealerById } = await import('../services/dealerApi');
           const dealerDetails = await getDealerById(Number(dealerId));
           if (dealerDetails) {
             dealerRepresentative = dealerDetails.contactPerson || '';
-            console.log('✅ Dealer representative loaded:', dealerRepresentative);
           }
         } catch (dealerError) {
           console.warn('⚠️ Could not load dealer details:', dealerError);
@@ -135,11 +115,6 @@ const ContractSignPage: React.FC = () => {
       }
       
       // Convert Contract to ContractPayload for PdfPreview component
-      console.log('🔍 DEBUG - contractData.dealer:', contractData.dealer);
-      console.log('🔍 DEBUG - loadedOrder?.dealer:', loadedOrder?.dealer);
-      console.log('🔍 DEBUG - contractData.dealer?.representative:', contractData.dealer?.representative);
-      console.log('🔍 DEBUG - loadedOrder?.dealer?.representative:', (loadedOrder?.dealer as any)?.representative);
-      console.log('🔍 DEBUG - dealerRepresentative:', dealerRepresentative);
       
       const convertedPayload: ContractPayload = {
         orderId: contractData.orderId || '',
@@ -174,8 +149,6 @@ const ContractSignPage: React.FC = () => {
         order: loadedOrder || undefined,
       };
       
-      console.log('📋 Converted payload:', convertedPayload);
-      console.log('📋 Payload order items:', convertedPayload.order?.orderItems?.length);
       
       setPayload(convertedPayload);
     } catch (error: any) {
@@ -266,7 +239,6 @@ const ContractSignPage: React.FC = () => {
       throw new Error('Không tìm thấy nội dung hợp đồng');
     }
 
-    console.log('📄 Starting HIGH-QUALITY PDF generation with signatures...');
 
     // CRITICAL: Use higher scale for sharper text
     const scale = 3; // Increase from 2 to 3 for better quality
@@ -287,7 +259,6 @@ const ContractSignPage: React.FC = () => {
       return await generatePdfSimple(element);
     }
 
-    console.log('📚 Found', sections.length, 'sections to render');
 
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -314,7 +285,6 @@ const ContractSignPage: React.FC = () => {
       const section = sections[i];
       const sectionClass = section.className || `section-${i}`;
       
-      console.log(`📦 Processing section ${i + 1}/${sections.length}: ${sectionClass.substring(0, 30)}...`);
 
       // Check if section contains a table
       const table = section.querySelector('table');
@@ -322,7 +292,6 @@ const ContractSignPage: React.FC = () => {
 
       // ⭐ HANDLE TABLE SECTION - Render row-by-row
       if (table && !isSignatureSection) {
-        console.log('   🔍 Section contains TABLE - rendering row-by-row for perfect alignment');
         const result = await renderTableSectionRowByRow(
           pdf, section, table as HTMLTableElement, contentWidth, marginLeft,
           pageWidth, pageHeight, marginTop, marginBottom, currentY, pageNumber, scale
@@ -334,7 +303,6 @@ const ContractSignPage: React.FC = () => {
 
       // ⭐ SIGNATURE SECTION - Always keep on one page
       if (isSignatureSection) {
-        console.log('   ✍️  SIGNATURE SECTION - ensuring no split');
         const canvas = await html2canvas(section, {
           scale: scale,
           useCORS: true,
@@ -351,14 +319,12 @@ const ContractSignPage: React.FC = () => {
         
         // If signature doesn't fit, move to new page (don't split)
         if (imgHeight > spaceLeft) {
-          console.log('   ⏭️  Moving ENTIRE signature section to new page');
           pdf.addPage();
           pageNumber++;
           currentY = marginTop;
         }
         
         pdf.addImage(imgData, 'PNG', marginLeft, currentY, imgWidth, imgHeight, undefined, 'MEDIUM');
-        console.log(`   ✅ Added complete signature section at Y=${currentY.toFixed(2)}mm`);
         currentY += imgHeight + 3;
         continue;
       }
@@ -376,13 +342,11 @@ const ContractSignPage: React.FC = () => {
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      console.log(`   📐 Section height: ${imgHeight.toFixed(2)} mm`);
 
       const spaceLeft = pageHeight - currentY - marginBottom;
       
       // Check if need new page
       if (imgHeight > spaceLeft && currentY > marginTop + 10) {
-        console.log('   ⏭️  Moving to new page');
         pdf.addPage();
         pageNumber++;
         currentY = marginTop;
@@ -390,7 +354,6 @@ const ContractSignPage: React.FC = () => {
 
       // If section still too tall, split it
       if (imgHeight > usableHeight) {
-        console.log('   ⚠️  Section too tall, splitting...');
         const result = await splitImageAcrossPages(
           pdf, canvas, imgWidth, imgHeight, marginLeft,
           currentY, pageHeight, marginTop, marginBottom, pageNumber
@@ -399,7 +362,6 @@ const ContractSignPage: React.FC = () => {
         pageNumber = result.pageNumber;
       } else {
         pdf.addImage(imgData, 'PNG', marginLeft, currentY, imgWidth, imgHeight, undefined, 'MEDIUM');
-        console.log(`   ✅ Added at Y=${currentY.toFixed(2)}mm`);
         currentY += imgHeight + 5;
       }
     }
@@ -408,10 +370,6 @@ const ContractSignPage: React.FC = () => {
     const totalPages = pdf.internal.pages.length - 1;
     const sizeKB = (pdfBlob.size / 1024).toFixed(2);
     
-    console.log(`\n✅ HIGH-QUALITY PDF generated:`);
-    console.log(`   📄 Pages: ${totalPages}`);
-    console.log(`   💾 Size: ${sizeKB} KB`);
-    console.log(`   📐 Scale: ${scale}x (high quality)`);
     
     return pdfBlob;
   };
@@ -433,7 +391,6 @@ const ContractSignPage: React.FC = () => {
     startPage: number,
     scale: number
   ): Promise<{ currentY: number; pageNumber: number }> => {
-    console.log('   📊 Rendering table with smart row breaks...');
     
     const parts: HTMLElement[] = [];
     
@@ -451,7 +408,6 @@ const ContractSignPage: React.FC = () => {
     const tbody = table.querySelector('tbody');
     if (tbody) {
       const rows = Array.from(tbody.querySelectorAll('tr')) as HTMLElement[];
-      console.log(`   📋 Found ${rows.length} table rows`);
       parts.push(...rows);
     }
     
@@ -461,7 +417,6 @@ const ContractSignPage: React.FC = () => {
     ) as HTMLElement[];
     parts.push(...childrenAfterTable);
     
-    console.log(`   📋 Split into ${parts.length} parts (header + ${tbody?.querySelectorAll('tr').length || 0} rows)`);
     
     let currentY = startY;
     let pageNumber = startPage;
@@ -488,7 +443,6 @@ const ContractSignPage: React.FC = () => {
       
       // Check if need new page
       if (imgHeight > spaceLeft && currentY > marginTop + 10) {
-        console.log(`   ⏭️  Part ${i} (${part.tagName}) needs new page`);
         pdf.addPage();
         pageNumber++;
         currentY = marginTop;
@@ -505,7 +459,6 @@ const ContractSignPage: React.FC = () => {
           const headerHeight = (headerCanvas.height * imgWidth) / headerCanvas.width;
           pdf.addImage(headerData, 'PNG', marginLeft, currentY, imgWidth, headerHeight, undefined, 'MEDIUM');
           currentY += headerHeight + 0.5;
-          console.log(`      ↪️  Re-added table header`);
         }
       }
       
@@ -513,10 +466,8 @@ const ContractSignPage: React.FC = () => {
       pdf.addImage(imgData, 'PNG', marginLeft, currentY, imgWidth, imgHeight, undefined, 'MEDIUM');
       
       if (isHeader) {
-        console.log(`      ✓ Added header at Y=${currentY.toFixed(2)}mm`);
         lastWasHeader = true;
       } else if (isRow) {
-        console.log(`      ✓ Added row ${i - (lastWasHeader ? 1 : 0)} at Y=${currentY.toFixed(2)}mm`);
       }
       
       currentY += imgHeight + 0.5; // Small spacing between rows
@@ -574,7 +525,6 @@ const ContractSignPage: React.FC = () => {
         
         const partImgData = tempCanvas.toDataURL('image/png', 1.0);
         pdf.addImage(partImgData, 'PNG', marginLeft, currentY, imgWidth, partHeight, undefined, 'MEDIUM');
-        console.log(`      ✓ Added part: ${partHeight.toFixed(2)}mm at Y=${currentY.toFixed(2)}mm`);
       }
       
       heightLeft -= partHeight;
@@ -584,7 +534,6 @@ const ContractSignPage: React.FC = () => {
         pdf.addPage();
         pageNumber++;
         currentY = marginTop;
-        console.log(`      📄 New page ${pageNumber}`);
       } else {
         currentY += partHeight + 5;
       }
@@ -595,7 +544,6 @@ const ContractSignPage: React.FC = () => {
 
   // Fallback: Simple single-image PDF generation
   const generatePdfSimple = async (element: HTMLElement): Promise<Blob> => {
-    console.log('📄 Using simple PDF generation...');
     
     const canvas = await html2canvas(element, {
       scale: 3, // High quality
@@ -641,23 +589,16 @@ const ContractSignPage: React.FC = () => {
       setSubmitting(true);
       
       if (signerType === 'manufacturer') {
-        console.log('💾 Step 1: Saving manufacturer signature to database...');
         await saveManufacturerSignature(contractId, signatureData);
-        console.log('✅ Manufacturer signature saved to database');
       } else {
-        console.log('💾 Step 1: Saving dealer signature to database...');
         await saveDealerSignature(contractId, signatureData);
-        console.log('✅ Dealer signature saved to database');
       }
       
       // Step 2: Generate PDF with signature
-      console.log('📄 Step 2: Generating signed PDF...');
       const pdfBlob = await generateSignedPdf();
       
       // Step 3: Upload PDF to server
-      console.log('☁️ Step 3: Uploading signed PDF to server...');
       await uploadContractPdf(Number(contractId), pdfBlob);
-      console.log('✅ Signed PDF uploaded successfully');
       
       const successMessage = signerType === 'manufacturer' 
         ? '✅ Hãng sản xuất đã ký hợp đồng thành công! Chờ đại lý ký.'

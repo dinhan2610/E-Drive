@@ -115,7 +115,6 @@ const OrderManagementPage: React.FC = () => {
         const profile = await getProfile();
         if (profile.dealerId) {
           setCurrentDealerId(profile.dealerId);
-          console.log('✅ Dealer logged in - ID:', profile.dealerId);
         } else {
           console.warn('⚠️ No dealerId in profile');
         }
@@ -169,7 +168,6 @@ const OrderManagementPage: React.FC = () => {
     try {
       const allContracts = await getAllContracts();
       setContracts(allContracts);
-      console.log('✅ Contracts loaded:', allContracts.length);
     } catch (error) {
       console.error('❌ Error loading contracts:', error);
       setContracts([]);
@@ -179,13 +177,11 @@ const OrderManagementPage: React.FC = () => {
   // ===== HANDLERS =====
   const handleViewDetail = async (order: Order) => {
     try {
-      console.log('👁️ Loading order details:', order.orderId);
       // Gọi API getOrderById để lấy chi tiết đầy đủ
       const { getOrderById } = await import('../services/orderApi');
       const fullOrderData = await getOrderById(order.orderId);
       setSelectedOrder(fullOrderData);
       setShowDetailModal(true);
-      console.log('✅ Order details loaded successfully');
     } catch (error: any) {
       console.error('❌ Error loading order details:', error);
       // Fallback: hiển thị data hiện có
@@ -197,27 +193,21 @@ const OrderManagementPage: React.FC = () => {
   const handleViewContract = async (orderId: number | string) => {
     try {
       setDownloadingContractId(orderId);
-      console.log('📄 Order:', orderId, '→ Checking contract...');
       
       // Use optimized O(1) lookup to get contractId directly
       const contractId = getContractId(String(orderId));
       
-      console.log('🎯 Contract mapping:', orderId, '→', contractId || 'NOT FOUND');
       
       if (!contractId) {
         // Nếu chưa có hợp đồng -> Hiển thị thông báo chờ hãng tạo
-        console.log('⏳ No contract found for order:', orderId, '- Waiting for dealer to create contract...');
         setDownloadingContractId(null);
         alert('⏳ Đơn hàng đang chờ hãng tạo hợp đồng.\n\nVui lòng liên hệ với hãng để biết thêm chi tiết.');
         return;
       }
       
-      console.log('✅ Contract ID found:', contractId, '- Downloading PDF...');
       
       // Download PDF directly using contractId (optimized!)
-      console.log('📥 Downloading contract PDF...');
       const pdfBlob = await downloadContractPdf(contractId);
-      console.log('✅ PDF downloaded successfully, size:', (pdfBlob.size / 1024).toFixed(2), 'KB');
       
       // Auto-download file PDF
       const blobUrl = URL.createObjectURL(pdfBlob);
@@ -231,7 +221,6 @@ const OrderManagementPage: React.FC = () => {
       // Cleanup blob URL
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       
-      console.log('💾 PDF downloaded for contract:', contractId);
     } catch (error: any) {
       console.error('❌ Error downloading contract PDF:', error);
       alert(error.message || 'Không thể tải hợp đồng. Vui lòng thử lại.');
@@ -242,7 +231,6 @@ const OrderManagementPage: React.FC = () => {
 
   const handleViewBill = async (orderId: number | string) => {
     try {
-      console.log('📄 Opening bill for order:', orderId);
       
       // Fetch bill from API
       const billBlob = await getBillPreview(orderId);
@@ -254,7 +242,6 @@ const OrderManagementPage: React.FC = () => {
       // Cleanup blob URL after a short delay
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       
-      console.log('✅ Bill opened successfully');
     } catch (error: any) {
       console.error('❌ Error opening bill:', error);
       
@@ -339,12 +326,10 @@ const OrderManagementPage: React.FC = () => {
 
     try {
       setUploadingBillOrderId(selectedOrderIdForUpload);
-      console.log('📤 Uploading bill for order:', selectedOrderIdForUpload, 'File:', file.name);
 
       await uploadOrderBill(selectedOrderIdForUpload, file);
 
       alert(`✅ Đã upload hóa đơn "${file.name}" cho đơn hàng #${selectedOrderIdForUpload} thành công!`);
-      console.log('✅ Bill uploaded successfully');
       
       // Mark bill as existing
       const orderIdStr = String(selectedOrderIdForUpload);

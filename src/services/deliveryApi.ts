@@ -20,9 +20,7 @@ export class DeliveryApiError extends Error {
  */
 export const confirmDelivery = async (orderId: number | string): Promise<void> => {
   try {
-    console.log('🚚 Confirming delivery for order:', orderId);
     const response = await api.post(`/api/deliveries/orders/${orderId}/confirm-delivery`);
-    console.log('✅ Delivery confirmed successfully:', response.data);
   } catch (error: any) {
     console.error('❌ Error confirming delivery:', error);
     console.error('Error response:', error.response?.data);

@@ -18,9 +18,7 @@ export async function createContract(payload: ContractPayload): Promise<Contract
       terms: JSON.stringify(payload.terms) || '',
     };
     
-    console.log('📤 Sending contract creation request:', requestBody);
     const response = await apiClient.post<Contract>('/api/contracts', requestBody);
-    console.log('📥 Contract creation response:', response.data);
     
     // CRITICAL: Check if orderId is in response
     if (!response.data.orderId) {
@@ -29,7 +27,6 @@ export async function createContract(payload: ContractPayload): Promise<Contract
       console.error('Response:', response.data);
       // Manually add orderId to response if backend doesn't return it
       response.data.orderId = requestBody.orderId;
-      console.log('✅ Manually added orderId to contract:', response.data.orderId);
     }
     
     return response.data;
@@ -76,7 +73,6 @@ export async function getContract(id: string): Promise<Contract> {
 // Get all contracts
 export const getAllContracts = async (): Promise<Contract[]> => {
   try {
-    console.log('📡 Fetching all contracts...');
     const response = await apiClient.get('/api/contracts');
     // Handle different response structures
     const data = response.data;
@@ -101,14 +97,12 @@ export const getAllContracts = async (): Promise<Contract[]> => {
       contracts = [];
     }
     
-    console.log(`✅ Fetched ${contracts.length} contracts`);
     
     // Debug: Log orderId mapping
     contracts.forEach((contract, index) => {
       if (!contract.orderId) {
         console.warn(`⚠️ Contract ${index} (ID: ${contract.id}) is missing orderId!`);
       } else {
-        console.log(`✅ Contract ${contract.id} → Order ${contract.orderId}`);
       }
     });
     
@@ -180,7 +174,6 @@ export const uploadContractPdf = async (
     }
 
     const result = await response.json().catch(() => ({ success: true }));
-    console.log('✅ PDF uploaded successfully:', result);
     return result;
   } catch (error: any) {
     console.error('❌ Upload contract PDF error:', error);
@@ -214,7 +207,6 @@ export const downloadContractPdf = async (
     }
 
     const blob = await response.blob();
-    console.log('✅ PDF downloaded successfully, size:', (blob.size / 1024).toFixed(2), 'KB');
     return blob;
   } catch (error: any) {
     console.error('❌ Download contract PDF error:', error);
@@ -228,12 +220,10 @@ export async function saveManufacturerSignature(
   signatureData: string
 ): Promise<Contract> {
   try {
-    console.log('📝 Saving manufacturer signature for contract:', contractId);
     const response = await apiClient.put<Contract>(
       `/api/contracts/${contractId}/sign/manufacturer`,
       { signatureData }
     );
-    console.log('✅ Signature saved successfully');
     return response.data;
   } catch (error: any) {
     console.error('❌ Save signature error:', error);
@@ -247,12 +237,10 @@ export async function saveDealerSignature(
   signatureData: string
 ): Promise<Contract> {
   try {
-    console.log('📝 Saving dealer signature for contract:', contractId);
     const response = await apiClient.put<Contract>(
       `/api/contracts/${contractId}/sign/dealer`,
       { signatureData }
     );
-    console.log('✅ Dealer signature saved successfully');
     return response.data;
   } catch (error: any) {
     console.error('❌ Save dealer signature error:', error);

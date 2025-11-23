@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getTestDrivesByDealer, deleteTestDrive, updateTestDriveStatus, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
+import { getTestDrivesByDealer, deleteTestDrive, updateManagerStatus, updateStaffStatus, type TestDrive, TestDriveApiError } from '../services/testDriveApi';
 import { getProfile } from '../services/profileApi';
 import { getCurrentUserRole } from '../utils/roleUtils';
 import TestDriveDetailModal from '../components/testDrive/TestDriveDetailModal';
@@ -55,10 +55,7 @@ const TestDriveManagementPage: React.FC = () => {
   useEffect(() => {
     const fetchDealerInfo = async () => {
       try {
-        console.log('🔍 Fetching dealer info from /api/profile/me...');
         const profile = await getProfile();
-        console.log('✅ Profile data:', profile);
-        console.log('🏢 Dealer ID from profile:', profile.dealerId);
         
         setDealerInfo({
           id: profile.dealerId,
@@ -96,13 +93,10 @@ const TestDriveManagementPage: React.FC = () => {
     
     try {
       setIsLoading(true);
-      console.log('🔍 Loading test drives for dealer ID:', dealerInfo.id);
       const data = await getTestDrivesByDealer(dealerInfo.id);
-      console.log(`✅ Loaded ${data.length} test drives for dealer ${dealerInfo.id}`);
       
       // Log all unique statuses in the data
       const uniqueStatuses = [...new Set(data.map(td => td.status))];
-      console.log('📊 Available statuses in backend data:', uniqueStatuses);
       
       // Log each test drive with its current status
       console.table(data.map(td => ({
@@ -178,16 +172,16 @@ const TestDriveManagementPage: React.FC = () => {
     try {
       setUpdatingConfirmation(testDrive.testdriveId);
       
-      const payload: any = {
-        status: newStatus as 'PENDING' | 'APPROVED' | 'CANCELLED'
-      };
-      
-      // Use PATCH API with dealer confirmation status
-      const updated = await updateTestDriveStatus(
+      // Use new Manager API
+      const updated = await updateManagerStatus(
         testDrive.dealerId,
         testDrive.testdriveId,
-        payload
+        {
+          statusOfManager: newStatus as 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED',
+          // staffUserId can be added here if needed
+        }
       );
+      
       
       // Update local state
       setDealerConfirmations(prev => ({
@@ -201,6 +195,12 @@ const TestDriveManagementPage: React.FC = () => {
       
       // Show success notification
       showNotification(`✓ Đã cập nhật xác nhận: ${getStatusLabel(newStatus)}`);
+      
+      // Trigger notification reload for all users
+      window.dispatchEvent(new Event('reloadNotifications'));
+      
+      // Reload data from backend to ensure consistency
+      await loadTestDrives();
       
     } catch (error: any) {
       console.error('❌ Error updating confirmation:', error);
@@ -223,14 +223,16 @@ const TestDriveManagementPage: React.FC = () => {
     try {
       setUpdatingStaffStatus(testDrive.testdriveId);
       
-      // Use PATCH API with staff status field only
-      const updated = await updateTestDriveStatus(
+      // Use new Staff API
+      const updated = await updateStaffStatus(
         testDrive.dealerId,
         testDrive.testdriveId,
         {
-          statusForStaff: newStatus as 'PENDING' | 'COMPLETED' | 'CANCELLED' // Staff processing field
+          statusOfStaff: newStatus as 'PENDING' | 'COMPLETED' | 'CANCELLED',
+          // staffUserId will be auto-fetched
         }
       );
+      
       
       setTestDrives(prev => prev.map(td => 
         td.testdriveId === testDrive.testdriveId ? updated : td
@@ -238,6 +240,12 @@ const TestDriveManagementPage: React.FC = () => {
       
       // Show success notification
       showNotification(`✓ Đã cập nhật trạng thái: ${getStatusLabel(newStatus)}`);
+      
+      // Trigger notification reload for all users
+      window.dispatchEvent(new Event('reloadNotifications'));
+      
+      // Reload data from backend to ensure consistency
+      await loadTestDrives();
       
     } catch (error: any) {
       console.error('❌ Error updating staff status:', error);
@@ -259,36 +267,46 @@ const TestDriveManagementPage: React.FC = () => {
       
       if (isStaffCancelling) {
         setUpdatingStaffStatus(cancellingTestDrive.testdriveId);
+        
+        // Use Staff API for cancellation
+        const updated = await updateStaffStatus(
+          cancellingTestDrive.dealerId,
+          cancellingTestDrive.testdriveId,
+          {
+            statusOfStaff: 'CANCELLED',
+            cancelReason: cancelReason.trim(),
+            staffUserId: 0,
+          }
+        );
+        
+        setTestDrives(prev => prev.map(td => 
+          td.testdriveId === cancellingTestDrive.testdriveId ? updated : td
+        ));
       } else {
         setUpdatingConfirmation(cancellingTestDrive.testdriveId);
+        
+        // Use Manager API for cancellation
+        const updated = await updateManagerStatus(
+          cancellingTestDrive.dealerId,
+          cancellingTestDrive.testdriveId,
+          {
+            statusOfManager: 'CANCELLED',
+            cancelReason: cancelReason.trim(),
+          }
+        );
+        
+        setTestDrives(prev => prev.map(td => 
+          td.testdriveId === cancellingTestDrive.testdriveId ? updated : td
+        ));
       }
-      
-      // Build payload based on who is cancelling
-      const payload: any = {
-        cancelReason: cancelReason.trim()
-      };
-      
-      if (isStaffCancelling) {
-        // Staff cancels: Update both statusForStaff and status
-        payload.statusForStaff = 'CANCELLED';
-        payload.status = 'CANCELLED';
-      } else {
-        // Manager cancels: Update both status and statusForStaff
-        payload.status = 'CANCELLED';
-        payload.statusForStaff = 'CANCELLED';
-      }
-      
-      const updated = await updateTestDriveStatus(
-        cancellingTestDrive.dealerId,
-        cancellingTestDrive.testdriveId,
-        payload
-      );
-      
-      setTestDrives(prev => prev.map(td => 
-        td.testdriveId === cancellingTestDrive.testdriveId ? updated : td
-      ));
       
       showNotification(`✓ Đã hủy lịch lái thử`);
+      
+      // Trigger notification reload for all users
+      window.dispatchEvent(new Event('reloadNotifications'));
+      
+      // Reload data from backend to ensure consistency
+      await loadTestDrives();
       
       // Close dialog and reset
       setShowCancelDialog(false);

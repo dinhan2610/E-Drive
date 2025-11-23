@@ -76,12 +76,10 @@ export interface ApiResponse<T> {
  * Create new quotation
  */
 export async function createQuotation(request: QuotationCreateRequest): Promise<QuotationResponse> {
-  console.log('📝 Creating quotation:', request);
   
   try {
     const { data } = await api.post<ApiResponse<QuotationResponse>>('/api/quotations/create', request);
     
-    console.log('✅ Quotation created:', data);
     return data.data;
   } catch (error: any) {
     console.error('❌ Create quotation error:', error.response?.data || error.message);
@@ -93,12 +91,10 @@ export async function createQuotation(request: QuotationCreateRequest): Promise<
  * Get all quotations
  */
 export async function listQuotations(): Promise<QuotationResponse[]> {
-  console.log('📋 Fetching quotations list');
   
   try {
     const { data } = await api.get<ApiResponse<QuotationResponse[]>>('/api/quotations');
     
-    console.log('✅ Quotations fetched:', data);
     return data.data;
   } catch (error: any) {
     console.error('❌ List quotations error:', error.response?.data || error.message);
@@ -110,12 +106,10 @@ export async function listQuotations(): Promise<QuotationResponse[]> {
  * Get quotation by ID
  */
 export async function getQuotation(id: number): Promise<QuotationResponse> {
-  console.log('🔍 Fetching quotation:', id);
   
   try {
     const { data } = await api.get<ApiResponse<QuotationResponse>>(`/api/quotations/${id}`);
     
-    console.log('✅ Quotation fetched:', data);
     return data.data;
   } catch (error: any) {
     console.error('❌ Get quotation error:', error.response?.data || error.message);
@@ -127,14 +121,12 @@ export async function getQuotation(id: number): Promise<QuotationResponse> {
  * Preview quotation PDF
  */
 export async function previewQuotationPDF(id: number): Promise<Blob> {
-  console.log('👁️ Previewing quotation PDF:', id);
   
   try {
     const { data } = await api.get<Blob>(`/api/quotations/${id}/preview-pdf`, {
       responseType: 'blob'
     });
     
-    console.log('✅ PDF preview fetched');
     return data;
   } catch (error: any) {
     console.error('❌ Preview PDF error:', error.response?.data || error.message);
@@ -146,14 +138,12 @@ export async function previewQuotationPDF(id: number): Promise<Blob> {
  * Export quotation PDF
  */
 export async function exportQuotationPDF(id: number): Promise<Blob> {
-  console.log('📥 Exporting quotation PDF:', id);
   
   try {
     const { data } = await api.get<Blob>(`/api/quotations/${id}/export-pdf`, {
       responseType: 'blob'
     });
     
-    console.log('✅ PDF exported');
     return data;
   } catch (error: any) {
     console.error('❌ Export PDF error:', error.response?.data || error.message);

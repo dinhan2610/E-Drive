@@ -25,9 +25,12 @@ export type UserRole = 'admin' | 'dealer' | 'staff' | 'evm_staff';
 export const getCurrentUserRole = (): UserRole => {
   try {
     const user = getCurrentUser();
-    if (!user) return 'dealer'; // Default fallback
+    if (!user) {
+      return 'dealer'; // Default fallback
+    }
     
-    let role = user.role || 'dealer';
+    // Check for role or roles array
+    let role = user.role || (user.roles && user.roles[0]) || 'dealer';
     
     // Normalize role (remove ROLE_ prefix if exists)
     role = role.toLowerCase().replace('role_', '');

@@ -25,19 +25,19 @@ const Download: React.FC = () => {
       className: "primary", 
       text: "Đăng ký làm đại lý ngay",
       icon: "fa-solid fa-handshake",
-      onClick: () => console.log('Đăng ký đại lý được click')
+      onClick: () => {} // TODO: Implement dealer registration
     },
     { 
       className: "secondary", 
       text: "Liên hệ hợp tác",
       icon: "fa-solid fa-phone",
-      onClick: () => console.log('Liên hệ hợp tác được click')
+      onClick: () => {} // TODO: Implement contact form
     },
     { 
       className: "outline", 
       text: "Tìm hiểu chính sách đại lý",
       icon: "fa-solid fa-file-contract",
-      onClick: () => console.log('Tìm hiểu chính sách được click')
+      onClick: () => {} // TODO: Implement policy documentation
     }
   ];
 

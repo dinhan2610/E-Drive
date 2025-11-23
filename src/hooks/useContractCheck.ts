@@ -28,7 +28,6 @@ export const useContractCheck = () => {
       });
       
       setContractMap(map);
-      console.log('✅ Contract map loaded:', map.size, 'contracts');
     } catch (err: any) {
       console.error('❌ Error loading contracts:', err);
       setError(err);

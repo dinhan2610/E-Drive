@@ -254,7 +254,6 @@ const ContractCreatePage: React.FC = () => {
 
     const element = previewRef.current;
     
-    console.log('🖼️ Starting intelligent PDF generation...');
     
     const allElements = element.querySelectorAll<HTMLElement>('[class*="contractHeader"], [class*="article"], [class*="signatures"]');
     
@@ -271,7 +270,6 @@ const ContractCreatePage: React.FC = () => {
       return await generatePdfFallback(element);
     }
 
-    console.log('📚 Found', sections.length, 'sections');
 
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -295,11 +293,9 @@ const ContractCreatePage: React.FC = () => {
       const section = sections[i];
       const sectionClass = section.className.split('_')[1]?.split(' ')[0] || `section-${i}`;
       
-      console.log(`\n📦 Processing ${sectionClass} (${i + 1}/${sections.length})...`);
 
       const table = section.querySelector('table');
       if (table) {
-        console.log('   🔍 Section contains table, using row-by-row rendering');
         const result = await renderTableSection(
           pdf, section, table, contentWidth, marginLeft, 
           pageWidth, pageHeight, marginTop, marginBottom, currentY, pageNumber
@@ -322,19 +318,16 @@ const ContractCreatePage: React.FC = () => {
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      console.log(`   📐 Section size: ${imgHeight.toFixed(2)} mm`);
 
       const spaceLeft = pageHeight - currentY - marginBottom;
       
       if (imgHeight > spaceLeft && currentY > marginTop + 10) {
-        console.log(`   ⏭️  Moving to new page`);
         pdf.addPage();
         pageNumber++;
         currentY = marginTop;
       }
 
       if (imgHeight > usableHeight) {
-        console.log(`   ⚠️  Section too tall, splitting...`);
         const result = await splitAndAddImage(
           pdf, canvas, imgData, imgWidth, imgHeight, marginLeft, 
           currentY, pageHeight, marginTop, marginBottom, pageNumber
@@ -343,13 +336,11 @@ const ContractCreatePage: React.FC = () => {
         pageNumber = result.pageNumber;
       } else {
         pdf.addImage(imgData, 'PNG', marginLeft, currentY, imgWidth, imgHeight, undefined, 'FAST');
-        console.log(`   ✅ Added at Y=${currentY.toFixed(2)}mm`);
         currentY += imgHeight + 3;
       }
     }
 
     const pdfBlob = pdf.output('blob');
-    console.log(`\n✅ PDF generated - ${pdf.internal.pages.length - 1} pages`);
     
     return pdfBlob;
   };
@@ -370,7 +361,6 @@ const ContractCreatePage: React.FC = () => {
     startY: number,
     startPage: number
   ): Promise<{ currentY: number; pageNumber: number }> => {
-    console.log('   📊 Rendering table with smart row breaks...');
     
     const parts: HTMLElement[] = [];
     
@@ -393,7 +383,6 @@ const ContractCreatePage: React.FC = () => {
     ) as HTMLElement[];
     parts.push(...childrenAfterTable);
     
-    console.log(`   📋 Split into ${parts.length} parts`);
     
     let currentY = startY;
     let pageNumber = startPage;
@@ -417,7 +406,6 @@ const ContractCreatePage: React.FC = () => {
       const spaceLeft = pageHeight - currentY - marginBottom;
       
       if (imgHeight > spaceLeft && currentY > marginTop + 10) {
-        console.log(`   ⏭️  Row ${i} needs new page`);
         pdf.addPage();
         pageNumber++;
         currentY = marginTop;
@@ -498,7 +486,6 @@ const ContractCreatePage: React.FC = () => {
    * Fallback: render entire document as one image
    */
   const generatePdfFallback = async (element: HTMLElement): Promise<Blob> => {
-    console.log('📄 Using fallback rendering...');
     
     const canvas = await html2canvas(element, {
       scale: 2,
@@ -550,7 +537,6 @@ const ContractCreatePage: React.FC = () => {
     try {
       const element = previewRef.current;
       
-      console.log('📥 Exporting PDF for download...');
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
@@ -587,7 +573,6 @@ const ContractCreatePage: React.FC = () => {
 
       const filename = `hop-dong-${createdContractId || payload.orderId || 'draft'}.pdf`;
       pdf.save(filename);
-      console.log('✅ PDF exported:', filename, '- Pages:', pageCount);
       showToast('success', `✅ Đã tải PDF thành công (${pageCount} trang)!`);
     } catch (error) {
       console.error('❌ Failed to export PDF:', error);

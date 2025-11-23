@@ -11,7 +11,6 @@ import EmptyState from '../components/Products/EmptyState';
 import styles from '../styles/ProductsStyles/ProductsPage.module.scss';
 
 const ProductsPage: React.FC = () => {
-  console.log('🌟 ProductsPage: Component initializing');
   
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -32,15 +31,6 @@ const ProductsPage: React.FC = () => {
     priceMax: searchParams.get('priceMax') ? parseInt(searchParams.get('priceMax')!) : undefined,
   };
 
-  console.log('🚀 ProductsPage render:', { 
-    isLoading, 
-    productsLength: products.length, 
-    totalProducts,
-    currentPage,
-    currentFilters 
-  });
-
-  // Update URL with new parameters
   const updateURL = useCallback((updates: Record<string, string | number | undefined>) => {
     const newParams = new URLSearchParams(searchParams);
     
@@ -59,7 +49,6 @@ const ProductsPage: React.FC = () => {
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true);
-      console.log('🔄 Loading products from API with:', { currentFilters, currentSort, currentPage, currentPageSize });
       
       try {
         // Fetch from API với pagination
@@ -101,13 +90,6 @@ const ProductsPage: React.FC = () => {
         });
         
         const calculatedTotalPages = Math.ceil(total / currentPageSize);
-        
-        console.log('✅ Products loaded from API:', { 
-          total, 
-          productsLoaded: productList.length,
-          currentPage,
-          totalPages: calculatedTotalPages 
-        });
         
         setProducts(productList);
         setTotalProducts(total);
@@ -155,7 +137,6 @@ const ProductsPage: React.FC = () => {
 
   const handleViewDetails = (product: Product) => {
     // Navigate to product detail page
-    console.log('View details for:', product);
     navigate(`/products/${product.id}`);
   };
 
@@ -172,10 +153,8 @@ const ProductsPage: React.FC = () => {
     // Dealer → Navigate to dealer order (Đặt hàng)
     // Admin → Should not reach here (has separate interface at /admin)
     if (userRole === 'staff') {
-      console.log('Staff - Navigate to quote creation');
       navigate('/quotes/create', { state: { product } });
     } else if (userRole === 'dealer') {
-      console.log('Dealer - Navigate to dealer order');
       navigate('/dealer-order', { state: { product } });
     } else {
       // Admin fallback (shouldn't happen normally)

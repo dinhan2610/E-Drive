@@ -25,32 +25,10 @@ export async function searchOrdersForContract(q?: string): Promise<OrderLite[]> 
 // Get order by ID for contract creation - using real API
 export async function getOrderById(id: string): Promise<OrderLite> {
   try {
-    console.log('🔍 [Contract] Fetching order by ID:', id);
     
-    // Call real API from orderApi.ts
     const order = await getOrderByIdFromApi(id);
-    console.log('✅ [Contract] Order fetched successfully:', {
-      orderId: order.orderId,
-      dealerName: order.dealerName,
-      grandTotal: order.grandTotal,
-      status: order.orderStatus,
-      orderItems: order.orderItems?.map(item => ({
-        vehicleName: item.vehicleName,
-        quantity: item.quantity,
-        colorName: item.colorName, // Backend field
-        color: item.color, // Frontend field
-      })),
-    });
     
-    // Map Order to OrderLite format
     const orderLite = await mapApiOrderToOrderLite(order);
-    console.log('✅ [Contract] Mapped to OrderLite:', {
-      id: orderLite.id,
-      code: orderLite.code,
-      customerName: orderLite.customer.name,
-      vehicleModel: orderLite.vehicle.model,
-      total: orderLite.money.total
-    });
     
     return orderLite;
   } catch (error: any) {
@@ -61,7 +39,6 @@ export async function getOrderById(id: string): Promise<OrderLite> {
     const mockOrders = mockOrdersForContract();
     const found = mockOrders.find(o => o.id === id);
     if (found) {
-      console.log('✅ [Contract] Found in mock data:', found.code);
       return found;
     }
     

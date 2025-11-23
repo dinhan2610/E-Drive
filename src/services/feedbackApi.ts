@@ -18,12 +18,8 @@ export async function listFeedbacks(filters: FeedbackFilters = {}): Promise<Feed
     ? `/api/feedbacks/by-dealer/${filters.dealerId}`
     : '/api/feedbacks';
 
-  console.log('🔗 Feedback API endpoint:', endpoint);
-  console.log('📦 Feedback API params:', params);
-  console.log('🏢 DealerId in filters:', filters.dealerId);
 
   const response = await apiClient.get<FeedbackListResponse>(endpoint, { params });
-  console.log('✅ Feedback API response:', response.data);
   return response.data;
 }
 

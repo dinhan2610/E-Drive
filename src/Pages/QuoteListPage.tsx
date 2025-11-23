@@ -97,10 +97,7 @@ const QuoteListPage: React.FC = () => {
   useEffect(() => {
     const fetchDealerInfo = async () => {
       try {
-        console.log('🔍 Fetching dealer info from /api/profile/me...');
         const profile = await getProfile();
-        console.log('✅ Profile data:', profile);
-        console.log('🏢 Dealer ID from profile:', profile.dealerId);
         
         setDealerInfo({
           id: profile.dealerId,
@@ -202,7 +199,6 @@ const QuoteListPage: React.FC = () => {
         throw new Error('Trạng thái không hợp lệ');
       }
       
-      console.log(`🔄 Updating quotation #${quoteId} to status: ${backendStatus}`);
       
       // Nếu là huỷ, yêu cầu nhập lý do
       let rejectionReason: string | undefined;
@@ -229,7 +225,6 @@ const QuoteListPage: React.FC = () => {
         )
       );
       
-      console.log(`✅ Updated quote ${quoteId} status to ${newStatus}`);
       alert('✅ Cập nhật trạng thái thành công!');
     } catch (error: any) {
       console.error('❌ Error updating status:', error);
@@ -287,12 +282,10 @@ const QuoteListPage: React.FC = () => {
     }
 
     try {
-      console.log('📧 Sending email for quotation:', quoteId);
       
       // Gọi email qua API
       const result = await sendQuotationEmail(Number(quoteId));
       
-      console.log('✅ Email sent successfully:', result);
       
       // Hiển thị thông báo thành công
       alert('✅ Gửi email báo giá thành công!\n\nEmail đã được gửi đến khách hàng kèm file PDF báo giá.');
@@ -305,7 +298,6 @@ const QuoteListPage: React.FC = () => {
 
   const handleDownloadPDF = async (quoteId: string) => {
     try {
-      console.log('📥 Downloading PDF for quotation:', quoteId);
       
       // Use backend PDF generation API
       const pdfBlob = await exportQuotationPDF(Number(quoteId));
@@ -322,7 +314,6 @@ const QuoteListPage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      console.log('✅ PDF downloaded successfully');
     } catch (error: any) {
       console.error('❌ Error downloading PDF:', error);
       alert(error.message || 'Không thể tải PDF. Vui lòng thử lại.');

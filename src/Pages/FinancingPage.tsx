@@ -47,7 +47,6 @@ const FinancingPage: React.FC = () => {
       monthlyPayment;
       monthlyPayment;
 
-    console.log('Consultation request:', message);
     alert('✅ Yêu cầu tư vấn đã được gửi!\n\nĐội ngũ tư vấn sẽ liên hệ với bạn trong thời gian sớm nhất.');
   };
 

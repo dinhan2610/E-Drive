@@ -274,7 +274,6 @@ export const authApi = {
       
       if (token) {
         // Call logout API to invalidate token on server
-        console.log('🚪 Calling logout API...');
         await fetch(`${API_BASE_URL}/logout`, {
           method: 'POST',
           headers: {
@@ -282,7 +281,6 @@ export const authApi = {
             'Content-Type': 'application/json'
           }
         });
-        console.log('✅ Logout API called successfully');
       }
     } catch (error) {
       console.warn('⚠️ Logout API failed (continuing anyway):', error);
@@ -291,7 +289,6 @@ export const authApi = {
       // Always clear local data
       clearAuthData();
       setAccessToken(null);
-      console.log('✅ Local auth data cleared');
     }
   },
 
@@ -324,7 +321,6 @@ export const authApi = {
         throw new Error('Bạn chưa đăng nhập');
       }
 
-      console.log('🔐 Đang gửi yêu cầu đổi mật khẩu...');
 
       const response = await fetch(`${API_BASE_URL}/change-password`, {
         method: 'POST',
@@ -336,10 +332,8 @@ export const authApi = {
         body: JSON.stringify(passwordData),
       });
 
-      console.log('📡 Response status:', response.status);
 
       const apiResponse: ApiResponse = await response.json();
-      console.log('📦 API Response:', apiResponse);
 
       if (!response.ok || apiResponse.statusCode !== 200) {
         throw new Error(apiResponse.message || 'Đổi mật khẩu thất bại');

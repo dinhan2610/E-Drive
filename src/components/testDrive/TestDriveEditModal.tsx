@@ -62,10 +62,6 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
         throw new Error('Giờ lái thử phải trong khoảng 8:00 - 17:00');
       }
       
-      // Call API with proper payload
-      console.log('📝 Updating test drive #' + testDrive.testdriveId);
-      console.log('⚠️ Status will reset to PENDING (requires manager approval)');
-      
       const updated = await updateTestDrive(testDrive.testdriveId, {
         customerId: testDrive.customerId,
         dealerId: testDrive.dealerId,
@@ -75,9 +71,6 @@ const TestDriveEditModal: React.FC<TestDriveEditModalProps> = ({
         cancelReason: undefined // Clear cancel reason on edit
       });
 
-      console.log('✅ Update successful:', updated);
-      
-      // Notify parent component with updated data
       onSuccess(updated);
       onClose();
       

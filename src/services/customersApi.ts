@@ -70,9 +70,7 @@ export async function updateCustomer(dealerId: number, id: number, payload: Upda
  */
 export async function deleteCustomer(dealerId: number, id: number): Promise<void> {
   try {
-    console.log(`🗑️ Attempting to delete customer ${id} for dealer ${dealerId}`);
     await api.delete(`/api/dealer/${dealerId}/customers/${id}`);
-    console.log(`✅ Successfully deleted customer ${id}`);
   } catch (error: any) {
     console.error(`❌ Failed to delete customer ${id}:`, error);
     

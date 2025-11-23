@@ -23,14 +23,10 @@ export async function fetchDiscountPolicies(): Promise<DiscountPolicy[]> {
 export async function fetchActiveDiscountPolicies(): Promise<DiscountPolicy[]> {
   try {
     const response = await api.get<any>('/api/admin/discount-policies/active');
-    console.log('✅ Active discount policies response:', response.data);
     
-    // Handle response format: { statusCode, message, data: [...] }
     if (response.data && Array.isArray(response.data.data)) {
-      console.log('✅ Active discount policies:', response.data.data);
       return response.data.data;
     }
-    // Fallback: direct array
     else if (Array.isArray(response.data)) {
       return response.data;
     }

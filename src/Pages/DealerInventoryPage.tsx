@@ -70,12 +70,10 @@ const DealerInventoryPage: React.FC = () => {
           return;
         }
         
-        console.log('👤 Current user:', user.username, '- Role:', user.role);
         
         // Fetch dealer profile from API
         try {
           const profile = await getProfile();
-          console.log('✅ Dealer profile loaded:', profile);
           setDealerId(profile.dealerId);
           return;
         } catch (profileError: any) {
@@ -86,7 +84,6 @@ const DealerInventoryPage: React.FC = () => {
         const usernameMatch = user.username?.match(/^d(\d+)_/);
         if (usernameMatch) {
           const extractedDealerId = parseInt(usernameMatch[1]);
-          console.log('✅ Dealer ID extracted from username:', extractedDealerId);
           setDealerId(extractedDealerId);
           return;
         }
@@ -103,15 +100,12 @@ const DealerInventoryPage: React.FC = () => {
   // Load Inventory
   const loadInventory = async () => {
     if (dealerId === null) {
-      console.log('⏳ Waiting for dealerId to load inventory...');
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log('🔄 Loading inventory for dealer:', dealerId);
       const data = await getDealerInventory(dealerId);
-      console.log('✅ Inventory loaded:', data);
       setInventory(data);
       setFilteredInventory(data);
     } catch (error: any) {

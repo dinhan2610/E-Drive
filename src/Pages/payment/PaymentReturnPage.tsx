@@ -109,8 +109,6 @@ const PaymentReturnPage: React.FC = () => {
   const isSuccess = result?.vnp_ResponseCode === '00';
   const orderId = getOrderIdFromInfo(result?.vnp_OrderInfo);
   
-  console.log('🔍 Payment result:', result);
-  console.log('✅ isSuccess:', isSuccess);
 
   return (
     <div className={styles.wrap}>

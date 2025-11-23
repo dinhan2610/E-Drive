@@ -25,7 +25,6 @@ const ProductDetailPage: React.FC = () => {
         }
 
         const data = await response.json();
-        console.log('✅ Product detail fetched:', data);
 
         // Handle both array and wrapper response
         let vehicleData: VehicleApiResponse;
@@ -77,7 +76,6 @@ const ProductDetailPage: React.FC = () => {
       
       setProduct(updatedProduct);
       setSelectedImage(0); // Reset to first image
-      console.log('🎨 Color changed to:', selectedVariant.color, 'Image:', selectedVariant.imageUrl);
     }
   };
 

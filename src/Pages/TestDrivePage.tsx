@@ -70,12 +70,9 @@ const TestDrivePage: React.FC = () => {
           if (profile.dealerId) {
             setCurrentDealerId(profile.dealerId);
             setCurrentDealerName(profile.agencyName || 'Đại lý');
-            console.log('✅ Dealer logged in - ID:', profile.dealerId);
-            console.log('✅ Dealer name:', profile.agencyName);
           }
         }
       } catch (error) {
-        console.log('❌ Not logged in or not a dealer');
       }
     };
     
@@ -112,7 +109,6 @@ const TestDrivePage: React.FC = () => {
         });
         
         setGroupedModels(models);
-        console.log('✅ Grouped models:', models.length, 'models');
       } catch (error) {
         console.error('Error loading vehicles:', error);
         setVehicleError('Không thể tải danh sách xe. Vui lòng thử lại.');
@@ -134,7 +130,6 @@ const TestDrivePage: React.FC = () => {
         try {
           const result = await listCustomers(currentDealerId, {});
           setCustomers(result.data || []);
-          console.log('✅ Loaded customers:', result.data?.length || 0);
         } catch (error) {
           console.error('Error loading customers:', error);
           setCustomersError('Không thể tải danh sách khách hàng.');
@@ -312,7 +307,6 @@ const TestDrivePage: React.FC = () => {
     }
     
     if (!validate()) {
-      console.log('Validation failed:', errors);
       return;
     }
 
@@ -320,7 +314,6 @@ const TestDrivePage: React.FC = () => {
     setSubmitError(null);
 
     try {
-      console.log('📝 Creating test drive for customer:', formData.customerId);
       
       const scheduleDatetime = `${formData.date}T${formData.time}:00`;
       const vehicleId = parseInt(formData.variant);
@@ -348,9 +341,7 @@ ${formData.note ? `\nGhi chú thêm: ${formData.note}` : ''}
         note: customerNote
       };
       
-      console.log('📤 Test drive payload:', testDrivePayload);
       await createTestDrive(testDrivePayload);
-      console.log('✅ Test drive created successfully!');
 
       // Trigger notification reload
       window.dispatchEvent(new Event('testDriveCreated'));

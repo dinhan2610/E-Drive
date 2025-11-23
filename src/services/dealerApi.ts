@@ -46,11 +46,9 @@ export interface UnverifiedAccountsApiResponse {
 
 // Fetch all dealers
 export async function fetchDealers(): Promise<Dealer[]> {
-  console.log('🏢 Fetching dealers from API');
 
   try {
     const response = await api.get<DealerApiResponse>('/api/dealers');
-    console.log('✅ Dealers Response:', response.data);
 
     if (response.data.statusCode === 200 && response.data.data) {
       // Normalize each dealer's data to match frontend field names
@@ -66,11 +64,9 @@ export async function fetchDealers(): Promise<Dealer[]> {
 
 // Fetch unverified accounts (accounts waiting to become dealers)
 export async function fetchUnverifiedAccounts(): Promise<UnverifiedAccount[]> {
-  console.log('👥 Fetching unverified accounts from API');
 
   try {
     const response = await api.get<UnverifiedAccountsApiResponse>('/api/admin/unverified-accounts');
-    console.log('✅ Unverified Accounts Response:', response.data);
 
     if (response.data.statusCode === 200) {
       return response.data.data || [];
@@ -85,11 +81,9 @@ export async function fetchUnverifiedAccounts(): Promise<UnverifiedAccount[]> {
 
 // Fetch ALL accounts (both verified and unverified) for business license lookup
 export async function fetchAllAccounts(): Promise<UnverifiedAccount[]> {
-  console.log('👥 Fetching ALL accounts (verified + unverified) from API');
 
   try {
     const response = await api.get<UnverifiedAccountsApiResponse>('/api/admin/all-accounts');
-    console.log('✅ All Accounts Response:', response.data);
 
     if (response.data.statusCode === 200) {
       return response.data.data || [];
@@ -109,13 +103,11 @@ export async function verifyAccount(userId: number, dealerId?: number): Promise<
   // Prefer dealerId if available (new backend), fallback to userId for compatibility
   const idToUse = dealerId || userId;
   const idType = dealerId ? 'dealerId' : 'userId';
-  console.log(`✅ Verifying account with ${idType}:`, idToUse);
 
   try {
     // Backend now uses dealerId in the endpoint
     const response = await api.post<any>(`/api/admin/verify-account/${idToUse}`, {});
     const data = response.data;
-    console.log('📦 Verify Account Response:', data);
 
     if (data.statusCode === 200) {
       return {
@@ -176,11 +168,9 @@ function normalizeDealerData(dealerData: any): Dealer {
 
 // Get dealer by ID
 export async function getDealerById(dealerId: number): Promise<Dealer> {
-  console.log('🔍 Getting dealer by ID:', dealerId);
 
   try {
     const response = await api.get<any>(`/api/dealers/${dealerId}`);
-    console.log('✅ Dealer Detail Response:', response.data);
 
     if (response.data.statusCode === 200 && response.data.data) {
       return normalizeDealerData(response.data.data);
@@ -195,7 +185,6 @@ export async function getDealerById(dealerId: number): Promise<Dealer> {
 
 // Create new dealer
 export async function createDealer(dealerData: Omit<Dealer, 'dealerId'>): Promise<Dealer> {
-  console.log('🏢 Creating dealer');
   
   // Backend expects both naming conventions
   const emailValue = dealerData.email || dealerData.dealerEmail || '';
@@ -214,11 +203,9 @@ export async function createDealer(dealerData: Omit<Dealer, 'dealerId'>): Promis
     contactPhone: phoneValue
   };
   
-  console.log('📤 Request body (transformed):', JSON.stringify(backendData, null, 2));
 
   try {
     const response = await api.post<any>('/api/dealers', backendData);
-    console.log('✅ Dealer Created Response:', response.data);
 
     if ((response.data.statusCode === 200 || response.data.statusCode === 201) && response.data.data) {
       return normalizeDealerData(response.data.data);
@@ -234,7 +221,6 @@ export async function createDealer(dealerData: Omit<Dealer, 'dealerId'>): Promis
 
 // Update dealer
 export async function updateDealer(dealerId: number, dealerData: Omit<Dealer, 'dealerId'>): Promise<Dealer> {
-  console.log('✏️ Updating dealer:', dealerId);
   
   // Backend expects both naming conventions
   const emailValue = dealerData.email || dealerData.dealerEmail || '';
@@ -253,11 +239,9 @@ export async function updateDealer(dealerId: number, dealerData: Omit<Dealer, 'd
     contactPhone: phoneValue
   };
   
-  console.log('📤 Request body (transformed):', JSON.stringify(backendData, null, 2));
 
   try {
     const response = await api.put<any>(`/api/dealers/${dealerId}`, backendData);
-    console.log('✅ Dealer Updated Response:', response.data);
 
     if ((response.data.statusCode === 200 || response.data.statusCode === 201) && response.data.data) {
       return normalizeDealerData(response.data.data);
@@ -273,12 +257,10 @@ export async function updateDealer(dealerId: number, dealerData: Omit<Dealer, 'd
 
 // Delete dealer
 export async function deleteDealer(dealerId: number): Promise<{ success: boolean; message: string }> {
-  console.log('🗑️ Deleting dealer:', dealerId);
 
   try {
     await api.delete(`/api/dealers/${dealerId}`);
     
-    console.log('✅ Dealer deleted successfully');
     return {
       success: true,
       message: 'Xóa đại lý thành công'
@@ -327,14 +309,12 @@ export async function deleteDealer(dealerId: number): Promise<{ success: boolean
 
 // Get business license image for a dealer by userId (legacy)
 export async function getBusinessLicense(userId: number): Promise<Blob> {
-  console.log('📄 Fetching business license for userId:', userId);
 
   try {
     const response = await api.get(`/api/admin/business-license/${userId}`, {
       responseType: 'blob'
     });
     
-    console.log('✅ Business license fetched successfully');
     return response.data as Blob;
   } catch (error) {
     console.error('❌ Fetch Business License Error:', error);
@@ -344,14 +324,12 @@ export async function getBusinessLicense(userId: number): Promise<Blob> {
 
 // Get business license image for a dealer by dealerId (NEW - OPTIMIZED)
 export async function getBusinessLicenseByDealerId(dealerId: number): Promise<Blob> {
-  console.log('📄 Fetching business license for dealerId:', dealerId);
 
   try {
     const response = await api.get(`/api/admin/business-license/${dealerId}`, {
       responseType: 'blob'
     });
     
-    console.log('✅ Business license fetched successfully');
     return response.data as Blob;
   } catch (error) {
     console.error('❌ Fetch Business License Error:', error);

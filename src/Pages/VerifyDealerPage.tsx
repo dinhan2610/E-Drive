@@ -19,7 +19,6 @@ const VerifyDealerPage: React.FC = () => {
         return;
       }
 
-      console.log('🔐 Verifying dealer with token:', token);
 
       try {
         const result = await authApi.verifyDealer(token);

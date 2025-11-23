@@ -56,10 +56,7 @@ const CustomersPage: React.FC = () => {
   useEffect(() => {
     const fetchDealerInfo = async () => {
       try {
-        console.log('🔍 Fetching dealer info from /api/profile/me...');
         const profile = await getProfile();
-        console.log('✅ Profile data:', profile);
-        console.log('🏢 Dealer ID from profile:', profile.dealerId);
         
         setDealerInfo({
           id: profile.dealerId,
@@ -78,13 +75,11 @@ const CustomersPage: React.FC = () => {
   // Load customers data
   const loadCustomers = useCallback(async () => {
     if (!dealerInfo) {
-      console.log('⏳ Waiting for dealer info...');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('📋 Loading customers for dealer:', dealerInfo.id);
       
       // Load tất cả customers không filter backend (vì backend search không chính xác)
       const params: ListCustomersParams = {
@@ -95,7 +90,6 @@ const CustomersPage: React.FC = () => {
 
       const response = await listCustomers(dealerInfo.id, params);
       
-      console.log(`✅ Loaded ${response.data?.length || 0} customers for dealer ${dealerInfo.id}`);
       
       setAllCustomers(response.data || []);
     } catch (error) {
@@ -140,7 +134,6 @@ const CustomersPage: React.FC = () => {
              address.includes(searchLower);
     });
 
-    console.log(`🔍 Filtered ${filtered.length}/${allCustomers.length} customers for query: "${searchQuery}"`);
     
     setCustomers(filtered);
     setTotal(filtered.length);
@@ -187,11 +180,9 @@ const CustomersPage: React.FC = () => {
     try {
       if (editingCustomer) {
         // Update existing customer
-        console.log(`📝 Updating customer ${editingCustomer.customerId} for dealer ${dealerInfo.id}`);
         await updateCustomer(dealerInfo.id, editingCustomer.customerId, data);
       } else {
         // Create new customer
-        console.log(`➕ Creating new customer for dealer ${dealerInfo.id}`);
         await createCustomer(dealerInfo.id, data);
       }
       await loadCustomers();
@@ -209,7 +200,6 @@ const CustomersPage: React.FC = () => {
     
     setDeleteLoading(true);
     try {
-      console.log(`🗑️ Deleting customer ${customerToDelete.customerId} from dealer ${dealerInfo.id}`);
       await deleteCustomer(dealerInfo.id, customerToDelete.customerId);
       await loadCustomers();
       setIsDeleteDialogOpen(false);

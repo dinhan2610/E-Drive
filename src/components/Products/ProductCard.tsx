@@ -50,12 +50,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleViewDetails = () => {
-    console.log('🔍 ProductCard - View Details clicked');
-    console.log('📦 Product:', item);
-    console.log('🎨 Selected Color:', selectedColorVariant);
-    
     if (onViewDetails) {
-      // Pass product với selected color info
       const productWithColor = {
         ...item,
         selectedColor: selectedColorVariant?.color || item.selectedColor,

@@ -106,7 +106,6 @@ const DealerOrderPage: React.FC = () => {
   useEffect(() => {
     const restored = restoreSelectedProductsFromSession();
     if (restored && restored.length > 0) {
-      console.log('♻️ Khôi phục giỏ hàng từ session:', restored.length, 'sản phẩm');
       setFormData(prev => ({ ...prev, selectedProducts: restored }));
     }
     setIsSessionRestored(true);
@@ -135,7 +134,6 @@ const DealerOrderPage: React.FC = () => {
           city: profile.city || '',
         }));
 
-        console.log('✅ Dealer profile loaded:', profile.fullName);
       } catch (error: any) {
         console.error('❌ Error loading profile:', error);
         
@@ -152,7 +150,6 @@ const DealerOrderPage: React.FC = () => {
             phone: user.phone || '',
             address: user.address || '',
           }));
-          console.log('✅ Dealer info loaded from auth session');
         }
       }
     };
@@ -165,10 +162,8 @@ const DealerOrderPage: React.FC = () => {
     const loadDiscountPolicies = async () => {
       setIsLoadingDiscounts(true);
       try {
-        console.log('💰 Loading active discount policies...');
         const policies = await fetchActiveDiscountPolicies();
         setDiscountPolicies(policies);
-        console.log('✅ Discount policies loaded:', policies);
       } catch (error: any) {
         console.error('❌ Error loading discount policies:', error);
         // Fallback to empty array if error
@@ -197,7 +192,6 @@ const DealerOrderPage: React.FC = () => {
     if (!isSessionRestored) return; // Chờ restore xong mới bắt đầu auto-save
     if (formData.selectedProducts.length > 0) {
       saveSelectedProductsToSession(formData.selectedProducts);
-      console.log('💾 Auto-save giỏ hàng:', formData.selectedProducts.length, 'sản phẩm');
     }
   }, [formData.selectedProducts, isSessionRestored]);
 
@@ -205,23 +199,16 @@ const DealerOrderPage: React.FC = () => {
   useEffect(() => {
     return () => {
       // Nếu vẫn còn sản phẩm trong giỏ khi unmount → GIỮ LẠI để restore sau
-      console.log('🚪 Component unmounting, giữ lại session để restore sau');
     };
   }, []);
 
   const fetchVehicles = async () => {
-    console.log('🚗 fetchVehicles called');
     setIsLoadingVehicles(true);
     try {
-      console.log('📡 Calling fetchVehiclesFromApi...');
       const { vehicles } = await fetchVehiclesFromApi({ size: 100 });
-      console.log('✅ Fetched vehicles:', vehicles);
-      console.log('📊 Number of vehicles:', vehicles.length);
       
       // Group vehicles by model and variant - each group will have color variants
       const groupedProducts = groupVehiclesByModel(vehicles);
-      console.log('🔄 Grouped products by model:', groupedProducts);
-      console.log('� Number of unique models:', groupedProducts.length);
       
       setAvailableVehicles(groupedProducts);
     } catch (error) {
@@ -229,14 +216,12 @@ const DealerOrderPage: React.FC = () => {
       setAvailableVehicles([]);
     } finally {
       setIsLoadingVehicles(false);
-      console.log('✅ Loading complete');
     }
   };
 
   const saveSelectedProductsToSession = (products: any[]) => {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(products || []));
-      console.log('💾 Saved selectedProducts to sessionStorage', products);
     } catch (err) {
       console.error('Failed to save selectedProducts to sessionStorage:', err);
     }
@@ -248,7 +233,6 @@ const DealerOrderPage: React.FC = () => {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        console.log('♻️ Restored selectedProducts from sessionStorage', parsed);
         return parsed;
       }
       return null;
@@ -272,7 +256,6 @@ const DealerOrderPage: React.FC = () => {
   };
 
   const handleAddProduct = (vehicle: any) => {
-    console.log('🛒 handleAddProduct called with vehicle:', vehicle);
 
     // Normalize id comparison to string to avoid duplicates due to type mismatch
     const incomingId = vehicle?.id ?? vehicle?.productId ?? vehicle?.vehicleId;
@@ -310,7 +293,6 @@ const DealerOrderPage: React.FC = () => {
       color: vehicle?.selectedColor || null,
     };
 
-    console.log('✅ Created newProduct (normalized):', newProduct);
 
     // Use functional updater to avoid stale reads and persist after update
     setFormData(prev => {
@@ -319,7 +301,6 @@ const DealerOrderPage: React.FC = () => {
       );
 
       if (existingProductIndex !== -1) {
-        console.log('🔁 Product already in order — incrementing quantity for', incomingId);
         const updated = [...prev.selectedProducts];
         const qty = Number(updated[existingProductIndex].quantity) || 0;
         updated[existingProductIndex] = {
@@ -355,10 +336,8 @@ const DealerOrderPage: React.FC = () => {
     if (!vehicleFromNav) return;
 
     const incomingId = String(vehicleFromNav?.id ?? vehicleFromNav?.productId ?? vehicleFromNav?.vehicleId ?? '');
-    console.log('📥 Navigation state contains vehicle:', { incomingId, vehicleFromNav });
 
     if (processedIncomingRef.current.has(incomingId)) {
-      console.log('⏭️ Skipping already-processed incoming vehicle:', incomingId);
       // still clear state to avoid re-processing by navigation
       navigate(location.pathname, { replace: true, state: {} });
       return;
@@ -367,7 +346,6 @@ const DealerOrderPage: React.FC = () => {
     try {
       handleAddProduct(vehicleFromNav);
       processedIncomingRef.current.add(incomingId);
-      console.log('✅ Processed incoming vehicle and updated selectedProducts.');
     } catch (err) {
       console.error('Error adding vehicle from navigation state:', err);
     }
@@ -394,7 +372,6 @@ const DealerOrderPage: React.FC = () => {
       // Nếu giỏ hàng rỗng, xóa luôn sessionStorage
       if (next.length === 0) {
         sessionStorage.removeItem(SESSION_KEY);
-        console.log('🧹 Giỏ hàng trống, đã xóa session');
       }
       return { ...prev, selectedProducts: next };
     });
@@ -428,7 +405,6 @@ const DealerOrderPage: React.FC = () => {
         if (totalQuantity >= policy.minQuantity && totalQuantity <= policy.maxQuantity) {
           discountRate = policy.discountRate;
           appliedDiscountPolicy = policy;
-          console.log(`✅ Applied discount: ${discountRate}% for ${totalQuantity} vehicles (${policy.description})`);
           break;
         }
       }
@@ -495,11 +471,7 @@ const DealerOrderPage: React.FC = () => {
         deliveryAddress: fullDeliveryAddress,
       };
 
-      console.log('Creating order with data:', orderRequest);
-      console.log('Current dealer ID:', currentDealerId);
       const createdOrder = await createOrder(orderRequest);
-      console.log('Order created successfully:', createdOrder);
-      console.log('Created order ID:', createdOrder.orderId);
 
       // Show success message
       setShowSuccess(true);
@@ -525,7 +497,6 @@ const DealerOrderPage: React.FC = () => {
       // Clear session snapshot after successful create
       try {
         sessionStorage.removeItem(SESSION_KEY);
-        console.log('🧹 Cleared session snapshot after submit');
       } catch (err) {
         console.error('Failed to clear session snapshot:', err);
       }

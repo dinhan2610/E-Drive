@@ -8,7 +8,6 @@ import { BrowserRouter } from "react-router-dom";
 (window as any).clearAllData = () => {
   localStorage.clear();
   sessionStorage.clear();
-  console.log('✅ All data cleared! Reloading...');
   setTimeout(() => window.location.reload(), 500);
 };
 

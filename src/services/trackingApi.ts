@@ -67,7 +67,6 @@ export async function trackByCode(code: string): Promise<TrackingItem> {
     return data;
   } catch (error) {
     // Mock fallback
-    console.log("Using mock data for trackByCode");
     return generateMockTracking(code);
   }
 }
@@ -79,7 +78,6 @@ export async function sendOtp(phone: string): Promise<{ ok: boolean }> {
     return { ok: true };
   } catch (error) {
     // Mock fallback
-    console.log("Mock OTP sent to:", phone);
     return { ok: true };
   }
 }
@@ -91,7 +89,6 @@ export async function trackByPhoneWithOtp(phone: string, otp: string): Promise<T
     return data.items;
   } catch (error) {
     // Mock fallback - giả lập có 2 đơn
-    console.log("Using mock data for trackByPhoneWithOtp");
     return [
       generateMockTracking("SO-202501-0001"),
       generateMockTracking("SO-202501-0002")
@@ -106,7 +103,6 @@ export async function requestReschedule(orderId: string, payload: { date: string
     return data;
   } catch (error) {
     // Mock fallback
-    console.log("Mock reschedule request for order:", orderId, payload);
     return { 
       success: true, 
       message: "Yêu cầu đổi lịch đã được ghi nhận. Chúng tôi sẽ liên hệ với bạn trong vòng 24h." 

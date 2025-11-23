@@ -15,14 +15,12 @@ export interface DealerInventoryItem {
  */
 export async function getDealerInventory(dealerId: number): Promise<DealerInventoryItem[]> {
   try {
-    console.log('📦 Fetching dealer inventory for dealer:', dealerId);
     const response = await apiClient.get<{
       statusCode: number;
       message: string;
       data: DealerInventoryItem[];
     }>(`/dealer-inventory/dealer/${dealerId}`);
     
-    console.log('✅ Dealer inventory response:', response.data);
     return response.data.data || [];
   } catch (error: any) {
     console.error('❌ Error fetching dealer inventory:', error?.response?.data || error);
@@ -40,11 +38,9 @@ export async function updateDealerInventory(
   quantity: number
 ): Promise<void> {
   try {
-    console.log('📝 Updating dealer inventory:', { dealerId, vehicleId, quantity });
     await apiClient.put(`/dealer-inventory/update/${dealerId}/${vehicleId}`, null, {
       params: { quantity }
     });
-    console.log('✅ Inventory updated successfully');
   } catch (error: any) {
     console.error('❌ Error updating dealer inventory:', error?.response?.data || error);
     throw new Error(error?.response?.data?.message || 'Không thể cập nhật kho hàng');
@@ -62,7 +58,6 @@ export async function updateDealerInventory(
 //  */
 // export async function fetchManufacturerInventorySummary(): Promise<ManufacturerInventorySummary> {
 //   const url = `${API_BASE_URL}/manufacturer-inventory/summary`;
-//   console.log('🌐 Fetching manufacturer inventory summary from:', url);
 
 //   try {
 //     const res = await fetch(url, { 
@@ -77,16 +72,13 @@ export async function updateDealerInventory(
 //     }
 
 //     const data = await res.json();
-//     console.log('✅ API Response:', data);
 
 //     // Check if API returns an array (take first item) or direct object
 //     let summary: ManufacturerInventorySummary;
     
 //     if (Array.isArray(data) && data.length > 0) {
-//       console.log('📦 API returned array, using first item');
 //       summary = data[0];
 //     } else if (data && typeof data === 'object' && 'vehicles' in data) {
-//       console.log('📦 API returned direct object');
 //       summary = data;
 //     } else {
 //       console.warn('⚠️ Unexpected response format', data);
@@ -97,7 +89,6 @@ export async function updateDealerInventory(
 //       };
 //     }
 
-//     console.log('✅ Manufacturer inventory summary:', summary);
 //     return summary;
 //   } catch (error) {
 //     console.error('❌ fetchManufacturerInventorySummary error:', error);

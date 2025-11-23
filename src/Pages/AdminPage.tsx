@@ -700,14 +700,11 @@ const AdminPage: React.FC = () => {
   // Auto-reload orders every 10 seconds when on bookings tab
   useEffect(() => {
     if (activeTab === 'bookings') {
-      console.log('🔄 [Admin] Setting up auto-reload (10s interval) for bookings tab');
       const intervalId = setInterval(() => {
-        console.log('⏰ [Admin] Auto-reloading orders...');
         reloadOrders();
       }, 10000); // 10 seconds
 
       return () => {
-        console.log('🛑 [Admin] Clearing auto-reload interval');
         clearInterval(intervalId);
       };
     }
@@ -820,19 +817,11 @@ const AdminPage: React.FC = () => {
   // Function to reload orders from API
   const reloadOrders = async () => {
     try {
-      console.log('🔄 [Admin] Reloading orders from server...');
       const ordersData = await getOrders();
-      console.log(`📦 [Admin] Received ${ordersData.length} orders from API`);
       
-      // Log each order's raw status from API
       ordersData.forEach(order => {
-        console.log(`📋 [Admin] Order ${order.orderId} from API:`, {
-          orderStatus: order.orderStatus,
-          paymentStatus: order.paymentStatus
-        });
       });
       
-      // Map Order data to Booking interface
       const mappedBookings: Booking[] = ordersData.map((order: Order) => {
         // Get first order item for car name
         const firstItem = order.orderItems && order.orderItems.length > 0 
@@ -859,14 +848,7 @@ const AdminPage: React.FC = () => {
         
         // Log if order is cancelled
         if (bookingStatus === 'cancelled' || paymentSt === 'cancelled') {
-          console.log(`🚫 [Admin] Order ${order.orderId} is CANCELLED - orderStatus: ${order.orderStatus}, paymentStatus: ${order.paymentStatus}`);
         }
-        
-        // Log mapping result for debugging
-        console.log(`🔄 [Admin] Mapping order ${order.orderId}:`, {
-          input: { orderStatus: order.orderStatus, paymentStatus: order.paymentStatus },
-          output: { status: bookingStatus, paymentStatus: paymentSt }
-        });
         
         return {
           id: order.orderId,
@@ -885,13 +867,10 @@ const AdminPage: React.FC = () => {
         };
       });
       
-      console.log(`✅ [Admin] Mapped ${mappedBookings.length} bookings`);
       const cancelledCount = mappedBookings.filter(b => b.status === 'cancelled').length;
       if (cancelledCount > 0) {
-        console.log(`🚫 [Admin] Found ${cancelledCount} cancelled orders`);
         // Log details of cancelled orders
         mappedBookings.filter(b => b.status === 'cancelled').forEach(b => {
-          console.log(`   - Order ${b.id}: status=${b.status}, paymentStatus=${b.paymentStatus}`);
         });
       }
       
@@ -902,9 +881,7 @@ const AdminPage: React.FC = () => {
         return dateB - dateA;
       });
       
-      console.log('💾 [Admin] Updating bookings state...');
       setBookings(sortedBookings);
-      console.log('✅ [Admin] Bookings state updated successfully');
 
       // Update stats
       setStats(prev => ({

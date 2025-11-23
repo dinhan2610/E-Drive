@@ -97,14 +97,6 @@ const ContractForm: React.FC<ContractFormProps> = ({ orderData }) => {
                     ? `${displayName} - ${vehicleVersion}`
                     : displayName;
                   
-                  // Debug log
-                  console.log('🎨 ContractForm item:', {
-                    vehicleName: item.vehicleName,
-                    vehicleVersion: item.vehicleVersion,
-                    color: item.color,
-                    fullVehicleName
-                  });
-                  
                   return (
                     <tr key={index}>
                       <td>{fullVehicleName}</td>
